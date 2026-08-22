@@ -3,6 +3,11 @@ name: gate
 # Budget guard. The private-repo allowance is 2,000 minutes/month at a 10x macOS
 # multiplier -- about 200 real macOS minutes, or 25-35 runs. A bare `on: push` spends
 # 6-10 of them on every branch and every markdown typo.
+#
+# UNVERIFIED: '**.md' is documented to match markdown at any depth, but the failure mode is
+# silent and expensive -- a filter that quietly does not match costs 10 macOS minutes per doc
+# edit. Test it once, free: after the first push, push a markdown-only change and confirm no
+# run appears. If one does, switch both lists to ['**/*.md', '*.md', 'LICENSE'].
 on:
   push:
     branches: [main]
@@ -83,7 +88,15 @@ jobs:
           SIM="${{ steps.sim.outputs.name }}"
           xcrun simctl boot "$SIM" || true
           xcrun simctl bootstatus "$SIM" -b
-          APP=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          # Pinned by name, not `-name '*.app' | head -1`. Unit tests emit .xctest so today
+          # it is unambiguous, but a UI test target would drop UnreadUITests-Runner.app in
+          # this same directory and head -1 would start photographing the test runner.
+          APP=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name 'Unread.app' | head -1)
+          if [ -z "$APP" ]; then
+            echo "Unread.app not found in build/Build/Products/Debug-iphonesimulator:"
+            ls -la build/Build/Products/Debug-iphonesimulator || true
+            exit 1
+          fi
           echo "Installing $APP"
           xcrun simctl install booted "$APP"
 
