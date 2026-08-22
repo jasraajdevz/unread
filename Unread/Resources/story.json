@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "contacts": [
+    { "id": "c_placeholder", "displayName": "[placeholder]", "accentHex": "#7A8B99" }
+  ],
+  "threads": [
+    { "id": "t_placeholder", "contactId": "c_placeholder", "startBeat": "b_placeholder_1", "pinned": false }
+  ],
+  "beats": [
+    {
+      "id": "b_placeholder_1",
+      "threadId": "t_placeholder",
+      "messages": [
+        { "id": "m1", "from": "them", "kind": "text",   "body": "[placeholder]",
+          "delayMs": 0,    "typingMs": 1400 },
+        { "id": "m2", "from": "them", "kind": "photo",  "asset": "hall_01",
+          "delayMs": 3000, "typingMs": 0 },
+        { "id": "m3", "from": "them", "kind": "audio",  "asset": "vm_01",
+          "durationMs": 7000, "delayMs": 2000, "typingMs": 0 }
+      ],
+      "setsFlags": ["saw_placeholder"],
+      "requiresFlags": [],
+      "choices": [
+        { "id": "c1", "label": "[placeholder]", "next": "b_placeholder_2", "setsFlags": ["replied_placeholder"] },
+        { "id": "c2", "label": "[placeholder]", "next": "b_placeholder_2", "setsFlags": [] }
+      ],
+      "notification": {
+        "afterSeconds": 1200,
+        "title": "[placeholder]",
+        "body": "[placeholder]",
+        "resumeBeat": "b_placeholder_2"
+      }
+    },
+    {
+      "id": "b_placeholder_2",
+      "threadId": "t_placeholder",
+      "messages": [
+        { "id": "m4", "from": "me",     "kind": "text",   "body": "[placeholder]",
+          "delayMs": 0,    "typingMs": 0 },
+        { "id": "m5", "from": "system", "kind": "system", "body": "[placeholder]",
+          "delayMs": 1500, "typingMs": 0 }
+      ],
+      "requiresFlags": ["saw_placeholder"]
+    }
+  ],
+  "endings": [
+    { "id": "e_placeholder", "requiresFlags": ["replied_placeholder"], "beatId": "b_placeholder_2" }
+  ]
+}
