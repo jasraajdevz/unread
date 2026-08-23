@@ -736,7 +736,8 @@ function loadPhase(day, phase, options){
       .filter(function(e){ return e.kind === "choice"; })
       .map(function(e){
         return { id: e.choiceId, token: Generated.label(e), tells: e.tells,
-                 onPick: function(item){ recordTold(item.tells); } };
+                 revealsClue: e.revealsClue,
+                 onPick: function(item){ recordTold(item.tells); recordClue(item.revealsClue); } };
       });
   }
   Save.write(S.save);
@@ -751,6 +752,15 @@ function recordTold(tells){
   var state = S.save.contactState || (S.save.contactState = {});
   var told = state.lastToldByRen || (state.lastToldByRen = []);
   told.push({ day: S.save.day, phase: S.save.phase, said: tells });
+  Save.write(S.save);
+}
+
+/* D27: a reply that reveals something writes the clue id. Act I only accumulates; nothing
+   reads these until Act II. */
+function recordClue(clueId){
+  if(!clueId) return;
+  var found = S.save.cluesFound || (S.save.cluesFound = {});
+  found[clueId] = { day: S.save.day, phase: S.save.phase };
   Save.write(S.save);
 }
 
@@ -805,6 +815,11 @@ window.__unread = {
   openThread: openThread,
   renderList: renderList,
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
+  pickChoice: function(id){
+    var el = document.querySelector('[data-choice="' + id + '"]');
+    if(el) el.click();
+    return !!el;
+  },
   /* D19: every element that shows story text carries the ingress stamp. Anything that
      reached the screen another way has none, and shows up here. */
   auditIngress: function(){

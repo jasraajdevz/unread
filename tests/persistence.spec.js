@@ -172,3 +172,76 @@ test('D19 — one ingress: everything on screen is stamped, a second path is not
   expect(offenders.length, 'the audit catches the rogue bubble').toBe(1);
   expect(offenders[0]).toContain('msg');
 });
+
+test('D26 — a reply is available in every phase of every day', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const ladder = await page.evaluate(() => window.CONTENT.ladder.days.map((d) => d.day));
+  for (const day of ladder.filter((d) => d > 1)) {
+    for (const phase of ['day', 'night']) {
+      const pending = await page.evaluate(([d, p]) => {
+        window.__unread.loadPhase(d, p);
+        return window.__unread.state.pendingChoices.length;
+      }, [day, phase]);
+      expect(pending, `day ${day} ${phase} offers a reply`).toBeGreaterThan(0);
+    }
+  }
+});
+
+test('D27 — answering records what Ren said and any clue it reveals', async ({ page }) => {
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // one pass: find a clue-revealing reply, open a thread, and take it. pickChoice
+  // dispatches a real click on the real button, so the handler under test is the one
+  // the player uses.
+  const taken = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      if (entry.day === 1) continue;
+      for (const phase of ['day', 'night']) {
+        window.__unread.loadPhase(entry.day, phase);
+        const withClue = window.__unread.state.pendingChoices.find((c) => c.revealsClue);
+        if (!withClue) continue;
+        const thread = window.__unread.story.threads()
+          .find((t) => t.id === 't_flat') || window.__unread.story.threads()[0];
+        window.__unread.openThread(thread);
+        const clicked = window.__unread.pickChoice(withClue.id);
+        return {
+          clicked, day: entry.day, phase, id: withClue.id,
+          clue: withClue.revealsClue, tells: withClue.tells,
+        };
+      }
+    }
+    return null;
+  });
+
+  expect(taken, 'some reply in days 2-10 reveals a clue').not.toBeNull();
+  expect(taken.clicked, `${taken.id} was on screen and clickable`).toBe(true);
+
+  const save = await page.evaluate(() =>
+    JSON.parse(window.localStorage.getItem('unread.save.v1')));
+  expect(Object.keys(save.cluesFound), 'the clue was recorded').toContain(taken.clue);
+  expect(save.contactState.lastToldByRen.map((t) => t.said),
+    'what Ren said was recorded for Act II').toContain(taken.tells);
+
+  // answering does not exhaust the supply: the last authored phase still offers a reply
+  const next = await page.evaluate(() => {
+    window.__unread.loadPhase(10, 'night');
+    return window.__unread.state.pendingChoices.length;
+  });
+  expect(next, 'the last authored phase still offers a reply').toBeGreaterThan(0);
+});

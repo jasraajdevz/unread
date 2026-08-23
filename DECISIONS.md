@@ -553,3 +553,71 @@ going while you were gone. Web Push stays a later option, never a dependency.
 **Anti-abuse: none.** Clock-shifting is not defended against. A player who sets their
 clock forward to skip is a player choosing to skip. Do not build a cheat check into a
 horror game.
+
+---
+
+## D25 — the four-minute target is retired; Act I is the wall
+
+**Status:** decided · **Supersedes:** the 4:00 beat-1 target from Phase 6a ·
+**Scope:** content, `tools/beat_duration.py`
+
+Beat 1 was designed to be boring for four solid minutes, and Phase 6a measured it at 3:20
+and extended it to reach the target. All of that measured *playback* — messages arriving
+one at a time behind typing indicators.
+
+D24 made history render instantly, correctly, and the four minutes went with it. Played at
+real speed, beat 1 is **75 messages, 293 words — about one minute of reading** at any
+plausible speed. The target was not missed; it stopped being a measurable thing.
+
+**Act I is the wall now.** Twenty days of nothing being wrong is a better version of the
+same idea than four minutes of it, and it is the mechanic the ladder already implements.
+
+**Consequence:** do not pad beat 1 to recover four minutes. Do not reintroduce a duration
+target anywhere. `beat_duration.py` reports counts and live playback and states no target;
+leave it that way. The thing to protect is the *twenty days*, not the four minutes.
+
+---
+
+## D26 — the player can always reply; decay is something that happens to other people
+
+**Status:** decided · **Scope:** `src/director.js`, content · **Enforced by:** the gate
+
+Act I's decay takes replies away from the cast. It must never take them away from the
+player. A phase that offers the player nothing to say is a phase where the game has
+stopped being a messaging app.
+
+Day 10 night, as generated, offered **zero** choices. That is the bug this entry exists
+to close.
+
+1. **Every phase offers at least one reply.** The director guarantees it: if a phase's
+   draw produces no choices, it draws again from the choice-bearing templates.
+2. **The player's replies are never budget-limited.** `repliesRemaining` gates cast lines
+   only. Nothing decays the player.
+3. **Replies never run out across the run.** Templates repeat with different slot values,
+   so the supply is unbounded by construction — the player can keep answering for a
+   hundred days.
+
+The one exception is D24's missed band: replies are gone because *the moment* has gone,
+not because the player ran out. That is a different thing and it stays.
+
+---
+
+## D27 — replies that reveal something are clues, and clues are declared
+
+**Status:** decided · **Scope:** `content/clues.json`, templates · **Enforced by:** validator
+
+A reply that changes nothing is a button. Some replies should reveal something the player
+can later realise mattered.
+
+- `content/clues.json` declares each clue: an id, what it is, and the act that pays it off.
+- A choice may carry `revealsClue`, which must resolve to a declared clue.
+- Picking that choice writes the clue id into `cluesFound`, alongside the `tells` that
+  already writes `lastToldByRen`.
+
+**Validated both ways, because both directions are bugs:** a `revealsClue` naming a clue
+that does not exist, and a declared clue that no choice can ever reveal. The second is the
+orphan clue — content that can never be found, which is worse, because nothing fails.
+
+Clues in Act I only accumulate. Nothing reads them until Act II, for the same reason
+`lastToldByRen` is written from day one: memory cannot be retrofitted onto history the
+player has already lived through.

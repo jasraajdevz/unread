@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "clues": [
+    {
+      "id": "clue_parcel",
+      "summary": "a parcel left at the door that nobody in the flat ordered",
+      "paysOffInAct": 2,
+      "note": "Beat 1's had Ren's name on it. The ones after do not. Same clue, and the difference is the point."
+    },
+    {
+      "id": "clue_light",
+      "summary": "the front light, on a sensor, on all night",
+      "paysOffInAct": 2,
+      "note": "Something was in front of it. The flat decided it was foxes."
+    },
+    {
+      "id": "clue_heating",
+      "summary": "the heating coming on at an hour nobody set",
+      "paysOffInAct": 2,
+      "note": "A timer nobody set is a timer somebody set."
+    },
+    {
+      "id": "clue_rota",
+      "summary": "the rota taken off the fridge",
+      "paysOffInAct": 2,
+      "note": "Small, indoors, and nobody in the flat did it."
+    },
+    {
+      "id": "clue_noise",
+      "summary": "a sound on the stairs that only one person heard",
+      "paysOffInAct": 2,
+      "note": "Only load-bearing if Ren says he heard it too."
+    },
+    {
+      "id": "clue_signin",
+      "summary": "a sign-in from a device Ren does not own",
+      "paysOffInAct": 2,
+      "note": "The one clue that arrives without anyone choosing to notice it."
+    }
+  ]
+}

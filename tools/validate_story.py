@@ -280,6 +280,54 @@ def audit_content(content_dir):
             problems.append("ladder day %s names act %r, which is not defined"
                             % (entry.get("day"), entry.get("act")))
 
+    # D27 -- clues are declared, and both directions are bugs.
+    try:
+        clues = read("clues.json")
+    except (OSError, ValueError) as error:
+        problems.append("clues.json could not be read: %s" % error)
+        clues = {"clues": []}
+
+    clue_ids = set()
+    for clue in clues.get("clues", []):
+        cid = clue.get("id")
+        if not cid:
+            problems.append("a clue has no id")
+            continue
+        if cid in clue_ids:
+            problems.append("duplicate clue id '%s'" % cid)
+        clue_ids.add(cid)
+        if not (clue.get("summary") or "").strip():
+            problems.append("clue '%s' has no summary" % cid)
+        act = clue.get("paysOffInAct")
+        if act not in acts and acts:
+            problems.append("clue '%s' pays off in act %r, which the ladder does not define"
+                            % (cid, act))
+
+    revealed = set()
+    for template in templates.get("templates", []):
+        for choice in template.get("choices") or []:
+            cid = choice.get("revealsClue")
+            if cid is None:
+                continue
+            revealed.add(cid)
+            if cid not in clue_ids:
+                problems.append("template '%s' choice '%s' reveals '%s', which is not a "
+                                "declared clue" % (template.get("id"), choice.get("id"), cid))
+
+    for cid in sorted(clue_ids - revealed):
+        problems.append("orphan clue '%s': nothing can ever reveal it. Content that cannot "
+                        "be found is worse than content that is missing, because nothing "
+                        "fails." % cid)
+
+    # D26 -- every template that is not a no-reply sender must offer the player something
+    NO_REPLY_THREADS = {"t_notify"}
+    for template in templates.get("templates", []):
+        if template.get("threadId") in NO_REPLY_THREADS:
+            continue
+        if not (template.get("choices") or []):
+            problems.append("template '%s' offers the player no reply (D26)"
+                            % template.get("id"))
+
     return problems
 
 

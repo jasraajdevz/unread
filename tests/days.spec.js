@@ -22,13 +22,12 @@ test('days 1-10 play in fast mode and each phase is photographed', async ({ page
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  await page.addInitScript((seed) => {
-    const now = Date.now();
+  await page.addInitScript(([seed, now]) => {
     window.localStorage.setItem('unread.save.v1', JSON.stringify({
       runSeed: seed, day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
       flags: {}, contactState: {}, cluesFound: {},
     }));
-  }, SEED);
+  }, [SEED, LAUNCH.getTime()]);
 
   await page.clock.install({ time: LAUNCH });
   await page.goto(BUILT);

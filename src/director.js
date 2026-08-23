@@ -186,9 +186,53 @@
           kind: 'choice',
           choiceId: choice.id,
           label: choice.label,
-          tells: choice.tells ? fillSlots(choice.tells, slots) : null
+          tells: choice.tells ? fillSlots(choice.tells, slots) : null,
+          revealsClue: choice.revealsClue || null
         });
       });
+    }
+
+    /* D26: the player can always reply. Decay is something that happens to other
+       people, and a phase with nothing to say is a phase where this stopped being a
+       messaging app. If the draw produced no choices, draw one that has them -- ignoring
+       budget, because the budget governs the cast, never the player. */
+    if (!events.some(function (e) { return e.kind === 'choice'; })) {
+      var withChoices = pool.filter(function (t) {
+        return !used[t.id] && (t.choices || []).length;
+      });
+      var rescue = pickWeighted(rand, withChoices, function (t) { return t.weight || 1; });
+      if (rescue) {
+        used[rescue.id] = true;
+        if (rescue.once) options.fired[rescue.id] = true;
+        (rescue.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
+        var rescueSlots = chooseSlots(rand, rescue);
+        var rescueOpened = {};
+        rescue.lines.forEach(function (line) {
+          if (!castById[line.speaker]) return;
+          if (rescueOpened[line.speaker]) return;   /* the opener only: no budget spent */
+          rescueOpened[line.speaker] = true;
+          events.push({
+            templateId: rescue.id,
+            threadId: rescue.threadId,
+            speaker: line.speaker,
+            from: 'them',
+            kind: 'text',
+            body: fillSlots(line.text, rescueSlots),
+            isReply: false
+          });
+        });
+        (rescue.choices || []).forEach(function (choice) {
+          events.push({
+            templateId: rescue.id,
+            threadId: rescue.threadId,
+            kind: 'choice',
+            choiceId: choice.id,
+            label: choice.label,
+            tells: choice.tells ? fillSlots(choice.tells, rescueSlots) : null,
+            revealsClue: choice.revealsClue || null
+          });
+        });
+      }
     }
 
     return { events: events, replies: replies, dropped: dropped };
