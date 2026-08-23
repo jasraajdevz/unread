@@ -6,7 +6,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -59,7 +59,11 @@
         {
           "id": "ch_ill_do_it",
           "label": "ill do it",
-          "tells": "offered to do {CHORE}"
+          "tells": "offered to do {CHORE}",
+          "memory": {
+            "tag": "chore_promised",
+            "fragment": "you said youd do {CHORE}"
+          }
         },
         {
           "id": "ch_not_mine",
@@ -73,7 +77,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day",
@@ -129,7 +133,11 @@
           "id": "ch_open_it",
           "label": "open it",
           "tells": "said to open {THING}",
-          "revealsClue": "clue_parcel"
+          "revealsClue": "clue_parcel",
+          "memory": {
+            "tag": "parcel_opened",
+            "fragment": "you told us to open {THING}"
+          }
         }
       ]
     },
@@ -138,7 +146,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -182,7 +190,11 @@
           "id": "ch_timer",
           "label": "i didnt set it",
           "tells": "denied setting the timer",
-          "revealsClue": "clue_heating"
+          "revealsClue": "clue_heating",
+          "memory": {
+            "tag": "timer_denied",
+            "fragment": "you said you didnt set it"
+          }
         },
         {
           "id": "ch_shrug",
@@ -196,7 +208,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -236,7 +248,11 @@
           "id": "ch_heard_it",
           "label": "i heard it",
           "tells": "said he heard {SOUND}",
-          "revealsClue": "clue_noise"
+          "revealsClue": "clue_noise",
+          "memory": {
+            "tag": "noise_heard",
+            "fragment": "you said you heard {SOUND} too"
+          }
         },
         {
           "id": "ch_nothing",
@@ -250,7 +266,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -303,7 +319,7 @@
       "threadId": "t_mom",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -343,7 +359,11 @@
         {
           "id": "ch_did_it",
           "label": "yeah did it",
-          "tells": "said he checked {PART}"
+          "tells": "said he checked {PART}",
+          "memory": {
+            "tag": "car_claimed",
+            "fragment": "you told me youd checked {PART}"
+          }
         },
         {
           "id": "ch_will_do",
@@ -357,7 +377,7 @@
       "threadId": "t_mom",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day",
@@ -398,7 +418,11 @@
         {
           "id": "ch_coming",
           "label": "yeah ill come",
-          "tells": "said he would come {WHEN}"
+          "tells": "said he would come {WHEN}",
+          "memory": {
+            "tag": "visit_promised",
+            "fragment": "you said you were coming {WHEN}"
+          }
         },
         {
           "id": "ch_working",
@@ -412,7 +436,7 @@
       "threadId": "t_mom",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -456,7 +480,7 @@
       "threadId": "t_mom",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -493,7 +517,7 @@
       "threadId": "t_dave",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -531,7 +555,11 @@
         {
           "id": "ch_dave_yes",
           "label": "that works",
-          "tells": "agreed to {DAY}"
+          "tells": "agreed to {DAY}",
+          "memory": {
+            "tag": "dave_agreed",
+            "fragment": "You said {DAY} was alright."
+          }
         },
         {
           "id": "ch_dave_no",
@@ -545,7 +573,7 @@
       "threadId": "t_dave",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -580,7 +608,7 @@
       "threadId": "t_dave",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -616,7 +644,7 @@
       "threadId": "t_notify",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day",
@@ -649,7 +677,7 @@
       "threadId": "t_notify",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day",
@@ -682,7 +710,11 @@
           "id": "ch_login_not_me",
           "label": "that wasnt me",
           "tells": "said the sign-in was not him",
-          "revealsClue": "clue_signin"
+          "revealsClue": "clue_signin",
+          "memory": {
+            "tag": "signin_denied",
+            "fragment": "you said it wasnt you"
+          }
         }
       ]
     },
@@ -691,7 +723,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -745,7 +777,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -803,7 +835,7 @@
       "threadId": "t_flat",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "night"
@@ -855,7 +887,7 @@
       "threadId": "t_mom",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day",
@@ -901,7 +933,7 @@
       "threadId": "t_dave",
       "acts": [
         1,
-        1
+        2
       ],
       "phases": [
         "day"
@@ -939,6 +971,505 @@
           "id": "ch_insp_later",
           "label": "can it wait",
           "tells": "asked dave to delay the inspection"
+        }
+      ]
+    },
+    {
+      "id": "tpl_mom_recall_visit",
+      "threadId": "t_mom",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "visit_promised",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_mom",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_mom",
+          "text": "i did the food"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_sorry",
+          "label": "i know",
+          "tells": "acknowledged missing it"
+        },
+        {
+          "id": "ch_r_deny",
+          "label": "i never said that",
+          "tells": "denied saying it",
+          "memory": {
+            "tag": "denied_memory",
+            "fragment": "you said you never said it"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpl_mom_recall_car",
+      "threadId": "t_mom",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "car_claimed",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_mom",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_mom",
+          "text": "dad looked at it and you hadnt"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_car_ok",
+          "label": "i forgot",
+          "tells": "admitted forgetting"
+        },
+        {
+          "id": "ch_r_car_deny",
+          "label": "i did check it",
+          "tells": "insisted he checked",
+          "memory": {
+            "tag": "denied_memory",
+            "fragment": "you said you never said it"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_recall_chore",
+      "threadId": "t_flat",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "chore_promised",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "he did say that"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "when though"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_chore_soon",
+          "label": "ill do it tonight",
+          "tells": "promised again"
+        },
+        {
+          "id": "ch_r_chore_no",
+          "label": "i never said that",
+          "tells": "denied saying it",
+          "memory": {
+            "tag": "denied_memory",
+            "fragment": "you said you never said it"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_recall_parcel",
+      "threadId": "t_flat",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "parcel_opened",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_priya",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "there wasnt anything in it"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "there wasnt anything in it when i looked either"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_parcel_who",
+          "label": "who looked first",
+          "tells": "asked who looked first"
+        },
+        {
+          "id": "ch_r_parcel_drop",
+          "label": "forget it",
+          "tells": "dropped it"
+        }
+      ]
+    },
+    {
+      "id": "tpl_dave_recall_slot",
+      "threadId": "t_dave",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "dave_agreed",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_dave",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_dave",
+          "text": "Nobody was in. I waited twenty minutes."
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_dave_sorry",
+          "label": "sorry dave",
+          "tells": "apologised to dave"
+        },
+        {
+          "id": "ch_r_dave_home",
+          "label": "i was in",
+          "tells": "insisted he was home"
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_mom",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "visit_promised",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you didnt"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_u_who",
+          "label": "how do you know that",
+          "tells": "asked how it knew"
+        },
+        {
+          "id": "ch_r_u_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_flat",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "chore_promised",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "thats not something ren says"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_u_ren",
+          "label": "im ren",
+          "tells": "claimed to be ren",
+          "memory": {
+            "tag": "claimed_to_be_ren",
+            "fragment": "you said you were ren"
+          }
+        },
+        {
+          "id": "ch_r_u_quiet",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_denial",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "denied_memory",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you did"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_u_stop",
+          "label": "stop",
+          "tells": "told it to stop"
+        },
+        {
+          "id": "ch_r_u_watch",
+          "label": "are you reading these",
+          "tells": "asked if it was reading"
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_recall_noise",
+      "threadId": "t_flat",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "noise_heard",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_priya",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "you were the only one who did"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_noise_again",
+          "label": "i hear it most nights",
+          "tells": "said he hears it most nights"
+        },
+        {
+          "id": "ch_r_noise_drop",
+          "label": "i was probably wrong",
+          "tells": "walked it back"
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_timer",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "timer_denied",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "somebody set it"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_t_who",
+          "label": "who are you",
+          "tells": "asked who it was"
+        },
+        {
+          "id": "ch_r_t_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_signin",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "signin_denied",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "it wasnt"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_s_stop",
+          "label": "get off his account",
+          "tells": "told it to get off the account"
+        },
+        {
+          "id": "ch_r_s_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_recall_ren",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 6,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "claimed_to_be_ren",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "ren stopped answering on the tuesday"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you started on the sunday"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_r_ren_how",
+          "label": "how would you know that",
+          "tells": "asked how it knew the dates"
+        },
+        {
+          "id": "ch_r_ren_none",
+          "label": "[say nothing]",
+          "tells": null
         }
       ]
     }

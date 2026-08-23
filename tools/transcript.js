@@ -17,7 +17,10 @@ const content = load();
 const seed = arg('seed', 'default');
 const from = parseInt(arg('from', '1'), 10);
 const to = parseInt(arg('to', '10'), 10);
-const run = Director.planRun(content, seed, from, to);
+// Always play from day 1 and print only the window asked for: Act II quotes what the
+// player said in Act I, so a run that starts on day 24 has nothing to remember.
+const whole = Director.planRun(content, seed, 1, to);
+const run = whole.filter((d) => d.day >= from);
 
 if (process.argv.includes('--decay')) {
   console.log('day  authored  messages  replies  dropped');

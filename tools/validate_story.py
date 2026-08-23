@@ -259,7 +259,9 @@ def audit_content(content_dir):
         for choice in template.get("choices") or []:
             used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("tells") or ""))
             used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("label") or ""))
-        for name in sorted(used - set(slots)):
+        # {MEMORY} is filled by the director from what the player said, so a template
+        # quotes it without declaring it.
+        for name in sorted(used - set(slots) - {"MEMORY"}):
             problems.append("template '%s' uses slot {%s}, which it does not declare" % (tid, name))
         for name in sorted(set(slots) - used):
             problems.append("template '%s' declares slot {%s}, which nothing uses" % (tid, name))
@@ -327,6 +329,40 @@ def audit_content(content_dir):
         if not (template.get("choices") or []):
             problems.append("template '%s' offers the player no reply (D26)"
                             % template.get("id"))
+
+    # Act II -- memory. Both directions are bugs, as with clues: a template quoting
+    # something no choice can ever produce, and a memory nothing ever quotes.
+    produced_memory = {}
+    for template in templates.get("templates", []):
+        for choice in template.get("choices") or []:
+            memory = choice.get("memory")
+            if memory is None:
+                continue
+            if not isinstance(memory, dict) or not memory.get("tag"):
+                problems.append("template '%s' choice '%s' has a malformed memory"
+                                % (template.get("id"), choice.get("id")))
+                continue
+            if not (memory.get("fragment") or "").strip():
+                problems.append("memory '%s' has no fragment: nothing to quote back"
+                                % memory["tag"])
+            produced_memory.setdefault(memory["tag"], []).append(template.get("id"))
+
+    quoted = set()
+    for template in templates.get("templates", []):
+        tag = template.get("requiresMemory")
+        if tag is None:
+            continue
+        quoted.add(tag)
+        if tag not in produced_memory:
+            problems.append("template '%s' quotes memory '%s', which no choice records"
+                            % (template.get("id"), tag))
+        if "{MEMORY}" not in " ".join(l.get("text", "") for l in template.get("lines", [])):
+            problems.append("template '%s' requires memory '%s' but never says it"
+                            % (template.get("id"), tag))
+
+    for tag in sorted(set(produced_memory) - quoted):
+        problems.append("memory '%s' is recorded but nothing ever quotes it back. Act I "
+                        "writes memory only so Act II can read it." % tag)
 
     return problems
 

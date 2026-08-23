@@ -195,6 +195,186 @@
       "replyBudget": 0.06,
       "dayMessages": 3,
       "nightMessages": 3
+    },
+    {
+      "day": 21,
+      "act": 2,
+      "pressure": 0.3,
+      "replyBudget": 0.04,
+      "recallWeight": 1.0,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 22,
+      "act": 2,
+      "pressure": 0.32,
+      "replyBudget": 0.04,
+      "recallWeight": 1.35,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 23,
+      "act": 2,
+      "pressure": 0.34,
+      "replyBudget": 0.04,
+      "recallWeight": 1.7,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 24,
+      "act": 2,
+      "pressure": 0.36,
+      "replyBudget": 0.04,
+      "recallWeight": 2.05,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 25,
+      "act": 2,
+      "pressure": 0.38,
+      "replyBudget": 0.04,
+      "recallWeight": 2.4,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 26,
+      "act": 2,
+      "pressure": 0.4,
+      "replyBudget": 0.04,
+      "recallWeight": 2.75,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 27,
+      "act": 2,
+      "pressure": 0.42,
+      "replyBudget": 0.04,
+      "recallWeight": 3.1,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 28,
+      "act": 2,
+      "pressure": 0.44,
+      "replyBudget": 0.04,
+      "recallWeight": 3.45,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 29,
+      "act": 2,
+      "pressure": 0.46,
+      "replyBudget": 0.04,
+      "recallWeight": 3.8,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 30,
+      "act": 2,
+      "pressure": 0.48,
+      "replyBudget": 0.04,
+      "recallWeight": 4.15,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 31,
+      "act": 2,
+      "pressure": 0.5,
+      "replyBudget": 0.0,
+      "recallWeight": 4.5,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 32,
+      "act": 2,
+      "pressure": 0.52,
+      "replyBudget": 0.0,
+      "recallWeight": 4.85,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 33,
+      "act": 2,
+      "pressure": 0.54,
+      "replyBudget": 0.0,
+      "recallWeight": 5.2,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 34,
+      "act": 2,
+      "pressure": 0.56,
+      "replyBudget": 0.0,
+      "recallWeight": 5.55,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 35,
+      "act": 2,
+      "pressure": 0.58,
+      "replyBudget": 0.0,
+      "recallWeight": 5.9,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 36,
+      "act": 2,
+      "pressure": 0.6,
+      "replyBudget": 0.0,
+      "recallWeight": 6.25,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 37,
+      "act": 2,
+      "pressure": 0.62,
+      "replyBudget": 0.0,
+      "recallWeight": 6.6,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 38,
+      "act": 2,
+      "pressure": 0.64,
+      "replyBudget": 0.0,
+      "recallWeight": 6.95,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 39,
+      "act": 2,
+      "pressure": 0.66,
+      "replyBudget": 0.0,
+      "recallWeight": 7.3,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 40,
+      "act": 2,
+      "pressure": 0.68,
+      "replyBudget": 0.0,
+      "recallWeight": 7.65,
+      "dayMessages": 4,
+      "nightMessages": 3
     }
   ]
 }

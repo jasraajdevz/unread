@@ -100,6 +100,15 @@
     for (var i = 0; i < need.length; i++) {
       if (!context.flags[need[i]]) return false;
     }
+    /* Act II: a template that quotes the player back can only fire if the player
+       actually said it. This is why Act I wrote memory from day one -- it cannot be
+       retrofitted onto history someone has already lived through. */
+    if (template.requiresMemory) {
+      if (!context.memory[template.requiresMemory]) return false;
+      /* quoted once. Saying it back twice is nagging; saying it back once, weeks later,
+         is the mechanic. */
+      if (context.spent[template.requiresMemory]) return false;
+    }
     return true;
   }
 
@@ -128,9 +137,16 @@
     var pool = (content.templates.templates || []).filter(function (t) {
       return eligible(t, {
         act: options.act, phase: options.phase,
-        fired: options.fired, flags: options.flags
+        fired: options.fired, flags: options.flags,
+        memory: options.memory || {}, spent: options.spent || {}
       });
     });
+
+    /* The ladder decides how hard the draw leans toward being quoted back. */
+    function weightOf(t) {
+      var base = t.weight || 1;
+      return t.requiresMemory ? base * (options.recallWeight || 1) : base;
+    }
 
     var guard = 0;
     while (guard++ < 60) {
@@ -152,15 +168,22 @@
           return castById[l.speaker] && (castById[l.speaker].baseReplies || 0) > 0;
         });
       });
-      var candidates = withBudget.length ? withBudget : (human.length ? human : available);
-      var template = pickWeighted(rand, candidates, function (t) { return t.weight || 1; });
+      var recall = available.filter(function (t) { return t.requiresMemory; });
+      var candidates = withBudget.length
+        ? withBudget
+        : (recall.length || human.length ? recall.concat(human) : available);
+      var template = pickWeighted(rand, candidates, weightOf);
       if (!template) break;
 
       used[template.id] = true;
       if (template.once) options.fired[template.id] = true;
+      if (template.requiresMemory) options.spent[template.requiresMemory] = true;
       (template.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
 
       var slots = chooseSlots(rand, template);
+      if (template.requiresMemory) {
+        slots.MEMORY = (options.memory || {})[template.requiresMemory] || '';
+      }
       var openedBy = {};
 
       template.lines.forEach(function (line) {
@@ -195,7 +218,10 @@
           choiceId: choice.id,
           label: choice.label,
           tells: choice.tells ? fillSlots(choice.tells, slots) : null,
-          revealsClue: choice.revealsClue || null
+          revealsClue: choice.revealsClue || null,
+          memory: choice.memory
+            ? { tag: choice.memory.tag, fragment: fillSlots(choice.memory.fragment, slots) }
+            : null
         });
       });
     }
@@ -208,12 +234,15 @@
       var withChoices = pool.filter(function (t) {
         return !used[t.id] && (t.choices || []).length;
       });
-      var rescue = pickWeighted(rand, withChoices, function (t) { return t.weight || 1; });
+      var rescue = pickWeighted(rand, withChoices, weightOf);
       if (rescue) {
         used[rescue.id] = true;
         if (rescue.once) options.fired[rescue.id] = true;
         (rescue.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
         var rescueSlots = chooseSlots(rand, rescue);
+        if (rescue.requiresMemory) {
+          rescueSlots.MEMORY = (options.memory || {})[rescue.requiresMemory] || '';
+        }
         var rescueOpened = {};
         rescue.lines.forEach(function (line) {
           if (!castById[line.speaker]) return;
@@ -237,7 +266,11 @@
             choiceId: choice.id,
             label: choice.label,
             tells: choice.tells ? fillSlots(choice.tells, rescueSlots) : null,
-            revealsClue: choice.revealsClue || null
+            revealsClue: choice.revealsClue || null,
+            memory: choice.memory
+              ? { tag: choice.memory.tag,
+                  fragment: fillSlots(choice.memory.fragment, rescueSlots) }
+              : null
           });
         });
       }
@@ -304,7 +337,9 @@
     if (entry.authored) return authoredDay(content, day, entry);
 
     var castById = indexCast(content.cast);
-    var state = carried || { flags: {}, fired: {} };
+    var state = carried || { flags: {}, fired: {}, memory: {}, spent: {} };
+    state.memory = state.memory || {};
+    state.spent = state.spent || {};
 
     /* Split the day's budget between the phases so night is never left mute by a
        talkative morning. */
@@ -338,7 +373,10 @@
         target: pair[0] === 'day' ? entry.dayMessages : entry.nightMessages,
         budget: pair[1],
         flags: state.flags,
-        fired: state.fired
+        fired: state.fired,
+        memory: state.memory,
+        spent: state.spent,
+        recallWeight: entry.recallWeight || 1
       });
       out.phases[pair[0]] = result.events;
       out.replies += result.replies;
@@ -350,12 +388,29 @@
     return out;
   }
 
-  function planRun(content, runSeed, fromDay, toDay) {
-    var state = { flags: {}, fired: {} };
+  /* Determinism is now conditional: same seed AND same memory produces the same
+     transcript. Act II reads what the player said, so the seed alone cannot describe a
+     run any more. Tests pass a fixed memory to keep the property testable. */
+  function planRun(content, runSeed, fromDay, toDay, memory) {
+    /* copy: a run accumulates memory forward, and mutating the caller's object would
+       make the second identical call start from the first one's leftovers. */
+    var seeded = {};
+    Object.keys(memory || {}).forEach(function (k) { seeded[k] = memory[k]; });
+    var state = { flags: {}, fired: {}, memory: seeded, spent: {} };
     var days = [];
     for (var day = fromDay; day <= toDay; day++) {
       var planned = planDay(content, runSeed, day, state);
-      if (planned) days.push(planned);
+      if (planned) {
+        days.push(planned);
+        /* a run remembers forward: what was said on day 3 is still quotable on day 30 */
+        ['day', 'night'].forEach(function (phase) {
+          (planned.phases[phase] || []).forEach(function (e) {
+            if (e.kind === 'choice' && e.memory && !state.memory[e.memory.tag]) {
+              state.memory[e.memory.tag] = e.memory.fragment;
+            }
+          });
+        });
+      }
     }
     return days;
   }

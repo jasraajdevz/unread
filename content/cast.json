@@ -50,6 +50,16 @@
       "punctuation": "full",
       "voice": "automated. Never varies. Does not know anyone is gone.",
       "baseReplies": 0
+    },
+    {
+      "id": "c_unknown",
+      "displayName": "+44 7700 900931",
+      "thread": "t_unknown",
+      "side": "them",
+      "capitalisation": "lower",
+      "punctuation": "none",
+      "voice": "states things. Never asks twice. Quotes the player exactly, and to the wrong person -- it has read the other threads.",
+      "baseReplies": 0
     }
   ]
 }

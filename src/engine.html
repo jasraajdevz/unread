@@ -730,7 +730,11 @@ document.getElementById("again").addEventListener("click", function(){
    ========================================================================== */
 function planFor(day){
   if(!window.Director || !CONTENT.templates) return null;
-  var carried = { flags: S.flags, fired: (S.save && S.save.fired) || {} };
+  var carried = {
+    flags: S.flags,
+    fired: (S.save && S.save.fired) || {},
+    memory: (S.save && S.save.contactState && S.save.contactState.memory) || {}
+  };
   return window.Director.planDay(
     { cast: CONTENT.cast, templates: CONTENT.templates, ladder: CONTENT.ladder,
       story: Story.raw },
@@ -789,8 +793,12 @@ function loadPhase(day, phase, options){
         return { id: e.choiceId, threadId: e.threadId, templateId: e.templateId,
                  label: e.label,
                  token: Generated.label(e), tells: e.tells,
-                 revealsClue: e.revealsClue,
-                 onPick: function(item){ recordTold(item.tells); recordClue(item.revealsClue); } };
+                 revealsClue: e.revealsClue, memory: e.memory,
+                 onPick: function(item){
+                   recordTold(item.tells);
+                   recordClue(item.revealsClue);
+                   recordMemory(item.memory);
+                 } };
       });
   }
   Save.write(S.save);
@@ -814,6 +822,17 @@ function recordClue(clueId){
   if(!clueId) return;
   var found = S.save.cluesFound || (S.save.cluesFound = {});
   found[clueId] = { day: S.save.day, phase: S.save.phase };
+  Save.write(S.save);
+}
+
+/* Act II quotes this back. Written the first time only: the earliest thing the player
+   said is the one that has had longest to be wrong. */
+function recordMemory(memory){
+  if(!memory || !memory.tag) return;
+  var state = S.save.contactState || (S.save.contactState = {});
+  var bank = state.memory || (state.memory = {});
+  if(bank[memory.tag]) return;
+  bank[memory.tag] = memory.fragment;
   Save.write(S.save);
 }
 
@@ -869,6 +888,7 @@ window.__unread = {
   renderList: renderList,
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
+  memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){
     return pendingInThread(id).map(function(c){ return { id: c.id, templateId: c.templateId }; });
   },

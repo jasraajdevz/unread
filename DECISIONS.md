@@ -670,3 +670,36 @@ the clue is still reachable, and the gate proves all six are within days 1-10.
 
 D28 stands on the other two points: a thread never shows another thread's replies, and
 answering always lands the reply in the conversation as a message from the player.
+
+---
+
+## D30 — Act II is recall, and it costs the seed its independence
+
+**Status:** decided · **Scope:** `content/`, `src/director.js` · **Enforced by:** the gate
+
+Act II (days 21-60) reads what Act I wrote. Three shapes, deliberately only three:
+
+- **a person half-remembers** — Mom quotes your promise back and it is not what happened
+- **a person checks** — Dave waited twenty minutes for someone who said they would be in
+- **the number quotes you exactly, to the wrong person** — it says back to you, in the
+  unnamed thread, something you only ever said in the flat. It has read the other threads.
+
+**Mechanics that make it work:**
+
+1. **A choice records a `memory`: a tag and a fragment.** `tells` is prose *about* the
+   player ("said he would come the weekend") and cannot go in anyone's mouth. The
+   fragment is written as it will be said back ("you said you were coming saturday").
+2. **A memory is quoted back once.** Twice is nagging; once, weeks later, is the mechanic.
+3. **A memory nothing quotes is deleted, not kept.** An unread memory is the same waste as
+   an orphan clue, and the validator rejects both. Sixteen were dropped for this.
+4. **Act I's texture continues underneath.** Without it the world simply vanishes on day
+   21 and Act II reads as a different game rather than the same one with something wrong
+   in it. Seventy-one ordinary messages still arrive across days 21-40.
+
+**The cost, and it is real: the director is no longer a pure function of the seed.**
+Determinism is now *seed AND memory*. A bug report needs both to reproduce. The gate
+asserts the property in that form, and separately asserts that the same Act II day plays
+differently with and without memory — which is the mechanic existing at all.
+
+**Act I is unchanged and must stay so.** The gate asserts Act I quotes the player back
+exactly zero times. Twenty days of nothing being wrong is still the wall.

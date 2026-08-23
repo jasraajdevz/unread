@@ -13,7 +13,7 @@ const { ROOT, load } = require('./content.js');
 
 const content = load();
 const FROM = 1;
-const TO = 20;
+const TO = 40;
 
 let failures = 0;
 function check(label, fn) {
@@ -119,13 +119,14 @@ check('lastToldByRen is writable from day one: every act I day offers a reply', 
 });
 
 
-check('Act I ends silent: the last day still talks, and nobody answers', () => {
-  const last = Director.planRun(content, 'alpha', FROM, TO).slice(-1)[0];
-  assert.strictEqual(last.day, 20, 'the ladder ends at day 20');
-  assert.ok(last.messages > 0, 'day 20 is empty, not silent');
-  assert.strictEqual(last.replies, 0, 'day 20 still has ' + last.replies + ' replies');
-  console.log('        day 20: ' + last.messages + ' messages, ' + last.replies +
-              ' replies, ' + last.dropped + ' lines dropped for want of budget');
+check('Act I ends silent: day 20 still talks, and nobody answers', () => {
+  // day 20 by name, not "the last day" -- the ladder runs past it now.
+  const day20 = Director.planRun(content, 'alpha', FROM, TO).find((d) => d.day === 20);
+  assert.ok(day20, 'day 20 is in the ladder');
+  assert.ok(day20.messages > 0, 'day 20 is empty, not silent');
+  assert.strictEqual(day20.replies, 0, 'day 20 still has ' + day20.replies + ' replies');
+  console.log('        day 20: ' + day20.messages + ' messages, ' + day20.replies +
+              ' replies, ' + day20.dropped + ' lines dropped for want of budget');
 });
 check('the silence is the same conversations, shortened', () => {
   const run = Director.planRun(content, 'alpha', FROM, TO);
@@ -175,6 +176,91 @@ check('the supply is unbounded: every generated phase across five seeds is answe
     });
   });
   console.log('        ' + phases + ' generated phases, every one answerable');
+});
+
+console.log('\nAct II - recall');
+const gatedIds = new Set(content.templates.templates
+  .filter((t) => t.requiresMemory).map((t) => t.id));
+// by template, not by wording: Mom's authored beat-1 line "you said that about the last
+// one" is not the game quoting the player back.
+const recallOf = (d) => ['day', 'night']
+  .reduce((n, p) => n + d.phases[p]
+    .filter((e) => e.kind !== 'choice' && gatedIds.has(e.templateId)).length, 0);
+
+check('nothing is quoted back that the player never said', () => {
+  // an empty-memory run must produce no recall at all
+  const state = { flags: {}, fired: {}, memory: {}, spent: {} };
+  for (let day = 21; day <= TO; day++) {
+    const planned = Director.planDay(content, 'alpha', day, state);
+    ['day', 'night'].forEach((p) => planned.phases[p].forEach((e) => {
+      const gated = content.templates.templates
+        .find((t) => t.id === e.templateId && t.requiresMemory);
+      assert.ok(!gated, 'day ' + day + ' quoted ' + (gated && gated.requiresMemory) +
+        ' with no memory to quote');
+    }));
+  }
+});
+
+check('Act II quotes the player back, and Act I does not', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const actI = run.filter((d) => d.act === 1).reduce((n, d) => n + recallOf(d), 0);
+  const actII = run.filter((d) => d.act === 2).reduce((n, d) => n + recallOf(d), 0);
+  console.log('        recall lines: act I ' + actI + ', act II ' + actII);
+  assert.strictEqual(actI, 0, 'Act I quoted the player back ' + actI + ' times');
+  assert.ok(actII > 10, 'Act II only quotes the player ' + actII + ' times');
+});
+
+check('a memory is quoted back once, not repeatedly', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const seen = {};
+  run.forEach((d) => ['day', 'night'].forEach((p) => {
+    // one firing of a recall template is one quoting, however many lines it then says
+    const fired = new Set(d.phases[p]
+      .filter((e) => gatedIds.has(e.templateId)).map((e) => e.templateId));
+    fired.forEach((id) => {
+      const tag = content.templates.templates.find((x) => x.id === id).requiresMemory;
+      seen[tag] = (seen[tag] || 0) + 1;
+    });
+  }));
+  Object.keys(seen).forEach((tag) => {
+    assert.strictEqual(seen[tag], 1, 'memory ' + tag + ' quoted ' + seen[tag] + ' times');
+  });
+  console.log('        ' + Object.keys(seen).length + ' distinct memories quoted, each once');
+});
+
+check('the unknown number speaks again in Act II', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const lines = run.filter((d) => d.act === 2)
+    .reduce((n, d) => n + ['day', 'night']
+      .reduce((m, p) => m + d.phases[p]
+        .filter((e) => e.threadId === 't_unknown' && e.kind !== 'choice').length, 0), 0);
+  console.log('        the number says ' + lines + ' things in days 21-' + TO);
+  assert.ok(lines > 0, 'the unknown number never speaks in Act II');
+});
+
+check('Act I texture continues under Act II', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const mundane = run.filter((d) => d.act === 2).reduce((n, d) => n + ['day', 'night']
+    .reduce((m, p) => m + d.phases[p].filter((e) => {
+      const t = content.templates.templates.find((x) => x.id === e.templateId);
+      return t && !t.requiresMemory && e.kind !== 'choice';
+    }).length, 0), 0);
+  console.log('        ' + mundane + ' ordinary messages still arrive in Act II');
+  assert.ok(mundane > 10, 'the world vanishes in Act II: only ' + mundane + ' plain lines');
+});
+
+check('determinism survives: same seed AND same memory, same transcript', () => {
+  const mem = { visit_promised: 'you said you were coming saturday' };
+  const one = JSON.stringify(Director.planRun(content, 'alpha', FROM, TO, mem));
+  const two = JSON.stringify(Director.planRun(content, 'alpha', FROM, TO, mem));
+  assert.strictEqual(one, two);
+  const withMem = JSON.stringify(Director.planDay(content, 'alpha', 25,
+    { flags: {}, fired: {}, spent: {},
+      memory: { visit_promised: 'you said you were coming saturday' } }));
+  const without = JSON.stringify(Director.planDay(content, 'alpha', 25,
+    { flags: {}, fired: {}, spent: {}, memory: {} }));
+  assert.notStrictEqual(withMem, without,
+    'the same Act II day plays identically with and without memory');
 });
 
 console.log('\nD27 - clues');
