@@ -41,6 +41,17 @@ command -v python3 >/dev/null 2>&1 || PY=python
 command -v gh   >/dev/null 2>&1 || die "gh is not installed"
 command -v curl >/dev/null 2>&1 || die "curl is not installed"
 
+# A fresh clone inherits nothing, and this machine has no global identity: the source
+# repo carries its own. Borrow it, and fall back to the account gh is signed in as.
+GIT_NAME="$(git config user.name || true)"
+GIT_EMAIL="$(git config user.email || true)"
+if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
+  GH_LOGIN="$(gh api user -q '.login' 2>/dev/null)"
+  [ -n "$GH_LOGIN" ] || die "no git identity here and gh cannot say who you are"
+  GIT_NAME="${GIT_NAME:-$GH_LOGIN}"
+  GIT_EMAIL="${GIT_EMAIL:-$GH_LOGIN@users.noreply.github.com}"
+fi
+
 # ---------------------------------------------------------------------------
 say "the source tree"
 SHA="$(git rev-parse --short HEAD)"
@@ -89,9 +100,14 @@ else
     || die "cannot clone $MIRROR_REPO. Create it first, or set UNREAD_MIRROR_REPO."
 fi
 
-# Git on Windows would rewrite the served bytes to CRLF on checkout, and then the
-# live-file check below would fail against a file that is actually correct.
+# Git on Windows checks out LF blobs as CRLF, which makes every tracked file read as
+# modified and would make the byte comparison against the live site meaningless. Turn it
+# off, write the rule down, and re-materialise the working tree from the blobs before
+# anything is compared to anything.
+git -C "$MIRROR_DIR" config core.autocrlf false
+git -C "$MIRROR_DIR" config core.eol lf
 printf '* -text\n' > "$MIRROR_DIR/.gitattributes"
+git -C "$MIRROR_DIR" checkout -q --force -- . 2>/dev/null
 : > "$MIRROR_DIR/.nojekyll"
 cp "$BUILT" "$MIRROR_DIR/index.html"
 
@@ -107,7 +123,8 @@ else
     exit 0
   fi
   git -C "$MIRROR_DIR" add -A
-  git -C "$MIRROR_DIR" commit -q -m "Deploy $SHA — $SUBJECT" || die "the mirror commit failed"
+  git -C "$MIRROR_DIR" -c user.name="$GIT_NAME" -c user.email="$GIT_EMAIL" \
+      commit -q -m "Deploy $SHA — $SUBJECT" || die "the mirror commit failed"
   git -C "$MIRROR_DIR" push -q origin main || die "the push failed"
   note "pushed $(git -C "$MIRROR_DIR" rev-parse --short HEAD)"
   PUSHED=1
