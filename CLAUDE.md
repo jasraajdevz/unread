@@ -2,6 +2,12 @@
 Mobile horror game. iOS 17+, SwiftUI, Swift 5.9+. The player reads a stranger's
 messenger app. All narrative content is data, not code.
 
+**Read `DECISIONS.md` before this file.** It holds the rulings that are not derivable
+from the code -- what was decided, and why -- and it is append-only. This file says how
+to work; that file says what has already been settled. Do not re-litigate an entry in
+it, and do not edit one: reverse a decision by appending a new entry that names the one
+it supersedes.
+
 ## Absolute rules
 1. ZERO third-party dependencies. No SPM packages. If you want a package, stop and ask.
    (XcodeGen is a build-time tool, not a dependency of the app.)
@@ -32,12 +38,18 @@ messenger app. All narrative content is data, not code.
     Change both in the same commit or neither.
 15. If the local Xcode cannot build the current project format, say so and stop.
     Do not "fix" the project file. Regenerate it from project.yml.
+16. `Models/` may hold computed accessors that supply a Codable default -- `isLive`,
+    `beginsUnread`, and anything of that exact shape -- because synthesised `Codable`
+    does not apply Swift property defaults. That is the ONLY logic permitted there:
+    no formatting, no lookups, no derivation across types. See DECISIONS.md D2.
 
 ## File tree — the whole project
 project.yml                    the project; .xcodeproj is generated and gitignored
 CLAUDE.md
+DECISIONS.md                   append-only rulings; read before CLAUDE.md
 tools/
   validate_story.py            mirror of StoryValidationTests; see rule 14
+  beat_duration.py             counts messages + live playback; reports, never gates (--selftest)
   doctor.sh                    read-only; GREEN/AMBER/RED on whether this machine can build
 .github/workflows/
   gate.yml                     build + test + screenshots; the only source of "done"

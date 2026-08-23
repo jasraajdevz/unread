@@ -12,3 +12,7 @@ xcuserdata/
 *.xcscmblueprint
 *.xccheckout
 .DS_Store
+
+# Python bytecode from the tools/
+__pycache__/
+*.pyc

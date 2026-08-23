@@ -20,15 +20,29 @@ AUDIO_EXTENSIONS = ("m4a", "mp3", "wav", "caf", "aiff", "aif")
 MESSAGE_KINDS = ("text", "photo", "audio", "system")
 MESSAGE_SENDERS = ("them", "me", "system")
 
+# Phase 2b. Older versions are rejected outright; there is no migration path and none
+# should ever be added.
+
+# Rule 13: date dividers are derived by the renderer from calendar-day changes, never
+# authored. A system message whose body is a bare weekday name is a divider that came back.
+WEEKDAY_NAMES = frozenset([
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
+    "today", "yesterday", "tomorrow",
+])
+SCHEMA_VERSION = 3
+
 # Mirrors the Codable structs in Models/StoryModels.swift. A key listed as required
 # here is non-optional in Swift; decoding fails on either side if it is absent.
 SCHEMA = {
     "contact": {"required": {"id": str, "displayName": str, "accentHex": str},
                 "optional": {}},
-    "thread": {"required": {"id": str, "contactId": str, "startBeat": str, "pinned": bool},
-               "optional": {}},
-    "message": {"required": {"id": str, "from": str, "kind": str, "delayMs": int, "typingMs": int},
-                "optional": {"body": str, "asset": str, "durationMs": int}},
+    "thread": {"required": {"id": str, "displayName": str, "startBeat": str, "pinned": bool},
+               "optional": {"contactId": str, "participantIds": list, "startsUnread": bool}},
+    "message": {"required": {"id": str, "from": str, "kind": str, "offsetMinutes": int,
+                             "delayMs": int, "typingMs": int},
+                "optional": {"body": str, "asset": str, "durationMs": int,
+                             "live": bool, "fromContactId": str}},
     "choice": {"required": {"id": str, "label": str, "next": str},
                "optional": {"setsFlags": list}},
     "notification": {"required": {"afterSeconds": int, "title": str, "body": str, "resumeBeat": str},
@@ -149,14 +163,51 @@ class Validator:
             self.check_unique([c.get("id") for c in (beat.get("choices") or [])],
                               "choice in beat '%s'" % beat.get("id"))
 
-        # -- mirrors testEveryThreadContactExists / testEveryThreadStartBeatExists
+        # RULE 1 / RULE 14 -- schema version is exactly SCHEMA_VERSION; older files are
+        # rejected, never migrated. A v2 file fails here naming the phase that moved it on.
+        if story["version"] != SCHEMA_VERSION:
+            self.fail("root: version is %r, but only version %d is supported. Version 2 was "
+                      "superseded by Phase 2b, which added offsetMinutes and deleted authored "
+                      "date dividers; there is no migration path"
+                      % (story["version"], SCHEMA_VERSION))
+
+        threads_by_id = {t.get("id"): t for t in story["threads"]}
+
         for thread in story["threads"]:
-            if thread.get("contactId") not in contact_ids:
+            thread_id = thread.get("id")
+
+            # RULE 2 -- displayName is required and must carry something.
+            if not (thread.get("displayName") or "").strip():
+                self.fail("thread '%s' has an empty displayName" % thread_id)
+
+            # RULE 3 -- contactId, when present, resolves.
+            if "contactId" in thread and thread["contactId"] not in contact_ids:
                 self.fail("thread '%s' has contactId '%s', which is not a known contact"
-                          % (thread.get("id"), thread.get("contactId")))
+                          % (thread_id, thread["contactId"]))
+
+            # RULE 4 -- participantIds, when present, is non-empty, duplicate-free and resolves.
+            if "participantIds" in thread:
+                participants = thread["participantIds"]
+                if not participants:
+                    self.fail("thread '%s' has an empty participantIds; omit the key instead"
+                              % thread_id)
+                seen = set()
+                for participant in participants:
+                    if not isinstance(participant, str):
+                        self.fail("thread '%s' participantIds contains a non-string entry %r"
+                                  % (thread_id, participant))
+                        continue
+                    if participant in seen:
+                        self.fail("thread '%s' lists participant '%s' twice"
+                                  % (thread_id, participant))
+                    seen.add(participant)
+                    if participant not in contact_ids:
+                        self.fail("thread '%s' has participant '%s', which is not a known contact"
+                                  % (thread_id, participant))
+
             if thread.get("startBeat") not in beat_ids:
                 self.fail("thread '%s' has startBeat '%s', which is not a known beat"
-                          % (thread.get("id"), thread.get("startBeat")))
+                          % (thread_id, thread.get("startBeat")))
 
         for beat in story["beats"]:
             beat_id = beat.get("id")
@@ -191,6 +242,69 @@ class Validator:
                     self.fail("message '%s' in beat '%s' has from '%s', which is not one of %s"
                               % (message_id, beat_id, sender, ", ".join(MESSAGE_SENDERS)))
 
+                thread = threads_by_id.get(beat.get("threadId")) or {}
+                participants = thread.get("participantIds")
+                speaker = message.get("fromContactId")
+
+                # RULE 5 -- fromContactId, when present, resolves to a contact.
+                if speaker is not None and speaker not in contact_ids:
+                    self.fail("message '%s' in beat '%s' has fromContactId '%s', "
+                              "which is not a known contact" % (message_id, beat_id, speaker))
+
+                # RULE 6 -- fromContactId belongs to this thread, and only `them` may carry it.
+                if speaker is not None:
+                    if sender != "them":
+                        self.fail("message '%s' in beat '%s' is from '%s' but carries a "
+                                  "fromContactId; only 'them' messages name a speaker"
+                                  % (message_id, beat_id, sender))
+                    allowed = set(participants or [])
+                    if thread.get("contactId"):
+                        allowed.add(thread["contactId"])
+                    if allowed and speaker not in allowed:
+                        self.fail("message '%s' in beat '%s' names speaker '%s', who is not in "
+                                  "thread '%s' (%s)"
+                                  % (message_id, beat_id, speaker, thread.get("id"),
+                                     ", ".join(sorted(allowed)) or "no members"))
+
+                # RULE 7 -- the load-bearing one. A non-live message renders instantly, so a
+                # non-zero delay or typing time is dead data that silently misleads anyone
+                # reading the file or measuring it. Error, never a warning.
+                if message.get("live") is not True:
+                    for field in ("delayMs", "typingMs"):
+                        value = message.get(field, 0)
+                        # A wrong-typed value is already reported by the shape check; re-reporting
+                        # it here would crash on the format string and hide every later error.
+                        if not self.is_type(value, int):
+                            continue
+                        if value:
+                            self.fail("message '%s' in beat '%s' is not live but has %s %d; "
+                                      "history renders instantly, so it must be 0"
+                                      % (message_id, beat_id, field, value))
+
+                # RULE 8 -- in a multi-speaker thread every `them` message must name its speaker,
+                # otherwise the group chat renders as one person arguing with themselves.
+                if participants and sender == "them" and speaker is None:
+                    self.fail("message '%s' in beat '%s' is in multi-participant thread '%s' "
+                              "but has no fromContactId"
+                              % (message_id, beat_id, thread.get("id")))
+
+                # RULE 12 -- the future is only reachable live. This is what keeps beat 3
+                # honest: nothing may claim to be from the future unless it is actually
+                # arriving in the present.
+                offset = message.get("offsetMinutes")
+                if self.is_type(offset, int) and offset > 0 and message.get("live") is not True:
+                    self.fail("message '%s' in beat '%s' has offsetMinutes %d, which is in the "
+                              "future, but is not live" % (message_id, beat_id, offset))
+
+                # RULE 13 -- date dividers are derived by the renderer, never authored.
+                if kind == "system":
+                    label = (message.get("body") or "").strip().strip("-— ").lower()
+                    if label in WEEKDAY_NAMES:
+                        self.fail("message '%s' in beat '%s' is a system message whose body is "
+                                  "the bare day name %r; date dividers are derived from "
+                                  "offsetMinutes, not authored"
+                                  % (message_id, beat_id, message.get("body")))
+
                 # -- mirrors testEveryReferencedAssetIsInBundle
                 if kind in ("text", "system"):
                     if message.get("asset") is not None:
@@ -212,6 +326,46 @@ class Validator:
                     self.fail("asset '%s' referenced by message '%s' in beat '%s' is not in "
                               "Resources (tried extensions: %s)"
                               % (asset, message_id, beat_id, ", ".join(extensions)))
+
+        # RULE 10 -- within a beat, offsetMinutes is non-decreasing in message order.
+        for beat in story["beats"]:
+            previous = None
+            previous_id = None
+            for message in beat.get("messages", []):
+                offset = message.get("offsetMinutes")
+                if not self.is_type(offset, int):
+                    continue
+                if previous is not None and offset < previous:
+                    self.fail("message '%s' in beat '%s' has offsetMinutes %d, which is earlier "
+                              "than '%s' at %d immediately before it"
+                              % (message.get("id"), beat.get("id"), offset, previous_id, previous))
+                previous, previous_id = offset, message.get("id")
+
+        # RULE 11 -- across a thread's beats in reachable order, offsetMinutes is
+        # non-decreasing. Checked per edge, which stays well defined once beats branch.
+        beats_by_id = {b.get("id"): b for b in story["beats"]}
+
+        def offsets_of(beat):
+            return [m.get("offsetMinutes") for m in beat.get("messages", [])
+                    if self.is_type(m.get("offsetMinutes"), int)]
+
+        for beat in story["beats"]:
+            outgoing = [c.get("next") for c in (beat.get("choices") or [])]
+            notification = beat.get("notification")
+            if notification:
+                outgoing.append(notification.get("resumeBeat"))
+            here = offsets_of(beat)
+            if not here:
+                continue
+            for target_id in outgoing:
+                target = beats_by_id.get(target_id)
+                if target is None:
+                    continue
+                there = offsets_of(target)
+                if there and there[0] < here[-1]:
+                    self.fail("beat '%s' ends at offsetMinutes %d but leads to beat '%s' which "
+                              "starts at %d, going backwards in time"
+                              % (beat.get("id"), here[-1], target_id, there[0]))
 
         # -- mirrors testEveryEndingBeatExists
         for ending in story["endings"]:

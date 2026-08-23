@@ -36,8 +36,9 @@ info "uname: $UNAME"
 if [ "$UNAME" != "Darwin" ]; then
   bad "Not macOS. Xcode, the iOS SDK and simulators do not exist here."
   info "This is expected on the Windows authoring machine."
-  NEXT='gh repo create unread --private --source=. --push   # CI is your only build gate'
-  note "On a non-Mac host the CI gate is mandatory, not optional."
+  NEXT='# Nothing further runs here. On the Mac, in the unread folder:
+  bash tools/doctor.sh'
+  note "D13: the local Mac build is the primary route. This host can only author."
   # Still run the parts that do work off-Mac.
   head_ "Repo sanity (host-independent)"
   if [ -f project.yml ]; then ok "project.yml present"; else bad "project.yml missing"; fi
@@ -175,13 +176,18 @@ head_ "Build tooling"
 if command -v xcodegen >/dev/null 2>&1; then
   ok "xcodegen $(xcodegen --version 2>/dev/null | head -1)"
 else
-  warn "xcodegen not installed (CI installs its own; only needed for local builds)"
-  note "Install locally with: brew install xcodegen"
+  warn "xcodegen not installed -- required for the local build (D13)"
+  note "Install with: brew install xcodegen"
 fi
 command -v python3 >/dev/null 2>&1 && ok "python3 $(python3 -V 2>&1 | awk '{print $2}')" \
                                    || bad "python3 missing -- the story validator cannot run"
-command -v gh >/dev/null 2>&1 && ok "gh $(gh --version 2>/dev/null | head -1 | awk '{print $3}')" \
-                              || warn "gh not installed -- needed once, to create the private repo"
+# D13 made gh optional: the local build is the primary route. Demoting a buildable Mac to
+# AMBER over a missing gh would change the printed next command for no reason.
+if command -v gh >/dev/null 2>&1; then
+  ok "gh $(gh --version 2>/dev/null | head -1 | awk '{print $3}')"
+else
+  info "gh not installed -- optional since D13; only the CI fallback route needs it"
+fi
 
 # ------------------------------------------------------------ 5. repo state --
 head_ "Repo sanity"
@@ -208,7 +214,7 @@ if [ -z "$NEXT" ]; then
     GREEN)
       NEXT='brew install xcodegen && xcodegen generate && xcodebuild -project Unread.xcodeproj -scheme Unread -destination "platform=iOS Simulator,name='"${FIRST:-iPhone 16}"'" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build test' ;;
     AMBER)
-      NEXT='gh repo create unread --private --source=. --push   # then read the gate log before building locally' ;;
+      NEXT='brew install xcodegen && xcodegen generate && xcodebuild -project Unread.xcodeproj -scheme Unread -destination "platform=iOS Simulator,name='"${FIRST:-iPhone 16}"'" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build test' ;;
     RED)
       if [ "$HAS_FULL_XCODE" -eq 0 ]; then
         NEXT='# Install Xcode.app from the App Store, then:
@@ -216,7 +222,8 @@ if [ -z "$NEXT" ]; then
   sudo xcodebuild -license accept
   xcodebuild -runFirstLaunch'
       else
-        NEXT='gh repo create unread --private --source=. --push   # this Mac cannot build UNREAD; CI must'
+        NEXT='# This Mac cannot build UNREAD locally, so CI is the fallback route:
+  gh auth refresh -h github.com -s workflow && gh repo create unread --private --source=. --push'
       fi
       ;;
   esac

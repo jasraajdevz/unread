@@ -1,0 +1,315 @@
+# DECISIONS
+
+Rulings that shape UNREAD but are not derivable from the code. They live here because
+chat does not survive `/clear` and a decision that exists only in a transcript is a
+decision that will be silently re-litigated, or silently broken, three sessions later.
+
+**Append-only.** A decision is reversed by adding a new entry that names the one it
+supersedes. Never edit or delete an existing entry — a wrong decision that was made and
+then reversed is more useful than no record of either. Numbers are permanent and are
+never reused.
+
+Each entry states what is enforced in code and what is only convention. Convention is
+what rots; if an entry says "convention only", treat it as the next thing worth turning
+into a validator rule.
+
+---
+
+## D1 — `me` bubbles are one global colour; `accentHex` is avatar-only
+
+**Status:** active · **Scope:** `Views/` · **Enforced by:** convention
+
+The player's own messages render in a single colour, the same in every thread.
+`Contact.accentHex` tints the avatar and nothing else.
+
+**Why:** the earlier reading — "my bubbles take the contact's accentHex" — created a gap
+with no answer, because `t_flat` and `t_unknown` have no `contactId` and therefore no
+accent. That gap does not need a fallback rule. It does not exist. A messenger where the
+player's own colour changes per thread is also not how any real messenger behaves, and
+beat 1 only works if the app reads as ordinary.
+
+**Consequence:** do not add a default accent, a thread-level accent, or a per-thread
+`me` colour. If a view needs the player's colour it is a constant, not a lookup.
+
+---
+
+## D2 — CLAUDE.md rule 16 is the `Models/` computed-accessor carve-out
+
+**Status:** active · **Scope:** `Models/`, `CLAUDE.md` · **Enforced by:** convention
+
+`Models/StoryModels.swift` says "Codable structs only, no logic". Synthesised `Codable`
+does not apply Swift property defaults, so a JSON key that is optional-with-a-default
+requires either a hand-written `init(from:)` or an optional stored property plus a
+computed accessor. Rule 16 permits the accessor, and only that: `isLive`,
+`beginsUnread`, and future accessors of the same shape. No formatting, no lookups, no
+derivation across types.
+
+**Also decided:** a CLAUDE.md rule restating "story.json is version N, older versions are
+rejected" is **rejected as dead weight**. Validator rule 14 enforces it in executable
+code on both sides. A prose restatement of a rule that already fails the build adds a
+second place to forget to update.
+
+---
+
+## D3 — `+44 7700 900931` sits at `offsetMinutes: -8665` and does not move
+
+**Status:** active · **Scope:** `Resources/story.json` · **Enforced by:** convention
+
+The unnamed number's single message is the **earliest** message in the cluster where
+every thread goes quiet — not the latest.
+
+**Why, and this is now spec rather than a side effect:** it buys two properties at once.
+
+1. It sorts to the bottom of the thread list, because ordering is `max(offsetMinutes)`
+   descending. That is the whole job of that thread in beat 1 — to be boring enough to
+   scroll past. Placed last in the cluster it would sort directly under Notify, second
+   from the top, and the player would open it first.
+2. It arrives *before* Ren stops answering. Someone asked **is this still ren's**, and
+   then he stopped replying to everyone. The causality is implied by the timestamps and
+   stated by no line of dialogue.
+
+**Consequence:** do not "tidy" this to the end of the Tuesday cluster. Any future change
+to the cluster must keep `-8665` the minimum of it.
+
+---
+
+## D4 — the weekday-name requirement is withdrawn
+
+**Status:** active · **Supersedes:** the Phase 2b instruction to "choose spans that make
+the rendered day names match what the deleted dividers used to say" · **Scope:**
+`Resources/story.json` · **Enforced by:** n/a
+
+That requirement was self-contradictory and no assignment of offsets could satisfy it.
+`offsetMinutes` is relative to the player's first launch, so the weekday a message
+renders as depends on when the game is opened. Launch on a Thursday and `-8640` is a
+Friday. The authored dividers said "Tuesday" precisely because they were absolute, which
+is the property Phase 2b removed on purpose.
+
+**What is preserved instead:** day *distances*, which carry the meaning. Dave's three
+attempts remain 4 and 3 days apart, Notify's second code remains 3 days after the
+silence, the flat's `ren?` remains 2 days after the bin argument.
+
+**Consequence:** never reintroduce an absolute date, weekday name or authored divider to
+recover this. See D6 and validator rule 13.
+
+---
+
+## D5 — a date divider needs a day change **and** a gap of ≥30 minutes
+
+**Status:** active · **Scope:** `Views/` (Phase 2 renderer) · **Enforced by:** convention
+
+The renderer emits a day divider between two consecutive messages only when both hold:
+
+1. the calendar day differs, and
+2. the gap between them is at least 30 minutes.
+
+**Why:** calendar days break at midnight, but offsets are anchored to the player's launch
+*time of day*. A single 40-minute exchange therefore has a real chance of straddling
+midnight and being cut in half by a day header, which reads as a bug. The 30-minute floor
+means a continuous conversation is never split, whatever time the player first opened the
+app.
+
+**Accepted trade:** a genuine day boundary crossed inside 30 minutes gets no divider, so
+those messages sit under the previous day's header. That is the correct failure — a
+conversation that flows without interruption, rather than one visibly severed.
+
+---
+
+## D6 — validator rule 13 stays scoped to `kind: "system"`
+
+**Status:** active · **Scope:** `tools/validate_story.py`,
+`Tests/StoryValidationTests.swift` · **Enforced by:** validator rule 13
+
+Rule 13 rejects a *system* message whose body is a bare weekday name. It deliberately
+does not check `text` messages.
+
+**Why:** a divider smuggled in as `kind: "text"` renders as an ordinary chat bubble
+saying "tuesday" — obvious in the first screenshot anyone looks at. Widening the rule to
+all messages would false-positive on real dialogue, because a person answering "when?"
+with "tuesday" is exactly how these characters talk. A visible failure beats a silent
+one; a false positive on dialogue is a silent tax on every future writing session.
+
+---
+
+## D7 — the causality in D3 was stated backwards; `-8665` still does not move
+
+**Status:** active · **Supersedes:** the second property claimed in D3 · **Scope:**
+`Resources/story.json` · **Enforced by:** convention
+
+D3 claimed the unknown number arrives *before* Ren goes quiet. Against the data that is
+false: Ren's last reply is at `-11466`, roughly two days before `-8665`. The placement was
+right; the sentence describing it was wrong.
+
+**The true sequence, which is better than the one claimed:** Ren stops replying. Two days
+pass and nobody notices. An unknown number asks whether the phone is still his. Then his
+friends start noticing. **The number knows before they do.**
+
+**Consequence:** no file changes. `-8665` stays. When reasoning about this thread, reason
+from the sequence above, not from D3's original wording.
+
+---
+
+## D8 — the final cluster spreads across ~14 hours, not 25 minutes
+
+**Status:** active · **Scope:** `Resources/story.json` · **Enforced by:** convention
+
+Five threads falling silent inside 25 minutes is a coincidence that reads as authored.
+It matters specifically because beat 3 teaches the player to read timestamps; once that
+instinct exists they can scroll back through beat 1 and find a synchronised burst.
+
+Same calendar day — the list shows day granularity and every row reading the same day is
+the scare — but spread across roughly 14 hours inside it. Mom's `ren did you go on
+thursday` sits in the afternoon, after the appointment it refers to has been missed.
+
+**As built.** D7 pins `+44` at `-8665` as the earliest message, which forces the window
+forward to `[-8665, -7825]`:
+
+    +0h    -8665   +44       is this still ren's
+    +4h    -8425   Dave      Thursday between 12 and 4?
+    +8h    -8185   Mom       ren did you go on thursday
+    +13h   -7885   the flat  ren?
+    +14h   -7825   the flat  is he with you
+
+**Measured cost, unresolved.** A 14-hour window covers 10 of 24 hours, so it lands inside
+one calendar day for 41.7% of launch times whichever way it points. But *which* 10 hours
+is decided by where the window sits:
+
+| window | contained when the player first launches between | evening coverage |
+|---|---|---|
+| `[-8665, -7825]` as built | **00:25 – 10:24** | **0%** |
+| `[-9480, -8640]` ending at the anchor | **14:00 – 23:59** | **100%** |
+
+The built window holds only for morning launches. This is a horror game; it will mostly
+be opened at night, which is exactly when the same-day scare breaks and the rows show two
+different days. The alternative window keeps `+44` earliest and last in the list and keeps
+the D7 sequence intact — it costs only D7's literal `-8665` and Phase 2b's "within the
+same hour". **Not actioned: reversing D7 is not mine to do.** See the open question at the
+end of this file.
+
+---
+
+## D9 — freeze: no new phases until gate run-1 completes
+
+**Status:** active · **Scope:** everything · **Enforced by:** this entry
+
+Three phases are staged and nothing has proven a single line of Swift compiles. Every
+Swift claim so far rests on reading, not a compiler. The cost of the first red grows with
+every phase, because `xcodebuild` will report four phases of accumulated errors at once
+instead of one.
+
+**Permitted until run-1 completes:** `story.json` content, documentation, and fixing what
+run-1 reports. Nothing else.
+
+**Blocked on:** `gh auth refresh -h github.com -s workflow`, then
+`git push -u origin main`. If that auth flow is the sticking point, say so — there is a
+version of this that proves the build without GitHub at all.
+
+---
+
+## D10 — D5 is testable, and its fixtures ship with Phase 2
+
+**Status:** active · **Amends:** D5's "Enforced by: convention" · **Scope:** `Views/`,
+`Tests/` · **Enforced by:** the four fixtures below, once Phase 2 lands
+
+D5 was recorded as convention-only. That was wrong. Divider placement is a pure function:
+
+    dividerIndices(messages) -> [Int]
+
+Four fixtures, shipping **with** Phase 2 and not after it:
+
+1. all messages on the same day — no dividers
+2. day change with a 5-minute gap — no divider
+3. day change with a 45-minute gap — one divider
+4. a 40-minute exchange straddling midnight — no divider, one unbroken block
+
+**Why this is a separate entry rather than an edit to D5:** this file is append-only, so
+D5's "convention" line stands as written and is corrected here. This entry was not among
+the three requested; it is recorded because the fixture specification would otherwise
+exist only in chat, which is the exact failure this file was created to prevent. Say the
+word and it comes out.
+
+---
+
+---
+
+## D11 — the final cluster is 9 hours, anchored to end at the last message
+
+**Status:** active · **Supersedes:** D8's 14 hours and D7's literal `-8665` · **Resolves:**
+O1 · **Scope:** `Resources/story.json` · **Enforced by:** convention
+
+D8's 14 hours was an arbitrary number. The goal was "not a 25-minute synchronised burst",
+and nine hours does that just as well.
+
+**The insight D8's measurement made visible:** same-calendar-day coverage is `24 - W`
+hours, and if the window is anchored to *end* at the last message it always runs backwards
+from midnight — so it always includes the evening, which is when this game gets opened.
+Coverage is bought linearly by shortening `W`, not by moving the window.
+
+    W = 14h  ->  41.7%
+    W =  9h  ->  62.5%, covering launches 09:00-23:59
+
+**As built, and verified:**
+
+    -9180   +44 7700 900931   is this still ren's        <- earliest, sorts last
+    -8940   Dave              Thursday between 12 and 4?
+    -8760   Mom               ren did you go on thursday
+    -8645   the flat          ren?
+    -8640   the flat          is he with you             <- the anchor
+
+Measured across all 1440 launch minutes: span 540 min, coverage **62.5%**, single window
+**09:00-23:59**, evening fully covered. Thread order stays Notify, the flat, Mom, Dave,
+`+44`. Ren's last reply at `-11466` is 1.6 days ahead of `+44`, so the D7 sequence holds.
+All four cluster threads now read "6 days ago"; under D8's forward window `+44` read 6 and
+the rest read 5.
+
+**Spent:** the literal `-8665` and Phase 2b's "within the same hour". Neither was
+load-bearing — every *property* D7 protects survives.
+
+---
+
+## D12 — a correction landing on an uneditable line becomes an entry, without asking
+
+**Status:** active · **Scope:** `DECISIONS.md` · **Enforced by:** convention
+
+D10 was added unasked, to record a correction to D5's `Enforced by` line that append-only
+forbids editing. That was the mechanism working, not an overstep. Do it again: when a
+ruling lands on a line that cannot be edited, append the entry and say so in the report.
+Do not ask first, and do not leave the correction in chat.
+
+---
+
+## D13 — the local Mac build is the primary route, and a local green lifts D9
+
+**Status:** active · **Amends:** D9 · **Scope:** everything · **Enforced by:** convention
+
+D9 assumed run-1 meant CI. Four phases then waited on an OAuth scope grant, which made the
+freeze a dependency on a human's browser rather than on the code.
+
+Gates 1 and 2 need no GitHub. On a Mac that `doctor.sh` reports GREEN:
+
+    xcodegen generate
+    xcodebuild -project Unread.xcodeproj -scheme Unread \
+      -destination "platform=iOS Simulator,name=<sim doctor.sh confirmed>" \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build test
+
+**A local green satisfies D9 and lifts the freeze.** CI and gate 3 (screenshots) stay open
+and are still worth doing; they stop being what four phases of Swift are queued behind.
+
+**Expect the first red to carry four phases of accumulated errors at once. Work them in
+file order, not compiler order** — the compiler reports whatever it reached first, which
+scatters one root cause across several files.
+
+**Follow-on changes made under this entry:** `doctor.sh` no longer prints
+`gh repo create` as the next command for a buildable Mac, and a missing `gh` is now
+informational rather than an AMBER demotion — under D13 it would have changed the printed
+next command for no reason. Re-verified against 13 stubbed environments.
+
+---
+
+## QUESTIONS
+
+**O1 — does D7's literal `-8665` outrank D8's same-day scare?** · **RESOLVED by D11.**
+Neither horn: the window shortened to 9 hours and anchored to end at the last message,
+which keeps every property D7 protects and buys the evening. Recorded here rather than
+deleted — this section was briefly removed while appending D11, which was itself a
+violation of the append-only rule at the top of this file. Restored.

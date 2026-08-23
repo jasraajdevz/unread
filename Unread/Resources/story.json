@@ -1,49 +1,810 @@
 {
-  "version": 1,
+  "version": 3,
   "contacts": [
-    { "id": "c_placeholder", "displayName": "[placeholder]", "accentHex": "#7A8B99" }
+    {
+      "id": "c_mom",
+      "displayName": "Mom",
+      "accentHex": "#7A8B99"
+    },
+    {
+      "id": "c_sam",
+      "displayName": "sam",
+      "accentHex": "#8A8577"
+    },
+    {
+      "id": "c_priya",
+      "displayName": "priya",
+      "accentHex": "#7E8A80"
+    },
+    {
+      "id": "c_dave",
+      "displayName": "Dave",
+      "accentHex": "#6F7F76"
+    },
+    {
+      "id": "c_notify",
+      "displayName": "Notify",
+      "accentHex": "#8A8A8A"
+    }
   ],
   "threads": [
-    { "id": "t_placeholder", "contactId": "c_placeholder", "startBeat": "b_placeholder_1", "pinned": false }
+    {
+      "id": "t_mom",
+      "displayName": "Mom",
+      "startBeat": "b_mom_1",
+      "pinned": false,
+      "contactId": "c_mom",
+      "startsUnread": true
+    },
+    {
+      "id": "t_flat",
+      "displayName": "the flat",
+      "startBeat": "b_flat_1",
+      "pinned": false,
+      "participantIds": [
+        "c_sam",
+        "c_priya"
+      ],
+      "startsUnread": true
+    },
+    {
+      "id": "t_dave",
+      "displayName": "Dave",
+      "startBeat": "b_dave_1",
+      "pinned": false,
+      "contactId": "c_dave"
+    },
+    {
+      "id": "t_notify",
+      "displayName": "Notify",
+      "startBeat": "b_notify_1",
+      "pinned": false,
+      "contactId": "c_notify"
+    },
+    {
+      "id": "t_unknown",
+      "displayName": "+44 7700 900931",
+      "startBeat": "b_unknown_1",
+      "pinned": false
+    }
   ],
   "beats": [
     {
-      "id": "b_placeholder_1",
-      "threadId": "t_placeholder",
+      "id": "b_mom_1",
+      "threadId": "t_mom",
       "messages": [
-        { "id": "m1", "from": "them", "kind": "text",   "body": "[placeholder]",
-          "delayMs": 0,    "typingMs": 1400 },
-        { "id": "m2", "from": "them", "kind": "photo",  "asset": "hall_01",
-          "delayMs": 3000, "typingMs": 0 },
-        { "id": "m3", "from": "them", "kind": "audio",  "asset": "vm_01",
-          "durationMs": 7000, "delayMs": 2000, "typingMs": 0 }
-      ],
-      "setsFlags": ["saw_placeholder"],
-      "requiresFlags": [],
-      "choices": [
-        { "id": "c1", "label": "[placeholder]", "next": "b_placeholder_2", "setsFlags": ["replied_placeholder"] },
-        { "id": "c2", "label": "[placeholder]", "next": "b_placeholder_2", "setsFlags": [] }
-      ],
-      "notification": {
-        "afterSeconds": 1200,
-        "title": "[placeholder]",
-        "body": "[placeholder]",
-        "resumeBeat": "b_placeholder_2"
-      }
+        {
+          "id": "m_mom_them_01",
+          "from": "them",
+          "kind": "text",
+          "body": "did you ring the dentist",
+          "offsetMinutes": -17280,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_02",
+          "from": "them",
+          "kind": "text",
+          "body": "ren",
+          "offsetMinutes": -17278,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_03",
+          "from": "me",
+          "kind": "text",
+          "body": "yeah",
+          "offsetMinutes": -17275,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_04",
+          "from": "them",
+          "kind": "text",
+          "body": "what did they say",
+          "offsetMinutes": -17272,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_05",
+          "from": "me",
+          "kind": "text",
+          "body": "14th",
+          "offsetMinutes": -17271,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_06",
+          "from": "them",
+          "kind": "text",
+          "body": "thats a thursday",
+          "offsetMinutes": -17269,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_07",
+          "from": "me",
+          "kind": "text",
+          "body": "yeah",
+          "offsetMinutes": -17268,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_08",
+          "from": "them",
+          "kind": "text",
+          "body": "youre working thursday",
+          "offsetMinutes": -17267,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_09",
+          "from": "me",
+          "kind": "text",
+          "body": "ill sort it",
+          "offsetMinutes": -17265,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_10",
+          "from": "them",
+          "kind": "text",
+          "body": "you said that about the last one",
+          "offsetMinutes": -17263,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_11",
+          "from": "me",
+          "kind": "text",
+          "body": "mum",
+          "offsetMinutes": -17260,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_12",
+          "from": "them",
+          "kind": "text",
+          "body": "alright",
+          "offsetMinutes": -17258,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_13",
+          "from": "them",
+          "kind": "text",
+          "body": "is the car still making the noise",
+          "offsetMinutes": -17257,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_14",
+          "from": "me",
+          "kind": "text",
+          "body": "which noise",
+          "offsetMinutes": -17255,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_15",
+          "from": "them",
+          "kind": "text",
+          "body": "the one from before",
+          "offsetMinutes": -17253,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_16",
+          "from": "me",
+          "kind": "text",
+          "body": "no",
+          "offsetMinutes": -17250,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_17",
+          "from": "them",
+          "kind": "text",
+          "body": "ok",
+          "offsetMinutes": -17247,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_18",
+          "from": "them",
+          "kind": "text",
+          "body": "dad says put the blue oil in not the grey one",
+          "offsetMinutes": -17245,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_19",
+          "from": "me",
+          "kind": "text",
+          "body": "theres no blue one",
+          "offsetMinutes": -17242,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_20",
+          "from": "them",
+          "kind": "text",
+          "body": "theres a blue one",
+          "offsetMinutes": -17239,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_me_21",
+          "from": "me",
+          "kind": "text",
+          "body": "ok",
+          "offsetMinutes": -17238,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_mom_them_22",
+          "from": "them",
+          "kind": "text",
+          "body": "ren did you go on thursday",
+          "offsetMinutes": -8760,
+          "delayMs": 0,
+          "typingMs": 0
+        }
+      ]
     },
     {
-      "id": "b_placeholder_2",
-      "threadId": "t_placeholder",
+      "id": "b_flat_1",
+      "threadId": "t_flat",
       "messages": [
-        { "id": "m4", "from": "me",     "kind": "text",   "body": "[placeholder]",
-          "delayMs": 0,    "typingMs": 0 },
-        { "id": "m5", "from": "system", "kind": "system", "body": "[placeholder]",
-          "delayMs": 1500, "typingMs": 0 }
-      ],
-      "requiresFlags": ["saw_placeholder"]
+        {
+          "id": "m_flat_sam_01",
+          "from": "them",
+          "kind": "text",
+          "body": "whos bin week is it",
+          "offsetMinutes": -11520,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_sam_02",
+          "from": "them",
+          "kind": "text",
+          "body": "i genuinely cannot keep track",
+          "offsetMinutes": -11518,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_03",
+          "from": "them",
+          "kind": "text",
+          "body": "yours",
+          "offsetMinutes": -11516,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_04",
+          "from": "them",
+          "kind": "text",
+          "body": "it is NOT mine",
+          "offsetMinutes": -11514,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_05",
+          "from": "them",
+          "kind": "text",
+          "body": "it is",
+          "offsetMinutes": -11512,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_06",
+          "from": "them",
+          "kind": "text",
+          "body": "i did it two weeks ago",
+          "offsetMinutes": -11510,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_07",
+          "from": "them",
+          "kind": "text",
+          "body": "two weeks ago is when it was yours",
+          "offsetMinutes": -11508,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_08",
+          "from": "me",
+          "kind": "text",
+          "body": "its mine",
+          "offsetMinutes": -11506,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_09",
+          "from": "them",
+          "kind": "text",
+          "body": "see",
+          "offsetMinutes": -11505,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_10",
+          "from": "them",
+          "kind": "text",
+          "body": "thats not a see",
+          "offsetMinutes": -11504,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_11",
+          "from": "me",
+          "kind": "text",
+          "body": "ill do it",
+          "offsetMinutes": -11502,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_priya_12",
+          "from": "them",
+          "kind": "text",
+          "body": "sam what did the rota actually say",
+          "offsetMinutes": -11501,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_13",
+          "from": "them",
+          "kind": "text",
+          "body": "there was a rota",
+          "offsetMinutes": -11500,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_14",
+          "from": "them",
+          "kind": "text",
+          "body": "there was a rota?",
+          "offsetMinutes": -11499,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_15",
+          "from": "them",
+          "kind": "text",
+          "body": "i made it in october",
+          "offsetMinutes": -11498,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_16",
+          "from": "them",
+          "kind": "text",
+          "body": "october",
+          "offsetMinutes": -11496,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_17",
+          "from": "them",
+          "kind": "text",
+          "body": "it was laminated",
+          "offsetMinutes": -11494,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_sam_18",
+          "from": "them",
+          "kind": "text",
+          "body": "ren settle this",
+          "offsetMinutes": -11492,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_19",
+          "from": "them",
+          "kind": "text",
+          "body": "ren whose week is it",
+          "offsetMinutes": -11491,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_20",
+          "from": "me",
+          "kind": "text",
+          "body": "its mine",
+          "offsetMinutes": -11490,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_21",
+          "from": "them",
+          "kind": "text",
+          "body": "he already said that",
+          "offsetMinutes": -11489,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_22",
+          "from": "them",
+          "kind": "text",
+          "body": "i know what he said",
+          "offsetMinutes": -11487,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_23",
+          "from": "them",
+          "kind": "text",
+          "body": "then why did you ask him",
+          "offsetMinutes": -11486,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_24",
+          "from": "them",
+          "kind": "text",
+          "body": "theres a parcel for you btw its behind the door",
+          "offsetMinutes": -11484,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_25",
+          "from": "me",
+          "kind": "text",
+          "body": "whos is it",
+          "offsetMinutes": -11482,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_priya_26",
+          "from": "them",
+          "kind": "text",
+          "body": "yours",
+          "offsetMinutes": -11480,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_27",
+          "from": "me",
+          "kind": "text",
+          "body": "i didnt order anything",
+          "offsetMinutes": -11479,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_priya_28",
+          "from": "them",
+          "kind": "text",
+          "body": "well its got your name on it",
+          "offsetMinutes": -11477,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_me_29",
+          "from": "me",
+          "kind": "text",
+          "body": "ok",
+          "offsetMinutes": -11476,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_30",
+          "from": "them",
+          "kind": "text",
+          "body": "did you leave the light on out front again",
+          "offsetMinutes": -11474,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_me_31",
+          "from": "me",
+          "kind": "text",
+          "body": "no",
+          "offsetMinutes": -11472,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_32",
+          "from": "them",
+          "kind": "text",
+          "body": "its been on all night",
+          "offsetMinutes": -11470,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_me_33",
+          "from": "me",
+          "kind": "text",
+          "body": "its on a sensor",
+          "offsetMinutes": -11469,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_34",
+          "from": "them",
+          "kind": "text",
+          "body": "its been ON. all night.",
+          "offsetMinutes": -11468,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_me_35",
+          "from": "me",
+          "kind": "text",
+          "body": "then somethings setting it off",
+          "offsetMinutes": -11466,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_flat_sam_36",
+          "from": "them",
+          "kind": "text",
+          "body": "cool. love that.",
+          "offsetMinutes": -11464,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_37",
+          "from": "them",
+          "kind": "text",
+          "body": "foxes",
+          "offsetMinutes": -11462,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_38",
+          "from": "them",
+          "kind": "text",
+          "body": "sure",
+          "offsetMinutes": -11461,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        },
+        {
+          "id": "m_flat_priya_39",
+          "from": "them",
+          "kind": "text",
+          "body": "ren?",
+          "offsetMinutes": -8645,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_priya"
+        },
+        {
+          "id": "m_flat_sam_40",
+          "from": "them",
+          "kind": "text",
+          "body": "is he with you",
+          "offsetMinutes": -8640,
+          "delayMs": 0,
+          "typingMs": 0,
+          "fromContactId": "c_sam"
+        }
+      ]
+    },
+    {
+      "id": "b_dave_1",
+      "threadId": "t_dave",
+      "messages": [
+        {
+          "id": "m_dave_them_01",
+          "from": "them",
+          "kind": "text",
+          "body": "Hi Ren, can do Thursday between 12 and 4 for the boiler.",
+          "offsetMinutes": -18720,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_me_02",
+          "from": "me",
+          "kind": "text",
+          "body": "im at work thursday",
+          "offsetMinutes": -18709,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_03",
+          "from": "them",
+          "kind": "text",
+          "body": "Ok",
+          "offsetMinutes": -18703,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_04",
+          "from": "them",
+          "kind": "text",
+          "body": "Friday between 12 and 4?",
+          "offsetMinutes": -18686,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_me_05",
+          "from": "me",
+          "kind": "text",
+          "body": "same",
+          "offsetMinutes": -18679,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_06",
+          "from": "them",
+          "kind": "text",
+          "body": "I'll see what I can do",
+          "offsetMinutes": -18673,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_07",
+          "from": "them",
+          "kind": "text",
+          "body": "Sorry Ren — Thursday between 12 and 4?",
+          "offsetMinutes": -12960,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_me_08",
+          "from": "me",
+          "kind": "text",
+          "body": "dave",
+          "offsetMinutes": -12945,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_09",
+          "from": "them",
+          "kind": "text",
+          "body": "Ok",
+          "offsetMinutes": -12932,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_dave_them_10",
+          "from": "them",
+          "kind": "text",
+          "body": "Thursday between 12 and 4?",
+          "offsetMinutes": -8940,
+          "delayMs": 0,
+          "typingMs": 0
+        }
+      ]
+    },
+    {
+      "id": "b_notify_1",
+      "threadId": "t_notify",
+      "messages": [
+        {
+          "id": "m_notify_them_01",
+          "from": "them",
+          "kind": "text",
+          "body": "Your verification code is 4417. Never share this code.",
+          "offsetMinutes": -10080,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_notify_them_02",
+          "from": "them",
+          "kind": "text",
+          "body": "Your verification code is 8830. Never share this code.",
+          "offsetMinutes": -4320,
+          "delayMs": 0,
+          "typingMs": 0
+        }
+      ]
+    },
+    {
+      "id": "b_unknown_1",
+      "threadId": "t_unknown",
+      "messages": [
+        {
+          "id": "m_unknown_them_01",
+          "from": "them",
+          "kind": "text",
+          "body": "is this still ren's",
+          "offsetMinutes": -9180,
+          "delayMs": 0,
+          "typingMs": 0
+        }
+      ]
     }
   ],
-  "endings": [
-    { "id": "e_placeholder", "requiresFlags": ["replied_placeholder"], "beatId": "b_placeholder_2" }
-  ]
+  "endings": []
 }
