@@ -1,96 +1,90 @@
 # UNREAD
-Mobile horror game. iOS 17+, SwiftUI, Swift 5.9+. The player reads a stranger's
-messenger app. All narrative content is data, not code.
+Web horror game. The player opens what looks like a stranger's messaging app and reads
+their threads. All narrative content is data, not code.
 
 **Read `DECISIONS.md` before this file.** It holds the rulings that are not derivable
-from the code -- what was decided, and why -- and it is append-only. This file says how
-to work; that file says what has already been settled. Do not re-litigate an entry in
-it, and do not edit one: reverse a decision by appending a new entry that names the one
-it supersedes.
+from the code — what was decided, and why — and it is append-only. This file says how to
+work; that file says what has already been settled. Do not re-litigate an entry in it,
+and do not edit one: reverse a decision by appending a new entry that names the one it
+supersedes.
+
+The native build is deferred, not cancelled. See D18 for the three things that must stay
+portable, and for the instruction not to pay more than that.
 
 ## Absolute rules
-1. ZERO third-party dependencies. No SPM packages. If you want a package, stop and ask.
-   (XcodeGen is a build-time tool, not a dependency of the app.)
-2. All story text, contact names, message bodies, choice labels and timings live in
-   `Resources/story.json`. NO story text in any .swift file, including tests, previews
-   and placeholder strings. Use `"[placeholder]"` if you need a literal.
-3. When fixing code, do not edit story.json. When editing story, do not touch .swift files.
-   If a task seems to need both, stop and tell me why.
+1. ZERO third-party runtime dependencies. The shipped artifact is one HTML file that
+   loads nothing but a Google Font. Playwright is a test tool and is never shipped.
+   If you want a runtime package, stop and ask.
+2. All story text, contact names, message bodies, choice labels, ending text and timings
+   live in `Resources/story.json`. NO story text in `src/engine.html`. This is enforced —
+   see rule 11.
+3. When fixing the engine, do not edit story.json. When editing story, do not touch
+   `src/engine.html`. If a task seems to need both, stop and tell me why.
 4. Do not create new files that are not in the file tree below without asking first.
-5. iOS 17 minimum. Use `@Observable` (Observation framework), NOT `ObservableObject`.
-6. Persistence is `Codable` -> JSON in the Documents directory. No SwiftData. No CoreData.
-   No UserDefaults for game state. (UserDefaults IS used for the `-uiSnapshotBeat` launch
-   argument and for the mute/haptics toggles. Neither is game state.)
+5. `dist/unread.html` is GENERATED. Never hand-edit it, never commit it. It is rebuilt by
+   `python3 tools/build.py` and it is gitignored.
+6. The engine keeps the story layer separate from the DOM layer (D18). Anything that
+   reads the schema goes in the `Story` module; anything that touches an element does
+   not. A future native renderer replaces the second half and keeps the first.
 7. If you are not certain an API exists with that exact signature, STOP and say so.
-   Never invent a symbol, a modifier, or an initializer. A wrong guess costs an hour.
-8. Notifications must NEVER be required to progress. Every notification beat has an
-   in-app fallback that fires on next foreground. App Store Guideline 4.5.4.
-9. Never mimic another company's app name, icon, colors or logo. Guideline 4.1.
-10. No force unwraps (`!`) outside of tests. No `fatalError` in shipping paths.
-11. The build gate is CI, not your judgment. A phase is done when the `gate` workflow is green.
-    For any UI phase it is done when the screenshot artifact shows the intended screen.
-    Never say a phase is complete without naming the run you are relying on.
-12. NEVER hand-edit an .xcodeproj or project.pbxproj. The project is generated from project.yml
-    by `xcodegen generate` and is gitignored. If you find a committed .xcodeproj, delete it.
-13. Every UI phase must add its screen to the `-uiSnapshotBeat` launch-argument switch so CI can
-    photograph it. A screen CI cannot photograph does not exist.
-14. tools/validate_story.py and Tests/StoryValidationTests.swift must assert identical rules.
-    Change both in the same commit or neither.
-15. If the local Xcode cannot build the current project format, say so and stop.
-    Do not "fix" the project file. Regenerate it from project.yml.
-16. `Models/` may hold computed accessors that supply a Codable default -- `isLive`,
-    `beginsUnread`, and anything of that exact shape -- because synthesised `Codable`
-    does not apply Swift property defaults. That is the ONLY logic permitted there:
-    no formatting, no lookups, no derivation across types. See DECISIONS.md D2.
+   Never invent a symbol, a method, or an option. A wrong guess costs an hour.
+8. The away-hook (`visibilitychange`) may change what the game says, but must NEVER be
+   required to reach an ending. Every beat is reachable without ever leaving the tab.
+9. Never mimic another company's app name, icon, colours or logo. The messenger is
+   called Loop and it is fictional. (App Store Guideline 4.1, which still applies the
+   day this is wrapped for a store.)
+10. Story text is inserted with `textContent`, never `innerHTML`. `innerHTML` is for
+    fixed markup with no story in it.
+11. **Rule 15 (the engine string audit).** No string literal longer than three words may
+    appear in `src/engine.html` outside CSS, comments, or the UI-chrome allowlist.
+    `python3 tools/validate_story.py Resources/story.json --engine src/engine.html`
+    fails the build. Known limit: three words or fewer passes, so it catches prose, not
+    one-liners.
+12. The build gate is CI, not your judgment. A phase is done when the `gate` workflow is
+    green and the screenshot artifact shows the intended screen. Name the run.
+13. Every beat must be reachable and photographed by `tests/beats.spec.js`. A beat CI
+    cannot photograph does not exist.
+14. Tests assert against values read from `story.json`. Never paste story text into a
+    test — it is code, and rule 2 applies to it for the same reason.
+15. If a gate has been blocked on the same external action for two consecutive phases,
+    that path is dead. Route around it or stop (D17).
 
 ## File tree — the whole project
-project.yml                    the project; .xcodeproj is generated and gitignored
 CLAUDE.md
 DECISIONS.md                   append-only rulings; read before CLAUDE.md
+package.json                   dev-only: Playwright
+playwright.config.js
+Resources/
+  story.json                   the only place a line of dialogue exists
+  Images/
+  Audio/
+src/
+  engine.html                  markup, CSS, engine. Zero story text.
 tools/
-  validate_story.py            mirror of StoryValidationTests; see rule 14
-  beat_duration.py             counts messages + live playback; reports, never gates (--selftest)
-  doctor.sh                    read-only; GREEN/AMBER/RED on whether this machine can build
+  validate_story.py            schema + graph + rule 15
+  beat_duration.py             counts and playback time; reports, never gates
+  build.py                     story.json + engine.html -> dist/unread.html
+tests/
+  beats.spec.js                drives every beat headless, screenshots each
 .github/workflows/
-  gate.yml                     build + test + screenshots; the only source of "done"
-Unread/
-  UnreadApp.swift
-  Models/
-    StoryModels.swift          Codable structs only, no logic
-    GameState.swift            @Observable, flags, save/load
-  Engine/
-    StoryLoader.swift          bundle -> Story, descriptive errors, no story text
-    StoryEngine.swift          advances beats; contains no story text
-    NotificationScheduler.swift
-    AudioPlayer.swift
-    Haptics.swift
-  Views/
-    ThreadListView.swift
-    ConversationView.swift
-    MessageBubble.swift
-    ChoiceBar.swift
-    PhotoViewerView.swift
-  Resources/
-    story.json
-    Audio/
-    Images/
-Tests/
-  StoryValidationTests.swift
+  gate.yml                     the only source of "done"
+dist/                          generated, gitignored
+shots/                         generated, gitignored
 
 ## Definition of done for any task
-- `python3 tools/validate_story.py Unread/Resources/story.json` exits 0. Run this first;
-  it needs no Mac and costs under a second.
+- `python3 tools/validate_story.py Resources/story.json` exits 0.
+- `python3 tools/validate_story.py Resources/story.json --engine src/engine.html` exits 0.
+- `python3 tools/build.py` produces `dist/unread.html`.
+- `npx playwright test` passes.
 - The `gate` workflow is green on the pushed commit. Name the run.
-- For a UI phase: the screenshot artifact from that run shows the intended screen, and you
-  have described what each image actually contains.
-- Zero new compiler warnings.
 - You state which files you changed and why, in one line each.
 
-Locally on a Mac, the same gate is:
-    xcodegen generate
-    xcodebuild -project Unread.xcodeproj -scheme Unread \
-      -destination "platform=iOS Simulator,name=<a sim from xcrun simctl list devices available>" \
-      build test
+The whole gate, locally:
+
+    python3 tools/validate_story.py Resources/story.json --engine src/engine.html
+    python3 tools/build.py
+    npx playwright test
 
 ## Style
-No comments that restate the code. Comment only non-obvious timing or Apple-API caveats.
+No comments that restate the code. Comment only non-obvious timing, a ruling being
+honoured, or a browser caveat.

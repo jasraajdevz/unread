@@ -1,0 +1,14 @@
+{
+  "name": "unread",
+  "private": true,
+  "version": "0.1.0",
+  "description": "UNREAD - a horror game that is a messaging app",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "validate": "python3 tools/validate_story.py Resources/story.json",
+    "gate": "python3 tools/validate_story.py Resources/story.json && python3 tools/build.py && npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

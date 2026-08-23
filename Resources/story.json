@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "contacts": [
     {
       "id": "c_mom",
@@ -34,7 +34,8 @@
       "startBeat": "b_mom_1",
       "pinned": false,
       "contactId": "c_mom",
-      "startsUnread": true
+      "startsUnread": true,
+      "accentHex": "#9AA7B4"
     },
     {
       "id": "t_flat",
@@ -45,27 +46,31 @@
         "c_sam",
         "c_priya"
       ],
-      "startsUnread": true
+      "startsUnread": true,
+      "accentHex": "#8FA08C"
     },
     {
       "id": "t_dave",
       "displayName": "Dave",
       "startBeat": "b_dave_1",
       "pinned": false,
-      "contactId": "c_dave"
+      "contactId": "c_dave",
+      "accentHex": "#A8946F"
     },
     {
       "id": "t_notify",
       "displayName": "Notify",
       "startBeat": "b_notify_1",
       "pinned": false,
-      "contactId": "c_notify"
+      "contactId": "c_notify",
+      "accentHex": "#77808B"
     },
     {
       "id": "t_unknown",
       "displayName": "+44 7700 900931",
       "startBeat": "b_unknown_1",
-      "pinned": false
+      "pinned": false,
+      "accentHex": "#6E7480"
     }
   ],
   "beats": [
@@ -803,8 +808,228 @@
           "delayMs": 0,
           "typingMs": 0
         }
+      ],
+      "next": "b_unknown_2"
+    },
+    {
+      "id": "b_unknown_2",
+      "threadId": "t_unknown",
+      "next": "b_unknown_3",
+      "messages": [
+        {
+          "id": "m_unknown_photo_02",
+          "from": "them",
+          "kind": "photo",
+          "asset": "hall_01",
+          "offsetMinutes": -2,
+          "live": true,
+          "delayMs": 5000,
+          "typingMs": 0
+        }
+      ]
+    },
+    {
+      "id": "b_unknown_3",
+      "threadId": "t_unknown",
+      "next": "b_unknown_4",
+      "messages": [
+        {
+          "id": "m_unknown_them_03",
+          "from": "them",
+          "kind": "text",
+          "body": "you left it on again",
+          "offsetMinutes": -1,
+          "live": true,
+          "delayMs": 3200,
+          "typingMs": 1100
+        },
+        {
+          "id": "m_unknown_them_04",
+          "from": "them",
+          "kind": "text",
+          "body": "are you home",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 4200,
+          "typingMs": 900,
+          "showTimestamp": true
+        }
+      ]
+    },
+    {
+      "id": "b_unknown_4",
+      "threadId": "t_unknown",
+      "messages": [
+        {
+          "id": "m_unknown_them_05",
+          "from": "them",
+          "kind": "text",
+          "body": "where did you go",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 2000,
+          "typingMs": 900,
+          "showTimestamp": true,
+          "requiresFlags": [
+            "left_during_live"
+          ]
+        },
+        {
+          "id": "m_unknown_them_06",
+          "from": "them",
+          "kind": "text",
+          "body": "you read them all",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 7000,
+          "typingMs": 935
+        },
+        {
+          "id": "m_unknown_them_07",
+          "from": "them",
+          "kind": "text",
+          "body": "six days of nothing and then all of it at once",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 1800,
+          "typingMs": 2530
+        },
+        {
+          "id": "m_unknown_them_08",
+          "from": "them",
+          "kind": "text",
+          "body": "ren doesnt read things twice",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 2600,
+          "typingMs": 1540
+        },
+        {
+          "id": "m_unknown_them_09",
+          "from": "them",
+          "kind": "text",
+          "body": "who is this",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 5200,
+          "typingMs": 900,
+          "showTimestamp": true
+        }
+      ],
+      "choices": [
+        {
+          "id": "c_found",
+          "label": "i found this phone",
+          "next": "b_end_found",
+          "setsFlags": [
+            "chose_found"
+          ]
+        },
+        {
+          "id": "c_silence",
+          "label": "[say nothing]",
+          "next": "b_end_silence",
+          "setsFlags": [
+            "chose_silence"
+          ]
+        },
+        {
+          "id": "c_delete",
+          "label": "[delete this conversation]",
+          "next": "b_end_delete",
+          "setsFlags": [
+            "chose_delete"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b_end_found",
+      "threadId": "t_unknown",
+      "messages": [
+        {
+          "id": "m_end_me_01",
+          "from": "me",
+          "kind": "text",
+          "body": "i found this phone",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_end_them_02",
+          "from": "them",
+          "kind": "text",
+          "body": "where",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 2600,
+          "typingMs": 900
+        },
+        {
+          "id": "m_end_them_03",
+          "from": "them",
+          "kind": "text",
+          "body": "dont put it down",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 3400,
+          "typingMs": 900,
+          "showTimestamp": true
+        }
+      ]
+    },
+    {
+      "id": "b_end_silence",
+      "threadId": "t_unknown",
+      "messages": []
+    },
+    {
+      "id": "b_end_delete",
+      "threadId": "t_unknown",
+      "messages": [
+        {
+          "id": "m_end_them_04",
+          "from": "them",
+          "kind": "text",
+          "body": "you deleted it",
+          "offsetMinutes": 0,
+          "live": true,
+          "delayMs": 0,
+          "typingMs": 900,
+          "showTimestamp": true
+        }
       ]
     }
   ],
-  "endings": []
+  "endings": [
+    {
+      "id": "e_found",
+      "requiresFlags": [
+        "chose_found"
+      ],
+      "beatId": "b_end_found",
+      "title": "Ending — found",
+      "body": "You told it where you were.\n\nIt never asked you to."
+    },
+    {
+      "id": "e_silence",
+      "requiresFlags": [
+        "chose_silence"
+      ],
+      "beatId": "b_end_silence",
+      "title": "Ending — silence",
+      "body": "It is still typing.\n\nIt has been typing for a while now."
+    },
+    {
+      "id": "e_delete",
+      "requiresFlags": [
+        "chose_delete"
+      ],
+      "beatId": "b_end_delete",
+      "title": "Ending — deleted",
+      "body": "It came back.\n\nIt was never in the phone."
+    }
+  ]
 }

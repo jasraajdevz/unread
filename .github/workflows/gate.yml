@@ -1,0 +1,67 @@
+name: gate
+
+# D16: everything runs on ubuntu-latest at 1x. The 200-macOS-minutes-a-month constraint
+# that shaped half of Phase 1.5 is gone, so paths-ignore is dropped -- at 1x it is not
+# worth an unverified glob. cancel-in-progress stays: it is free and it is correct.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Costs seconds and needs nothing installed. A dangling beat id never reaches a
+      # browser download.
+      - name: Story validation
+        run: python3 tools/validate_story.py Resources/story.json
+
+      - name: Story shape
+        run: python3 tools/beat_duration.py Resources/story.json
+
+      - name: Rule 15 — no story text in the engine
+        run: python3 tools/validate_story.py Resources/story.json --engine src/engine.html
+
+      - name: Build
+        run: |
+          python3 tools/build.py
+          test -s dist/unread.html
+          python3 tools/build.py --check
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Beats
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unread-html
+          path: dist/unread.html
+          if-no-files-found: error

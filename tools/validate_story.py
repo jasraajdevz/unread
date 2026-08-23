@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Validate Resources/story.json.
 
-This is the exact mirror of Tests/StoryValidationTests.swift. Per CLAUDE.md rule 14,
-the two must assert identical rules -- change both in the same commit or neither.
+Checks the schema, the story graph, and -- with --engine -- rule 15, which keeps story
+text out of the engine template.
 
-Runs on any machine with Python 3, in well under a second, so a dangling beat id is
-caught before a 10x-billed macOS minute is ever spent.
+Runs on any machine with Python 3 in well under a second, so a dangling beat id never
+reaches a browser download.
 
-    python3 tools/validate_story.py Unread/Resources/story.json
+    python3 tools/validate_story.py Resources/story.json
+    python3 tools/validate_story.py Resources/story.json --engine src/engine.html
 """
 
 import json
 import os
+import re
 import sys
 
 PHOTO_EXTENSIONS = ("jpg", "jpeg", "png", "heic")
@@ -30,29 +32,143 @@ WEEKDAY_NAMES = frozenset([
     "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
     "today", "yesterday", "tomorrow",
 ])
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
-# Mirrors the Codable structs in Models/StoryModels.swift. A key listed as required
-# here is non-optional in Swift; decoding fails on either side if it is absent.
+# The shape of story.json. A required key must be present; an optional one may be
+# absent but must have the right type when it is there.
 SCHEMA = {
     "contact": {"required": {"id": str, "displayName": str, "accentHex": str},
                 "optional": {}},
     "thread": {"required": {"id": str, "displayName": str, "startBeat": str, "pinned": bool},
-               "optional": {"contactId": str, "participantIds": list, "startsUnread": bool}},
+               "optional": {"contactId": str, "participantIds": list, "startsUnread": bool,
+                            "accentHex": str}},
     "message": {"required": {"id": str, "from": str, "kind": str, "offsetMinutes": int,
                              "delayMs": int, "typingMs": int},
                 "optional": {"body": str, "asset": str, "durationMs": int,
-                             "live": bool, "fromContactId": str}},
+                             "live": bool, "fromContactId": str,
+                             "showTimestamp": bool, "requiresFlags": list}},
     "choice": {"required": {"id": str, "label": str, "next": str},
                "optional": {"setsFlags": list}},
     "notification": {"required": {"afterSeconds": int, "title": str, "body": str, "resumeBeat": str},
                      "optional": {}},
     "beat": {"required": {"id": str, "threadId": str, "messages": list},
              "optional": {"setsFlags": list, "requiresFlags": list,
-                          "choices": list, "notification": dict}},
-    "ending": {"required": {"id": str, "requiresFlags": list, "beatId": str},
+                          "choices": list, "notification": dict, "next": str}},
+    "ending": {"required": {"id": str, "requiresFlags": list, "beatId": str,
+                            "title": str, "body": str},
                "optional": {}},
 }
+
+
+# ---------------------------------------------------------------- rule 15 ----
+# D15: story text must never appear in the engine. This is the web equivalent of the old
+# string audit, and it is what stops the inlining creeping back.
+
+RULE_15_ALLOWLIST = frozenset(x.lower() for x in [
+    "Loop", "Today", "Yesterday", "now", "Photo", "Start again", "A WORK OF FICTION",
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
+    "January", "February", "March", "April", "May", "June", "July", "August",
+    "September", "October", "November", "December",
+    "Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+])
+
+RULE_15_MAX_WORDS = 3
+
+
+def _strip_blocks(text, open_tag, close_tag):
+    out = []
+    index = 0
+    while True:
+        start = text.find(open_tag, index)
+        if start < 0:
+            out.append(text[index:])
+            return "".join(out)
+        out.append(text[index:start])
+        end = text.find(close_tag, start)
+        index = len(text) if end < 0 else end + len(close_tag)
+
+
+def _js_string_literals(source):
+    """Walk a script body and yield its string literals, skipping comments.
+
+    Deliberately simple: it does not model regex literals, because the engine contains
+    none. If one is ever added, this may mis-scan and should be revisited.
+    """
+    literals = []
+    i, n = 0, len(source)
+    while i < n:
+        ch = source[i]
+        if ch == "/" and i + 1 < n and source[i + 1] == "/":
+            newline = source.find("\n", i)
+            i = n if newline < 0 else newline
+        elif ch == "/" and i + 1 < n and source[i + 1] == "*":
+            end = source.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+        elif ch in "\"'`":
+            quote, j, buf = ch, i + 1, []
+            while j < n:
+                if source[j] == "\\":
+                    buf.append(source[j + 1] if j + 1 < n else "")
+                    j += 2
+                    continue
+                if source[j] == quote:
+                    break
+                buf.append(source[j])
+                j += 1
+            literals.append("".join(buf))
+            i = j + 1
+        else:
+            i += 1
+    return literals
+
+
+def _visible_words(text):
+    """Words left after removing markup. A token counts only if it contains a letter or
+    digit, so '<span>' and '<<' and '-' are not words."""
+    stripped = re.sub(r"<[^>]*>", " ", text)
+    stripped = re.sub(r"&[a-zA-Z#0-9]+;", " ", stripped)
+    return [t for t in stripped.split() if re.search(r"[A-Za-z0-9]", t)]
+
+
+def audit_engine(path):
+    """Return a list of rule 15 violations in an engine template."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+    except OSError as error:
+        return ["engine template could not be read: %s" % error]
+
+    source = _strip_blocks(source, "<!--", "-->")
+    source = _strip_blocks(source, "<style", "</style>")
+
+    candidates = []
+    remainder = source
+    while True:
+        start = remainder.find("<script")
+        if start < 0:
+            break
+        body_start = remainder.find(">", start)
+        end = remainder.find("</script>", body_start if body_start > 0 else start)
+        if body_start < 0 or end < 0:
+            break
+        candidates.extend(_js_string_literals(remainder[body_start + 1:end]))
+        remainder = remainder[:start] + " " + remainder[end + len("</script>"):]
+
+    # whatever markup is left contributes its text nodes
+    candidates.extend(re.sub(r"<[^>]*>", "\n", remainder).splitlines())
+
+    violations = []
+    for raw in candidates:
+        normalised = " ".join(raw.split())
+        if not normalised or normalised.lower() in RULE_15_ALLOWLIST:
+            continue
+        words = _visible_words(normalised)
+        if len(words) > RULE_15_MAX_WORDS:
+            violations.append(
+                "%d-word string literal in the engine: %r -- story text belongs in "
+                "story.json (rule 15)" % (len(words), normalised[:90]))
+    return violations
 
 
 class Validator:
@@ -87,7 +203,7 @@ class Validator:
         known = set(spec["required"]) | set(spec["optional"])
         for key in obj:
             if key not in known:
-                self.fail("%s: unknown key '%s' -- the Swift schema will ignore it silently, "
+                self.fail("%s: unknown key '%s' -- the engine will ignore it silently, "
                           "so it is almost certainly a typo" % (where, key))
                 ok = False
         return ok
@@ -166,9 +282,9 @@ class Validator:
         # RULE 1 / RULE 14 -- schema version is exactly SCHEMA_VERSION; older files are
         # rejected, never migrated. A v2 file fails here naming the phase that moved it on.
         if story["version"] != SCHEMA_VERSION:
-            self.fail("root: version is %r, but only version %d is supported. Version 2 was "
-                      "superseded by Phase 2b, which added offsetMinutes and deleted authored "
-                      "date dividers; there is no migration path"
+            self.fail("root: version is %r, but only version %d is supported. v3 was "
+                      "superseded by Phase W1, which added the live beats, the endings and "
+                      "the fields they need; there is no migration path"
                       % (story["version"], SCHEMA_VERSION))
 
         threads_by_id = {t.get("id"): t for t in story["threads"]}
@@ -354,6 +470,8 @@ class Validator:
             notification = beat.get("notification")
             if notification:
                 outgoing.append(notification.get("resumeBeat"))
+            if beat.get("next"):
+                outgoing.append(beat["next"])
             here = offsets_of(beat)
             if not here:
                 continue
@@ -376,8 +494,7 @@ class Validator:
         return self.errors
 
     def asset_exists(self, asset, extensions):
-        # The Swift side asks Bundle.main, which flattens Resources/ subfolders, so a
-        # match anywhere under Resources/ is the correct equivalent here.
+        # Assets may sit in any subfolder of Resources/, so match anywhere beneath it.
         for root, _dirs, files in os.walk(self.resources_dir):
             for filename in files:
                 stem, ext = os.path.splitext(filename)
@@ -387,12 +504,38 @@ class Validator:
 
 
 def main(argv):
-    if len(argv) != 2:
-        print("usage: validate_story.py <path to story.json>", file=sys.stderr)
+    positional = []
+    skip = False
+    for index, arg in enumerate(argv[1:], start=1):
+        if skip:
+            skip = False
+            continue
+        if arg == "--engine":
+            skip = True
+            continue
+        if arg.startswith("-"):
+            continue
+        positional.append(arg)
+    if len(positional) != 1:
+        print("usage: validate_story.py <path to story.json> [--engine <engine.html>]",
+              file=sys.stderr)
         return 2
+    argv = [argv[0], positional[0]] + argv[1:]
 
     validator = Validator(argv[1])
     errors = validator.run()
+
+    # RULE 15 -- audit the engine template if one is present beside the story.
+    engine = None
+    if "--engine" in argv:
+        engine = argv[argv.index("--engine") + 1]
+    else:
+        root = os.path.dirname(os.path.dirname(validator.story_path))
+        candidate = os.path.join(root, "src", "engine.html")
+        if os.path.exists(candidate):
+            engine = candidate
+    if engine:
+        errors = errors + audit_engine(engine)
 
     if errors:
         print("story validation FAILED (%d problem%s)"

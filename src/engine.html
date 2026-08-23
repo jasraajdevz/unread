@@ -1,0 +1,543 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#08090C; --phone:#14171C; --bar:#171B21; --line:#1C222B;
+    --them:#1E232B; --me:#2E3A45;
+    --ink:#D6D9DE; --dim:#8A929C; --faint:#5C6672;
+    --alert:#A63D40; --instr:#B8863F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ground); color:var(--ink); margin:0; min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px; gap:12px;
+  }
+  .phone{
+    width:100%; max-width:390px; height:min(780px,88vh); background:var(--phone);
+    border:1px solid var(--line); border-radius:22px; overflow:hidden;
+    display:flex; flex-direction:column; position:relative;
+  }
+  .statusbar{
+    height:32px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums;
+  }
+  .appbar{
+    flex:none; height:50px; border-bottom:1px solid var(--line); background:var(--bar);
+    display:flex; align-items:center; gap:8px; padding:0 12px;
+  }
+  .appbar .title{font-size:17px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0;
+                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .back{background:none;border:none;padding:4px 8px;margin-left:-8px;color:var(--dim);
+        font-size:22px;line-height:1;cursor:pointer;}
+  .back:hover{color:var(--ink);}
+  .scroll{flex:1;overflow-y:auto;}
+
+  .row{display:flex;gap:12px;align-items:center;padding:12px 14px;
+       border:none;border-bottom:1px solid var(--line);background:none;width:100%;
+       text-align:left;cursor:pointer;font-family:inherit;}
+  .row:hover{background:#171C23;}
+  .avatar{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
+          font-size:15px;font-weight:600;color:#08090C;}
+  .rb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .rt{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .rn{font-size:15px;font-weight:600;letter-spacing:-.01em;}
+  .rtime{font-size:12px;color:var(--faint);flex:none;font-variant-numeric:tabular-nums;}
+  .rp{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--alert);flex:none;}
+
+  .convo{display:flex;flex-direction:column;gap:3px;padding:14px 12px 20px;}
+  .msg{max-width:76%;padding:8px 12px;border-radius:16px;font-size:15px;line-height:1.35;
+       word-wrap:break-word;}
+  .msg.them{background:var(--them);align-self:flex-start;border-bottom-left-radius:5px;}
+  .msg.me{background:var(--me);color:#E8EBEF;align-self:flex-end;border-bottom-right-radius:5px;}
+  .msg.run{border-radius:16px;}
+  .msg.live{animation:pop .22s ease-out;}
+  .who{display:block;font-size:11px;color:var(--faint);margin-bottom:2px;}
+  .divider{align-self:center;font-size:11px;color:var(--faint);padding:16px 0 10px;letter-spacing:.04em;}
+  .stamp{align-self:center;font-size:11px;color:var(--faint);padding:6px 0 2px;}
+  .photo{align-self:flex-start;max-width:76%;border-radius:14px;overflow:hidden;
+         border-bottom-left-radius:5px;line-height:0;animation:pop .22s ease-out;}
+  .photo canvas{width:100%;display:block;}
+  .typing{align-self:flex-start;background:var(--them);border-radius:16px;
+          border-bottom-left-radius:5px;padding:11px 14px;display:flex;gap:4px;}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:blink 1.3s infinite;}
+  .typing i:nth-child(2){animation-delay:.2s;} .typing i:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
+  @keyframes pop{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.55;}.msg.live,.photo{animation:none;}}
+
+  .choices{flex:none;border-top:1px solid var(--line);background:var(--bar);
+           padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+  .choice{width:100%;padding:11px 14px;border:1px solid #2A323D;border-radius:20px;
+          background:transparent;color:var(--ink);font-family:inherit;font-size:14px;
+          text-align:left;cursor:pointer;transition:background .15s,border-color .15s;}
+  .choice:hover{background:#1E232B;border-color:#3A434F;}
+  .choice:focus-visible{outline:2px solid var(--instr);outline-offset:2px;}
+
+  .end{position:absolute;inset:0;background:#08090C;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center;
+       opacity:0;pointer-events:none;transition:opacity 1.6s ease;}
+  .end.on{opacity:1;pointer-events:auto;}
+  .end p{font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.7;color:var(--dim);
+         margin:0;max-width:30ch;white-space:pre-line;}
+  .end .t{color:var(--instr);letter-spacing:.18em;text-transform:uppercase;font-size:11px;}
+  .end button{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;
+              color:var(--faint);background:none;border:1px solid var(--line);
+              border-radius:6px;padding:8px 14px;cursor:pointer;}
+  .end button:hover{color:var(--ink);}
+
+  .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
+</style>
+
+<div class="phone">
+  <div class="statusbar"><span id="clock"></span><span>▮▮▮ ⌁</span></div>
+  <div class="appbar" id="appbar"></div>
+  <div class="scroll" id="scroll"></div>
+  <div id="choices"></div>
+  <div class="end" id="end">
+    <p class="t" id="endTitle"></p>
+    <p id="endBody"></p>
+    <button id="again">Start again</button>
+  </div>
+</div>
+<p class="foot">A WORK OF FICTION</p>
+
+<!--STORY-->
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================================
+   STORY LAYER
+   Knows the story.json schema. Touches no DOM. A native renderer can reimplement
+   the layer below this one and keep all of it. (D18)
+   ========================================================================== */
+var Story = (function(data){
+  var beatsById = {}, contactsById = {}, threadsById = {};
+  (data.beats || []).forEach(function(b){ beatsById[b.id] = b; });
+  (data.contacts || []).forEach(function(c){ contactsById[c.id] = c; });
+  (data.threads || []).forEach(function(t){ threadsById[t.id] = t; });
+
+  return {
+    threads: function(){ return data.threads || []; },
+    thread: function(id){ return threadsById[id]; },
+    beat: function(id){ return beatsById[id]; },
+    contactName: function(id){
+      var c = contactsById[id];
+      return c ? c.displayName : null;
+    },
+    endingFor: function(flags){
+      var list = data.endings || [];
+      for(var i=0;i<list.length;i++){
+        var need = list[i].requiresFlags || [];
+        var ok = true;
+        for(var j=0;j<need.length;j++){ if(!flags[need[j]]) { ok = false; break; } }
+        if(ok && need.length) return list[i];
+      }
+      return null;
+    },
+    /* Messages of a beat, minus any gated on a flag the player has not set. */
+    messagesOf: function(beatId, flags){
+      var b = beatsById[beatId];
+      if(!b) return [];
+      return (b.messages || []).filter(function(m){
+        var need = m.requiresFlags || [];
+        for(var i=0;i<need.length;i++){ if(!flags[need[i]]) return false; }
+        return true;
+      });
+    },
+    choicesOf: function(beatId){
+      var b = beatsById[beatId];
+      return (b && b.choices) || [];
+    },
+    nextOf: function(beatId){
+      var b = beatsById[beatId];
+      return b && b.next;
+    },
+    isLive: function(m){ return m.live === true; },
+    speakerOf: function(m){
+      return m.fromContactId ? this.contactName(m.fromContactId) : null;
+    }
+  };
+})(window.STORY);
+
+/* ============================================================================
+   CLOCK
+   offsetMinutes are relative to first launch. Everything displayed is derived.
+   ========================================================================== */
+var LAUNCH = new Date();
+var WEEKDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var WEEKDAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+function at(offsetMin){ return new Date(LAUNCH.getTime() + offsetMin*60000); }
+function dayKey(d){ return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate(); }
+function hhmm(d){ var h=d.getHours(), m=d.getMinutes(); return h+":"+(m<10?"0"+m:m); }
+function daysBack(d){
+  return Math.round((new Date(dayKey(LAUNCH)) - new Date(dayKey(d)))/86400000);
+}
+function dayLabel(d){
+  var n = daysBack(d);
+  if(n===0) return "Today";
+  if(n===1) return "Yesterday";
+  if(n<7) return WEEKDAY[d.getDay()];
+  return d.getDate()+"/"+(d.getMonth()+1);
+}
+function listStamp(offsetMin){
+  var d = at(offsetMin), n = daysBack(d);
+  if(n===0) return hhmm(d);
+  if(n===1) return "Yesterday";
+  if(n<7) return WEEKDAY_SHORT[d.getDay()];
+  return d.getDate()+"/"+(d.getMonth()+1);
+}
+function stampLabel(offsetMin){
+  return offsetMin === 0 ? "now" : hhmm(at(offsetMin));
+}
+
+/* ============================================================================
+   RUNTIME STATE
+   ========================================================================== */
+var PHOTO_REVEAL_MS = 600;   /* a photo has no typing indicator; it just lands */
+var INTER_BEAT_MS   = 6000;  /* pause between the last message of a beat and the next */
+var PHOTO_ARRIVE_MS = 5000;  /* beat 2: how long after the trigger the photo shows up */
+var THREADS_TO_READ = 3;     /* beat 1 -> 2 trigger */
+
+var UNKNOWN = "t_unknown";
+var APP_NAME = "Loop";   /* the fictional messenger. Guideline 4.1: not anyone else's. */
+
+var S = {
+  beat: 1,
+  opened: {},
+  flags: {},
+  hidden: {},
+  current: null,
+  ended: false,
+  leftDuringLive: false,
+  shown: {}      /* threadId -> array of messages currently in that thread */
+};
+
+var scroll  = document.getElementById("scroll"),
+    appbar  = document.getElementById("appbar"),
+    choicesEl = document.getElementById("choices"),
+    endEl   = document.getElementById("end");
+
+document.getElementById("clock").textContent = hhmm(LAUNCH);
+
+Story.threads().forEach(function(t){
+  S.shown[t.id] = Story.messagesOf(t.startBeat, S.flags).slice();
+});
+
+function shownOf(t){ return S.shown[t.id] || []; }
+function lastOffset(t){
+  var m = shownOf(t);
+  return m.length ? m[m.length-1].offsetMinutes : -999999;
+}
+function preview(t){
+  var m = shownOf(t);
+  if(!m.length) return "";
+  var last = m[m.length-1];
+  var who = Story.speakerOf(last);
+  return (who ? who+": " : "") + (last.kind === "photo" ? "Photo" : (last.body || ""));
+}
+function isUnread(t){
+  return (t.startsUnread || t.forcedUnread) && !S.opened[t.id];
+}
+function sortedThreads(){
+  return Story.threads()
+    .filter(function(t){ return !S.hidden[t.id]; })
+    .slice()
+    .sort(function(a,b){ return lastOffset(b)-lastOffset(a); });
+}
+
+/* ============================================================================
+   THE HALLWAY, DRAWN NOT FETCHED
+   The photo message names an asset; until a real one is shot, the renderer draws
+   a stand-in. Swapping to the asset is a change here and nowhere else.
+   ========================================================================== */
+function hallway(){
+  var W=260,H=190,c=document.createElement("canvas");
+  c.width=W; c.height=H;
+  var g=c.getContext("2d");
+  g.fillStyle="#0a0a0b"; g.fillRect(0,0,W,H);
+  var vx=W*0.54, vy=H*0.48;
+  g.fillStyle="#111214";
+  g.beginPath(); g.moveTo(0,0); g.lineTo(vx-46,vy-30); g.lineTo(vx-46,vy+34); g.lineTo(0,H); g.fill();
+  g.fillStyle="#0e0f11";
+  g.beginPath(); g.moveTo(W,0); g.lineTo(vx+52,vy-30); g.lineTo(vx+52,vy+34); g.lineTo(W,H); g.fill();
+  g.fillStyle="#141517";
+  g.beginPath(); g.moveTo(0,H); g.lineTo(vx-46,vy+34); g.lineTo(vx+52,vy+34); g.lineTo(W,H); g.fill();
+  var grd=g.createLinearGradient(vx-46,vy-30,vx+52,vy+34);
+  grd.addColorStop(0,"#2b2721"); grd.addColorStop(.55,"#4a4034"); grd.addColorStop(1,"#211e1a");
+  g.fillStyle=grd; g.fillRect(vx-46,vy-30,98,64);
+  var sp=g.createLinearGradient(vx,vy+34,vx,H);
+  sp.addColorStop(0,"rgba(120,102,74,0.22)"); sp.addColorStop(1,"rgba(120,102,74,0)");
+  g.fillStyle=sp;
+  g.beginPath(); g.moveTo(vx-46,vy+34); g.lineTo(vx+52,vy+34); g.lineTo(W*0.86,H); g.lineTo(W*0.16,H); g.fill();
+  var vg=g.createRadialGradient(W/2,H/2,H*0.22,W/2,H/2,H*0.95);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.82)");
+  g.fillStyle=vg; g.fillRect(0,0,W,H);
+  var img=g.getImageData(0,0,W,H), d=img.data;
+  for(var i=0;i<d.length;i+=4){
+    var n=(Math.random()-0.5)*34;
+    d[i]  =Math.max(0,Math.min(255,d[i]+n));
+    d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));
+    d[i+2]=Math.max(0,Math.min(255,d[i+2]+n*0.9));
+  }
+  g.putImageData(img,0,0);
+  return c;
+}
+
+/* ============================================================================
+   RENDER LAYER
+   ========================================================================== */
+function renderList(){
+  S.current=null; choicesEl.innerHTML="";
+  appbar.innerHTML='<span class="title"></span>';
+  appbar.querySelector(".title").textContent = APP_NAME;
+  scroll.innerHTML="";
+  sortedThreads().forEach(function(t){
+    var b=document.createElement("button");
+    b.className="row";
+    b.setAttribute("data-thread", t.id);
+    b.innerHTML='<span class="avatar"></span><span class="rb"><span class="rt">'+
+      '<span class="rn"></span><span class="rtime"></span></span><span class="rp"></span></span>';
+    var av=b.querySelector(".avatar");
+    av.style.background = t.accentHex || "#6E7480";
+    av.textContent = (t.displayName || "").charAt(0).toUpperCase();
+    b.querySelector(".rn").textContent    = t.displayName;
+    b.querySelector(".rtime").textContent = listStamp(lastOffset(t));
+    b.querySelector(".rp").textContent    = preview(t);
+    if(isUnread(t)){ var d=document.createElement("span"); d.className="dot"; b.appendChild(d); }
+    b.addEventListener("click", function(){ openThread(t); });
+    scroll.appendChild(b);
+  });
+  scroll.scrollTop=0;
+  maybeAdvance();
+}
+
+function bubbleFor(m, prev){
+  if(m.kind === "photo"){
+    var p=document.createElement("div"); p.className="photo"; p.appendChild(hallway());
+    return p;
+  }
+  var same = prev && prev.from === m.from &&
+             Story.speakerOf(prev) === Story.speakerOf(m);
+  var el=document.createElement("div");
+  el.className = "msg " + (m.from === "me" ? "me" : "them") + (same ? " run" : "");
+  var who = Story.speakerOf(m);
+  if(who && !same){
+    var w=document.createElement("span"); w.className="who"; w.textContent=who;
+    el.appendChild(w);
+  }
+  el.appendChild(document.createTextNode(m.body || ""));
+  return el;
+}
+
+function appendStamp(wrap, m){
+  if(!m.showTimestamp) return;
+  var s=document.createElement("div"); s.className="stamp";
+  s.textContent = stampLabel(m.offsetMinutes);
+  wrap.appendChild(s);
+}
+
+function paint(t){
+  var wrap=document.createElement("div"); wrap.className="convo";
+  var lastDay=null, prev=null;
+  shownOf(t).forEach(function(m){
+    var d=at(m.offsetMinutes);
+    /* D5: a divider needs a calendar-day change AND a gap of at least 30 minutes,
+       so a conversation running over midnight is never cut in half. */
+    var gapOK = !prev || (m.offsetMinutes - prev.offsetMinutes) >= 30;
+    if(dayKey(d)!==lastDay && (lastDay===null || gapOK)){
+      var div=document.createElement("div"); div.className="divider";
+      div.textContent=dayLabel(d); wrap.appendChild(div);
+      lastDay=dayKey(d); prev=null;
+    }
+    wrap.appendChild(bubbleFor(m, prev));
+    appendStamp(wrap, m);
+    prev=m;
+  });
+  scroll.innerHTML=""; scroll.appendChild(wrap);
+  return wrap;
+}
+
+function openThread(t){
+  S.current=t; S.opened[t.id]=true; t.forcedUnread=false;
+  choicesEl.innerHTML="";
+  appbar.innerHTML='<button class="back" aria-label="Back">‹</button><span class="title"></span>';
+  appbar.querySelector(".title").textContent = t.displayName;
+  appbar.querySelector(".back").addEventListener("click", function(){
+    if(!S.ended) renderList();
+  });
+  paint(t);
+  scroll.scrollTop=0;
+  if(t.id === UNKNOWN) runQueue();
+  else maybeAdvance();
+}
+
+/* ============================================================================
+   LIVE DELIVERY
+   ========================================================================== */
+function deliver(threadId, list, done){
+  var t = Story.thread(threadId);
+  var wrap = scroll.querySelector(".convo");
+  if(!wrap){ if(done) done(); return; }
+  var i=0;
+  (function step(){
+    if(i>=list.length){ if(done) done(); return; }
+    var m=list[i++];
+    setTimeout(function(){
+      var showTyping = m.kind !== "photo" && m.from !== "me";
+      var ty=null;
+      if(showTyping){
+        ty=document.createElement("div"); ty.className="typing";
+        ty.innerHTML="<i></i><i></i><i></i>";
+        wrap.appendChild(ty); scroll.scrollTop=scroll.scrollHeight;
+      }
+      setTimeout(function(){
+        if(ty) ty.remove();
+        var prev = shownOf(t)[shownOf(t).length-1];
+        S.shown[t.id].push(m);
+        var el=bubbleFor(m, prev); el.classList.add("live");
+        wrap.appendChild(el);
+        appendStamp(wrap, m);
+        scroll.scrollTop=scroll.scrollHeight;
+        step();
+      }, showTyping ? (m.typingMs || 0) : PHOTO_REVEAL_MS);
+    }, m.delayMs || 0);
+  })();
+}
+
+/* ============================================================================
+   BEATS
+   Trigger conditions live here; every line of text they deliver comes from
+   story.json.
+   ========================================================================== */
+function maybeAdvance(){
+  var read=Object.keys(S.opened).length;
+  if(S.beat===1 && read>=THREADS_TO_READ && !S.current){
+    S.beat=2;
+    setTimeout(function(){
+      var t=Story.thread(UNKNOWN);
+      var photo=Story.messagesOf("b_unknown_2", S.flags);
+      S.shown[UNKNOWN]=S.shown[UNKNOWN].concat(photo);
+      t.forcedUnread=true; S.opened[UNKNOWN]=false;
+      if(!S.current) renderList();
+    }, PHOTO_ARRIVE_MS);
+  }
+}
+
+function runQueue(){
+  if(S.beat===2){
+    S.beat=3;
+    deliver(UNKNOWN, Story.messagesOf("b_unknown_3", S.flags), function(){
+      S.beat=4;
+      setTimeout(beat4, INTER_BEAT_MS);
+    });
+  } else if(S.beat===4){
+    beat4();
+  }
+}
+
+function beat4(){
+  var t=Story.thread(UNKNOWN);
+  if(S.current !== t){ t.forcedUnread=true; S.opened[UNKNOWN]=false; renderList(); return; }
+  if(S.leftDuringLive) S.flags["left_during_live"]=true;
+  deliver(UNKNOWN, Story.messagesOf("b_unknown_4", S.flags), showChoices);
+}
+
+function showChoices(){
+  S.beat=5;
+  Story.choicesOf("b_unknown_4").forEach(function(o){
+    var b=document.createElement("button");
+    b.className="choice";
+    b.setAttribute("data-choice", o.id);
+    b.textContent=o.label;
+    b.addEventListener("click", function(){ choicesEl.innerHTML=""; finish(o); });
+    choicesEl.appendChild(b);
+  });
+}
+
+/* Each ending is choreographed differently -- that is the mechanic, not the text.
+   The text, including the titles and bodies, comes from story.json. */
+var ENDING_TIMING = {
+  e_found:   { reveal: 3600 },
+  e_silence: { typingAfter: 4000, reveal: 26000 },
+  e_delete:  { removeAfter: 700, returnAfter: 7000, reveal: 12500 }
+};
+
+function finish(choice){
+  S.ended=true;
+  (choice.setsFlags || []).forEach(function(f){ S.flags[f]=true; });
+  var ending=Story.endingFor(S.flags);
+  if(!ending) return;
+  var timing=ENDING_TIMING[ending.id] || { reveal: 3000 };
+  var messages=Story.messagesOf(ending.beatId, S.flags);
+
+  if(ending.id === "e_delete"){
+    setTimeout(function(){ S.hidden[UNKNOWN]=true; renderList(); }, timing.removeAfter);
+    setTimeout(function(){
+      S.hidden[UNKNOWN]=false;
+      S.shown[UNKNOWN]=messages.slice();
+      Story.thread(UNKNOWN).forcedUnread=true; S.opened[UNKNOWN]=false;
+      renderList();
+    }, timing.returnAfter);
+    setTimeout(function(){ reveal(ending); }, timing.reveal);
+    return;
+  }
+
+  if(ending.id === "e_silence"){
+    var wrap=scroll.querySelector(".convo");
+    setTimeout(function(){
+      if(!wrap) return;
+      var ty=document.createElement("div"); ty.className="typing";
+      ty.innerHTML="<i></i><i></i><i></i>";
+      wrap.appendChild(ty); scroll.scrollTop=scroll.scrollHeight;
+    }, timing.typingAfter);
+    setTimeout(function(){ reveal(ending); }, timing.reveal);
+    return;
+  }
+
+  /* the reply the player sends lands instantly; the answer is delivered */
+  var immediate=messages.filter(function(m){ return m.from==="me"; });
+  var rest=messages.filter(function(m){ return m.from!=="me"; });
+  var wrap2=scroll.querySelector(".convo");
+  immediate.forEach(function(m){
+    var prev=shownOf(Story.thread(UNKNOWN)).slice(-1)[0];
+    S.shown[UNKNOWN].push(m);
+    if(wrap2){ wrap2.appendChild(bubbleFor(m, prev)); appendStamp(wrap2, m); }
+  });
+  if(wrap2) scroll.scrollTop=scroll.scrollHeight;
+  deliver(UNKNOWN, rest, function(){
+    setTimeout(function(){ reveal(ending); }, timing.reveal);
+  });
+}
+
+function reveal(ending){
+  document.getElementById("endTitle").textContent = ending.title;
+  document.getElementById("endBody").textContent  = ending.body;
+  endEl.classList.add("on");
+}
+
+document.getElementById("again").addEventListener("click", function(){ location.reload(); });
+
+/* the away hook: it keeps going while you are gone */
+document.addEventListener("visibilitychange", function(){
+  if(document.hidden && S.beat>=3 && !S.ended) S.leftDuringLive=true;
+});
+
+/* test hook: lets CI drive the beats without waiting on real time */
+window.__unread = {
+  state: S,
+  story: Story,
+  openThread: openThread,
+  renderList: renderList
+};
+
+renderList();
+})();
+</script>
