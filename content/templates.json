@@ -739,6 +739,208 @@
           "tells": "blamed foxes"
         }
       ]
+    },
+    {
+      "id": "tpl_flat_shopping",
+      "threadId": "t_flat",
+      "acts": [
+        1,
+        1
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "ITEM": [
+          "bread",
+          "washing up liquid",
+          "bin bags",
+          "loo roll"
+        ],
+        "SHOP": [
+          "the co op",
+          "the big tesco",
+          "the one by the station"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "is anyone near {SHOP}"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "no"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "we need {ITEM}"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "we always need {ITEM}"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_shop_get",
+          "label": "ill get it",
+          "tells": "said he would get {ITEM}"
+        },
+        {
+          "id": "ch_shop_not",
+          "label": "not out today",
+          "tells": "said he was not going out"
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_tv",
+      "threadId": "t_flat",
+      "acts": [
+        1,
+        1
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "THING": [
+          "the second episode",
+          "the one with the boat",
+          "that documentary"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_priya",
+          "text": "did anyone watch {THING} without me"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "no"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "its on the continue watching"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "that could be anyone"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_tv_me",
+          "label": "that was me",
+          "tells": "admitted watching {THING}"
+        },
+        {
+          "id": "ch_tv_not",
+          "label": "wasnt me",
+          "tells": "denied watching {THING}"
+        }
+      ]
+    },
+    {
+      "id": "tpl_mom_weather",
+      "threadId": "t_mom",
+      "acts": [
+        1,
+        1
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "WEATHER": [
+          "frost",
+          "rain all week",
+          "wind",
+          "it going cold"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_mom",
+          "text": "theyre saying {WEATHER}"
+        },
+        {
+          "speaker": "c_mom",
+          "text": "have you got a proper coat"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_coat_yes",
+          "label": "yeah ive got one",
+          "tells": "said he had a coat"
+        },
+        {
+          "id": "ch_coat_no",
+          "label": "ill sort it",
+          "tells": "said he would sort a coat"
+        }
+      ]
+    },
+    {
+      "id": "tpl_dave_inspection",
+      "threadId": "t_dave",
+      "acts": [
+        1,
+        1
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 2,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [
+        "dave_inspection_mentioned"
+      ],
+      "slots": {
+        "WHEN": [
+          "the end of the month",
+          "some point in November",
+          "after the boiler"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_dave",
+          "text": "I need to do the annual inspection {WHEN}."
+        },
+        {
+          "speaker": "c_dave",
+          "text": "It takes about twenty minutes."
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_insp_ok",
+          "label": "thats fine",
+          "tells": "agreed to the inspection {WHEN}"
+        },
+        {
+          "id": "ch_insp_later",
+          "label": "can it wait",
+          "tells": "asked dave to delay the inspection"
+        }
+      ]
     }
   ]
 }

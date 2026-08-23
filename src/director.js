@@ -144,8 +144,16 @@
       var withBudget = available.filter(function (t) {
         return t.lines.some(function (l) { return (options.budget[l.speaker] || 0) > 0; });
       });
-      var template = pickWeighted(rand, withBudget.length ? withBudget : available,
-        function (t) { return t.weight || 1; });
+      /* Once nobody has budget the withBudget list is empty, and a no-reply sender like
+         Notify would otherwise win the endgame by default. Prefer the cast who used to
+         answer: the point of day 20 is a person talking to nobody. */
+      var human = available.filter(function (t) {
+        return t.lines.some(function (l) {
+          return castById[l.speaker] && (castById[l.speaker].baseReplies || 0) > 0;
+        });
+      });
+      var candidates = withBudget.length ? withBudget : (human.length ? human : available);
+      var template = pickWeighted(rand, candidates, function (t) { return t.weight || 1; });
       if (!template) break;
 
       used[template.id] = true;

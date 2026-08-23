@@ -11,7 +11,7 @@
         20
       ],
       "mechanic": "decay",
-      "note": "Twenty days of nothing being wrong. The player must have normal to lose."
+      "note": "Twenty days of nothing being wrong. The player must have normal to lose. The endpoint is literal: by day 20 the reply budget is spent, so openers still fire and nothing is answered -- the same conversations as day 2, truncated to their first line or two."
     },
     {
       "id": 2,
@@ -115,6 +115,86 @@
       "replyBudget": 0.45,
       "dayMessages": 5,
       "nightMessages": 4
+    },
+    {
+      "day": 11,
+      "act": 1,
+      "pressure": 0.174,
+      "replyBudget": 0.42,
+      "dayMessages": 5,
+      "nightMessages": 4
+    },
+    {
+      "day": 12,
+      "act": 1,
+      "pressure": 0.188,
+      "replyBudget": 0.38,
+      "dayMessages": 5,
+      "nightMessages": 4
+    },
+    {
+      "day": 13,
+      "act": 1,
+      "pressure": 0.202,
+      "replyBudget": 0.34,
+      "dayMessages": 5,
+      "nightMessages": 4
+    },
+    {
+      "day": 14,
+      "act": 1,
+      "pressure": 0.216,
+      "replyBudget": 0.3,
+      "dayMessages": 4,
+      "nightMessages": 4
+    },
+    {
+      "day": 15,
+      "act": 1,
+      "pressure": 0.23,
+      "replyBudget": 0.26,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 16,
+      "act": 1,
+      "pressure": 0.244,
+      "replyBudget": 0.22,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 17,
+      "act": 1,
+      "pressure": 0.258,
+      "replyBudget": 0.18,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 18,
+      "act": 1,
+      "pressure": 0.272,
+      "replyBudget": 0.14,
+      "dayMessages": 4,
+      "nightMessages": 3
+    },
+    {
+      "day": 19,
+      "act": 1,
+      "pressure": 0.286,
+      "replyBudget": 0.1,
+      "dayMessages": 3,
+      "nightMessages": 3
+    },
+    {
+      "day": 20,
+      "act": 1,
+      "pressure": 0.3,
+      "replyBudget": 0.06,
+      "dayMessages": 3,
+      "nightMessages": 3
     }
   ]
 }

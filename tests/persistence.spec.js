@@ -249,7 +249,7 @@ test('D27 — answering records what Ren said and any clue it reveals', async ({
 
   // answering does not exhaust the supply: the last authored phase still offers a reply
   const next = await page.evaluate(() => {
-    window.__unread.loadPhase(10, 'night');
+    window.__unread.loadPhase(20, 'night');
     return window.__unread.state.pendingChoices.length;
   });
   expect(next, 'the last authored phase still offers a reply').toBeGreaterThan(0);

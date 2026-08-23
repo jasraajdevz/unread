@@ -13,7 +13,7 @@ const { ROOT, load } = require('./content.js');
 
 const content = load();
 const FROM = 1;
-const TO = 10;
+const TO = 20;
 
 let failures = 0;
 function check(label, fn) {
@@ -118,6 +118,27 @@ check('lastToldByRen is writable from day one: every act I day offers a reply', 
   });
 });
 
+
+check('Act I ends silent: the last day still talks, and nobody answers', () => {
+  const last = Director.planRun(content, 'alpha', FROM, TO).slice(-1)[0];
+  assert.strictEqual(last.day, 20, 'the ladder ends at day 20');
+  assert.ok(last.messages > 0, 'day 20 is empty, not silent');
+  assert.strictEqual(last.replies, 0, 'day 20 still has ' + last.replies + ' replies');
+  console.log('        day 20: ' + last.messages + ' messages, ' + last.replies +
+              ' replies, ' + last.dropped + ' lines dropped for want of budget');
+});
+check('the silence is the same conversations, shortened', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const ids = (d) => new Set(['day', 'night']
+    .flatMap((p) => d.phases[p].map((e) => e.templateId)));
+  const early = ids(run[1]);
+  const late = ids(run[run.length - 1]);
+  const shared = [...late].filter((id) => early.has(id));
+  assert.ok(shared.length > 0,
+    'day 20 shares no template with day 2, so the player has nothing to recognise');
+  console.log('        day 20 reuses ' + shared.length +
+              ' of day 2 conversations, truncated');
+});
 
 console.log('\nD26 - the player can always reply');
 check('every generated phase offers at least one reply', () => {
