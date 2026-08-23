@@ -245,3 +245,55 @@ test('D27 — answering records what Ren said and any clue it reveals', async ({
   });
   expect(next, 'the last authored phase still offers a reply').toBeGreaterThan(0);
 });
+
+test('D28 — a thread offers its own replies and nobody else\'s', async ({ page }) => {
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  await page.evaluate(() => window.__unread.loadPhase(2, 'day'));
+
+  // the phase offers replies across more than one thread, or this proves nothing
+  const spread = await page.evaluate(() => {
+    const byThread = {};
+    window.__unread.state.pendingChoices.forEach((c) => {
+      byThread[c.threadId] = (byThread[c.threadId] || 0) + 1;
+    });
+    return byThread;
+  });
+  const threads = Object.keys(spread);
+  expect(threads.length, 'day 2 spans several threads').toBeGreaterThan(1);
+
+  // each thread shows exactly its own
+  for (const id of threads) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    const onScreen = await page.locator('.choice').evaluateAll((els) =>
+      els.map((e) => e.getAttribute('data-choice')));
+    const expected = await page.evaluate((t) => window.__unread.choicesForThread(t), id);
+    expect(onScreen.sort(), `${id} shows only its own replies`).toEqual(expected.sort());
+    expect(onScreen.length).toBe(spread[id]);
+    await page.locator('.back').click();
+  }
+
+  // answering one thread spends only that thread's replies, and the reply lands in it
+  const first = threads[0];
+  const second = threads[1];
+  await page.locator(`[data-thread="${first}"]`).click();
+  const before = await page.locator('.msg').count();
+  const label = await page.locator('.choice').first().textContent();
+  await page.locator('.choice').first().click();
+
+  await expect(page.locator('.choice'), `${first} is answered`).toHaveCount(0);
+  await expect(page.locator('.msg.me').last()).toHaveText(label);
+  expect(await page.locator('.msg').count(), 'the reply is in the thread').toBe(before + 1);
+
+  await page.locator('.back').click();
+  await page.locator(`[data-thread="${second}"]`).click();
+  await expect(page.locator('.choice'), `${second} still has its replies`)
+    .toHaveCount(spread[second]);
+});

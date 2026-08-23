@@ -621,3 +621,25 @@ orphan clue — content that can never be found, which is worse, because nothing
 Clues in Act I only accumulate. Nothing reads them until Act II, for the same reason
 `lastToldByRen` is written from day one: memory cannot be retrofitted onto history the
 player has already lived through.
+
+---
+
+## D28 — a reply belongs to the thread it answers
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the gate
+
+Choices were rendered as one pool: opening Mom showed Dave's replies too, and answering
+any of them consumed all of them. Nothing had ruled it wrong, and it would have read as
+wrong the first time a human played day 3.
+
+1. **A thread offers its own replies and nobody else's.** A pending choice carries the
+   `threadId` of the template that produced it, and opening a thread renders only that
+   thread's.
+2. **Answering spends only that thread's replies.** The others are still there when you
+   open the conversation they belong to.
+3. **The reply lands in the thread as a message from you.** This is not a separate
+   feature. A choice that vanishes without changing the conversation is a broken button,
+   so per-thread choices are only half-built without it.
+
+The authored beat-5 choices on day 1 are unaffected: they are the ending, they belong to
+the one thread that matters at that moment, and they still end the run.

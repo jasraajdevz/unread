@@ -510,7 +510,8 @@ function openThread(t){
   });
   paint(t);
   scroll.scrollTop=0;
-  if(S.pendingChoices.length && !S.repliesLocked) renderChoices(S.pendingChoices);
+  var mine = choicesForThread(t.id);
+  if(mine.length && !S.repliesLocked) renderChoices(mine);
   if(t.id === UNKNOWN) runQueue();
   else maybeAdvance();
 }
@@ -589,6 +590,44 @@ function beat4(){
   });
 }
 
+
+/* A reply belongs to the conversation it answers. Opening Mom must not offer Dave's
+   replies, and answering Mom must not silently consume them. */
+function choicesForThread(threadId){
+  return S.pendingChoices.filter(function(c){ return c.threadId === threadId; });
+}
+
+/* The player's reply lands in the thread as a message. Without this the choice vanishes
+   and the conversation does not change, which reads as a broken button. */
+function answerInThread(item){
+  var t = Story.thread(item.threadId);
+  if(t && S.shown[t.id]){
+    S.shown[t.id].push({
+      id: "reply_" + item.id + "_" + S.shown[t.id].length,
+      from: "me",
+      kind: "text",
+      body: item.label,
+      offsetMinutes: 0,
+      live: false,
+      delayMs: 0,
+      typingMs: 0,
+      __threadId: item.threadId,
+      __token: item.token
+    });
+  }
+  /* only this thread's replies are spent */
+  S.pendingChoices = S.pendingChoices.filter(function(c){
+    return c.threadId !== item.threadId;
+  });
+  if(item.onPick) item.onPick(item);
+
+  if(S.current && t && S.current.id === t.id){
+    paint(t);
+    scroll.scrollTop = scroll.scrollHeight;
+    renderChoices(choicesForThread(t.id));
+  }
+}
+
 /* One place choices are built, for the same reason as one place text is painted. */
 function renderChoices(items){
   choicesEl.innerHTML="";
@@ -599,10 +638,13 @@ function renderChoices(items){
     b.setAttribute("data-choice", item.id);
     Text.paint(b, item.token);
     b.addEventListener("click", function(){
-      choicesEl.innerHTML="";
-      S.pendingChoices=[];
-      if(item.choice) finish(item.choice);
-      else if(item.onPick) item.onPick(item);
+      if(item.choice){
+        choicesEl.innerHTML="";
+        S.pendingChoices=[];
+        finish(item.choice);
+      } else {
+        answerInThread(item);
+      }
     });
     choicesEl.appendChild(b);
   });
@@ -735,7 +777,8 @@ function loadPhase(day, phase, options){
     S.pendingChoices = events
       .filter(function(e){ return e.kind === "choice"; })
       .map(function(e){
-        return { id: e.choiceId, token: Generated.label(e), tells: e.tells,
+        return { id: e.choiceId, threadId: e.threadId, label: e.label,
+                 token: Generated.label(e), tells: e.tells,
                  revealsClue: e.revealsClue,
                  onPick: function(item){ recordTold(item.tells); recordClue(item.revealsClue); } };
       });
@@ -815,6 +858,7 @@ window.__unread = {
   openThread: openThread,
   renderList: renderList,
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
+  choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
   pickChoice: function(id){
     var el = document.querySelector('[data-choice="' + id + '"]');
     if(el) el.click();
