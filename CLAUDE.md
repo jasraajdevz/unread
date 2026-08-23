@@ -41,8 +41,9 @@ portable, and for the instruction not to pay more than that.
     anything that got there another way, and the suite asserts it is empty.
     Rule 15's word-count grep is kept as a second-line smoke test with a per-line
     `not-story` opt-out; `grep not-story src/engine.html` lists every exemption.
-12. **`bash tools/gate.sh` is the gate** (D21). CI lives at `ci/gate.yml` and is unproven. A phase is done when the `gate` workflow is
-    green and the screenshot artifact shows the intended screen. Name the run.
+12. **`bash tools/gate.sh` is the gate** (D21). It must exit 0, and for any phase that
+    changes what is on screen the screenshots must show the intended screen. CI lives at
+    `ci/gate.yml`, is a copy of the same steps, and has never run.
 13. Every beat must be reachable and photographed by `tests/beats.spec.js`. A beat CI
     cannot photograph does not exist.
 14. Tests assert against values read from `story.json`. Never paste story text into a
@@ -81,18 +82,12 @@ ci/
 dist/  shots/                  generated, gitignored
 
 ## Definition of done for any task
-- `python3 tools/validate_story.py Resources/story.json` exits 0.
-- `python3 tools/validate_story.py Resources/story.json --engine src/engine.html` exits 0.
-- `python3 tools/build.py` produces `dist/unread.html`.
-- `npx playwright test` passes.
-- The `gate` workflow is green on the pushed commit. Name the run.
+- `bash tools/gate.sh` prints GATE GREEN and exits 0.
+- For anything visible: you have looked at the screenshots and said what they show.
 - You state which files you changed and why, in one line each.
+- Any append to DECISIONS.md is re-read and asserted present before you report it (D22).
 
-The whole gate, locally:
-
-    python3 tools/validate_story.py Resources/story.json --engine src/engine.html
-    python3 tools/build.py
-    npx playwright test
+    bash tools/gate.sh
 
 ## Style
 No comments that restate the code. Comment only non-obvious timing, a ruling being
