@@ -249,7 +249,8 @@
           threadId: template.threadId,
           speaker: line.speaker,
           from: 'them',
-          kind: 'text',
+          kind: line.kind || 'text',
+          game: line.game || null,
           body: fillSlots(line.text, slots),
           emphasis: line.emphasis || null,
           isReply: isReply

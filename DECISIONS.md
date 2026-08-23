@@ -923,3 +923,57 @@ sure, then you are. At thumbnail size it is not there at all.
 - A test seeded `localStorage` in `addInitScript`, which re-runs on every navigation — so
   its own reload wiped the reaction it was about to assert. The seed is now conditional.
   The engine was right and the test was lying.
+
+---
+
+## D36 — two mini-games, both of them things a phone actually has
+
+**Status:** decided · **Scope:** schema v7, `content/`, `src/engine.html` ·
+**Enforced by:** validator rules 18 and 19
+
+Nothing here is a game *in* a messenger. Both are things a messenger already is.
+
+### The locked chat
+
+A thread may carry `lockedBy`. Opening it shows a keypad instead of its messages, the row
+in the list shows a padlock and `····` where the preview would be, and the code unlocks it
+for good.
+
+**Rule 18: a lock code must appear in a message somewhere in the game.** A puzzle whose
+answer exists nowhere is not a puzzle, it is a wall, and the validator refuses it. The
+archive's code is `8830` — the second verification code Notify sent on day one, three days
+after Ren stopped replying. It has been sitting in plain sight since the first build.
+
+Behind it is Ren's own archived conversation with the same number, from weeks earlier:
+
+    is this still lauras
+    wrong number mate
+    ok
+    the light out front is on a sensor isnt it
+    who is this
+    you asked me that last time
+
+Ren did exactly what the player is doing. That is the payoff for finding the code, and it
+costs no new mechanic.
+
+### The guessing game
+
+`kind: "game"` renders a playable widget inline in the conversation. Sam starts one because
+he is bored; the number is derived from the run seed, so a run always hides the same
+answer and a bug is reproducible. Higher, lower, your guesses kept as chips, and priya
+lands a punchline underneath it.
+
+**Rule 19: a game message must name a game the engine implements, and must not also carry
+a body.** A game is played, not read. A new game is engine work and has to be declared
+before content can ask for it.
+
+**The turn is already written:** in Act III the number offers the same game, saying that
+sam used to make you play it, and that it already knows which number you will pick first.
+
+### One bug worth recording
+
+The patch that made `openThread` honour the lock **silently did nothing** — D29 had
+rewritten that line months of phases ago and my anchor no longer matched. It passed its own
+verification because the token I checked for (`isLocked(t)`) also matches the function
+*definition*. **Verify the call site, not the name.** The keypad simply never appeared, and
+only a screenshot found it.

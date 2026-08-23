@@ -2657,6 +2657,98 @@
           "tells": null
         }
       ]
+    },
+    {
+      "id": "tpl_flat_game",
+      "threadId": "t_flat",
+      "acts": [
+        1,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "im bored. guess my number"
+        },
+        {
+          "speaker": "c_sam",
+          "kind": "game",
+          "game": "guess",
+          "text": ""
+        },
+        {
+          "speaker": "c_priya",
+          "text": "sam youre thirty two"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_g_play",
+          "label": "go on then",
+          "tells": "played sams game"
+        },
+        {
+          "id": "ch_g_no",
+          "label": "im not playing",
+          "tells": "refused to play"
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_game",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "sam used to make you play this"
+        },
+        {
+          "speaker": "c_unknown",
+          "kind": "game",
+          "game": "guess",
+          "text": ""
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "i already know which one youll pick first"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_g1",
+          "label": "how",
+          "tells": "asked how it knew the number"
+        },
+        {
+          "id": "ch_p_g_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
     }
   ]
 }

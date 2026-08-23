@@ -596,3 +596,99 @@ test('D35 — the photo opens, and only close up is it not empty', async ({ page
   await page.keyboard.press('Escape');
   await expect(page.locator('#viewer')).not.toHaveClass(/on/);
 });
+
+test('D36 — a locked thread, and a code the game actually gives you', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // the lock is visible in the list: an invitation, not a dead end
+  await expect(page.locator('[data-thread="t_archive"] .lock')).toHaveCount(1);
+  await expect(page.locator('[data-thread="t_archive"] .rp')).toHaveText('····');
+
+  await page.locator('[data-thread="t_archive"]').click();
+  await expect(page.locator('.locked')).toHaveCount(1);
+  await expect(page.locator('.msg')).toHaveCount(0);
+
+  // a wrong code says so and clears
+  for (const d of ['1', '2', '3', '4']) await page.locator(`.pad [data-key="${d}"]`).click();
+  await page.locator('.pad .go').click();
+  await expect(page.locator('.padmsg').first()).toHaveText('wrong code');
+  expect(await page.evaluate(() => window.__unread.isLocked('t_archive'))).toBe(true);
+
+  // the right code is one the Notify thread sent
+  const code = await page.evaluate(() =>
+    window.STORY.threads.find((t) => t.id === 't_archive').lockedBy);
+  const inMessages = await page.evaluate((c) =>
+    window.STORY.beats.some((b) => b.messages.some((m) => (m.body || '').includes(c))), code);
+  expect(inMessages, 'the code appears in a message the player can read').toBe(true);
+
+  for (const d of code.split('')) await page.locator(`.pad [data-key="${d}"]`).click();
+  await page.locator('.pad .go').click();
+  await expect(page.locator('.msg')).not.toHaveCount(0);
+  expect(await page.evaluate(() => window.__unread.isLocked('t_archive'))).toBe(false);
+
+  // and it stays unlocked
+  await page.reload();
+  await page.locator('[data-thread="t_archive"]').click();
+  await expect(page.locator('.locked')).toHaveCount(0);
+  await expect(page.locator('.msg')).not.toHaveCount(0);
+});
+
+test('D36 — the guessing game is playable and seeded', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const found = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      if (entry.day === 1) continue;
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(entry.day, phase);
+        if ((plan.phases[phase] || []).some((e) => e.kind === 'game')) {
+          return { day: entry.day, phase };
+        }
+      }
+    }
+    return null;
+  });
+  expect(found, 'some day offers a game').not.toBeNull();
+
+  await page.locator('[data-thread="t_flat"]').click();
+  await expect(page.locator('.game')).toHaveCount(1);
+  await expect(page.locator('.game .pad')).toHaveCount(1);
+
+  // the answer comes from the run seed, so a run always hides the same number
+  const id = await page.locator('.game').getAttribute('data-game');
+  expect(id).toBe('guess');
+  const secret = await page.evaluate(() => window.__unread.secretFor('probe'));
+  expect(await page.evaluate(() => window.__unread.secretFor('probe'))).toBe(secret);
+  expect(secret).toBeGreaterThanOrEqual(1);
+  expect(secret).toBeLessThanOrEqual(50);
+
+  // guessing gives higher/lower and records the attempt
+  for (const d of ['2', '5']) await page.locator(`.game .pad [data-key="${d}"]`).click();
+  await page.locator('.game .pad .go').click();
+  await expect(page.locator('.game .try')).toHaveCount(1);
+  await expect(page.locator('.game .padmsg')).toHaveText(/higher|lower|got it/);
+
+  // play it properly: binary search must always land
+  const won = await page.evaluate(async () => {
+    const box = document.querySelector('.game');
+    const press = (label) => box.querySelector('[data-key="' + label + '"]').click();
+    let lo = 1, hi = 50;
+    for (let i = 0; i < 8; i++) {
+      const guess = Math.floor((lo + hi) / 2);
+      String(guess).split('').forEach(press);
+      box.querySelector('.go').click();
+      const said = box.querySelector('.padmsg').textContent;
+      if (said === 'got it') return true;
+      if (said === 'higher') lo = guess + 1; else hi = guess - 1;
+    }
+    return false;
+  });
+  expect(won, 'the game is winnable').toBe(true);
+  await expect(page.locator('.game')).toHaveClass(/done/);
+
+  // and the win is remembered
+  const games = await page.evaluate(() => window.__unread.games());
+  expect(Object.values(games).some((g) => g.won)).toBe(true);
+});

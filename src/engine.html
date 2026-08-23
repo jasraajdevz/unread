@@ -196,6 +196,39 @@
   .viewer .hint{flex:none;padding:10px 14px 16px;font-size:11px;color:#39414C;
                 text-align:center;letter-spacing:.05em;}
 
+
+  /* ---- keypad, shared by the lock and the guess --------------------------- */
+  .pad{display:grid;grid-template-columns:repeat(3,58px);gap:8px;justify-content:center;
+       padding:14px 0 4px;}
+  .pad button{height:48px;border-radius:12px;border:1px solid #2A323D;background:#1B2029;
+              color:var(--ink);font-family:inherit;font-size:18px;cursor:pointer;
+              font-variant-numeric:tabular-nums;}
+  .pad button:hover{background:#232B35;}
+  .pad button:active{background:#2E3A45;}
+  .pad button.wide{grid-column:span 2;font-size:14px;}
+  .pad button.go{background:#2E3A45;border-color:#3A4551;}
+  .pad button:focus-visible{outline:2px solid var(--instr);outline-offset:2px;}
+  .padout{text-align:center;font-size:26px;letter-spacing:.32em;padding:8px 0 2px;
+          color:var(--ink);font-variant-numeric:tabular-nums;min-height:34px;}
+  .padmsg{text-align:center;font-size:12px;color:var(--faint);padding:4px 0 2px;min-height:18px;}
+  .padmsg.bad{color:var(--alert);}
+  .padmsg.good{color:#7FA087;}
+
+  .locked{display:flex;flex-direction:column;justify-content:center;height:100%;
+          padding:0 22px 40px;}
+  .locked .glyph{text-align:center;font-size:34px;color:var(--faint);padding-bottom:4px;}
+  .locked .cap{text-align:center;font-size:12px;color:var(--faint);letter-spacing:.06em;}
+
+  .game{align-self:stretch;margin:6px 0 2px;padding:12px 10px 8px;border-radius:14px;
+        background:#171C24;border:1px solid var(--line);}
+  .game .head{font-size:12px;color:var(--dim);text-align:center;letter-spacing:.04em;}
+  .game .tries{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;padding-top:8px;}
+  .game .try{font-size:11px;color:var(--faint);border:1px solid var(--line);
+             border-radius:9px;padding:2px 7px;font-variant-numeric:tabular-nums;}
+  .game .try.up::after{content:" ↑";} .game .try.down::after{content:" ↓";}
+  .game.done .pad{display:none;}
+  .row .lock{color:var(--faint);font-size:12px;flex:none;}
+
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
 </style>
 
@@ -543,6 +576,7 @@ function hallway(scale, detail){
    RENDER LAYER
    ========================================================================== */
 function previewToken(t){
+  if(isLocked(t)) return Text.mint("ui.chrome", "····");
   var m = shownOf(t);
   if(!m.length) return Text.mint("story.preview", "");
   var last = m[m.length-1];
@@ -573,6 +607,11 @@ function renderList(){
     Text.paint(b.querySelector(".rn"), Story.threadName(t));
     b.querySelector(".rtime").textContent = listStamp(lastOffset(t));
     Text.paint(b.querySelector(".rp"), previewToken(t));
+    if(isLocked(t)){
+      var l=document.createElement("span"); l.className="lock";
+      l.textContent="🔒";        /* not-story: a glyph */
+      b.appendChild(l);
+    }
     if(isUnread(t)){
       var d=document.createElement("span"); d.className="dot"; b.appendChild(d);
       if(prefs.alerts) b.classList.add("pulse");
@@ -585,6 +624,7 @@ function renderList(){
 }
 
 function bubbleFor(m, prev){
+  if(m.kind === "game"){ return gameWidget(m); }
   if(m.kind === "photo"){
     var p=document.createElement("div"); p.className="photo";
     p.setAttribute("data-src","story.photo");
@@ -653,7 +693,7 @@ function openThread(t){
   appbar.querySelector(".back").addEventListener("click", function(){
     if(!S.ended) renderList();
   });
-  paint(t);
+  if(isLocked(t)) paintLocked(t); else paint(t);
   scroll.scrollTop=0;
   var mine = choicesForThread(t.id);
   if(mine.length && !S.repliesLocked) renderChoices(mine);
@@ -906,7 +946,8 @@ function eventsToMessages(events, baseOffsetMin){
     out.push({
       id: "g_" + (baseOffsetMin) + "_" + (n),
       from: "them",
-      kind: "text",
+      kind: e.kind || "text",
+      game: e.game || null,
       fromContactId: e.speaker,
       __threadId: e.threadId,
       emphasis: e.emphasis || null,
@@ -1005,6 +1046,183 @@ function recordMemory(memory){
 
 
 
+
+
+/* ============================================================================
+   KEYPAD — one component, two uses: a locked thread and a guessing game.
+   ========================================================================== */
+/* not-story:begin — chrome and glyphs */
+var PAD_GAME_HEAD = "im thinking of a number";
+var PAD_RANGE = "1 to 50";
+var PAD_HIGHER = "higher";
+var PAD_LOWER = "lower";
+var PAD_GOT_IT = "got it";
+var PAD_CLEAR = "clear";
+var PAD_GO = "enter";
+var LOCK_GLYPH = "🔒";
+var LOCK_CAP = "this chat is locked";
+var LOCK_WRONG = "wrong code";
+var LOCK_HINT = "four digits";
+/* not-story:end */
+
+function chromeText(el, text){ Text.paint(el, Text.mint("ui.chrome", text)); }
+
+function makeKeypad(digits, onSubmit){
+  var wrap = document.createElement("div");
+  var out = document.createElement("div");
+  out.className = "padout";
+  var msg = document.createElement("div");
+  msg.className = "padmsg";
+  var pad = document.createElement("div");
+  pad.className = "pad";
+  var buffer = "";
+
+  function draw(){ out.textContent = buffer || "·".repeat(digits); }
+
+  function key(label, cls, fn){
+    var b = document.createElement("button");
+    if(cls) b.className = cls;
+    b.textContent = label;                 /* not-story: a digit or a glyph */
+    b.setAttribute("data-key", label);
+    b.addEventListener("click", function(){ fn(); Sound.play("send"); });
+    return b;
+  }
+
+  ["1","2","3","4","5","6","7","8","9"].forEach(function(d){
+    pad.appendChild(key(d, null, function(){
+      if(buffer.length < digits){ buffer += d; draw(); }
+    }));
+  });
+  pad.appendChild(key("⌫", null, function(){ buffer = buffer.slice(0, -1); draw(); }));
+  pad.appendChild(key("0", null, function(){
+    if(buffer.length < digits){ buffer += "0"; draw(); }
+  }));
+  pad.appendChild(key("⏎", "go", function(){
+    if(!buffer.length) return;
+    var verdict = onSubmit(buffer, msg);
+    if(verdict !== "keep"){ buffer = ""; draw(); }
+  }));
+
+  draw();
+  wrap.appendChild(out);
+  wrap.appendChild(msg);
+  wrap.appendChild(pad);
+  wrap.pad = pad;
+  return wrap;
+}
+
+/* ---- locked threads ------------------------------------------------------- */
+function unlockedThreads(){
+  if(!S.save) return {};
+  return S.save.unlocked || (S.save.unlocked = {});
+}
+function isLocked(t){
+  return !!t.lockedBy && !unlockedThreads()[t.id];
+}
+
+function paintLocked(t){
+  var wrap = document.createElement("div");
+  wrap.className = "locked";
+  var glyph = document.createElement("div");
+  glyph.className = "glyph";
+  glyph.textContent = LOCK_GLYPH;          /* not-story: a glyph */
+  var cap = document.createElement("div");
+  cap.className = "cap";
+  chromeText(cap, LOCK_CAP);
+  wrap.appendChild(glyph);
+  wrap.appendChild(cap);
+  wrap.appendChild(makeKeypad(String(t.lockedBy).length, function(entry, msg){
+    if(entry === String(t.lockedBy)){
+      unlockedThreads()[t.id] = true;
+      Save.write(S.save);
+      Sound.play("receive");
+      openThread(t);
+      return "done";
+    }
+    msg.className = "padmsg bad";
+    chromeText(msg, LOCK_WRONG);
+    return "reset";
+  }));
+  var hint = document.createElement("div");
+  hint.className = "padmsg";
+  chromeText(hint, LOCK_HINT);
+  wrap.appendChild(hint);
+  scroll.innerHTML = "";
+  scroll.appendChild(wrap);
+}
+
+/* ---- the guessing game ---------------------------------------------------- */
+function gameState(id){
+  if(!S.save) return null;
+  var all = S.save.games || (S.save.games = {});
+  return all[id] || (all[id] = { tries: [], won: false });
+}
+
+/* the number is the seed's, so the same run always hides the same one */
+function secretFor(id){
+  var seed = (S.save && S.save.runSeed) || "default";
+  var h = 2166136261;
+  var text = seed + "|" + id;
+  for(var i = 0; i < text.length; i++){
+    h ^= text.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return (h % 50) + 1;
+}
+
+function gameWidget(m){
+  var box = document.createElement("div");
+  box.className = "game";
+  box.setAttribute("data-src", "story.game");
+  box.setAttribute("data-game", m.game);
+  var state = gameState(m.id);
+  var secret = secretFor(m.id);
+
+  var head = document.createElement("div");
+  head.className = "head";
+  chromeText(head, PAD_GAME_HEAD + ", " + PAD_RANGE);
+  box.appendChild(head);
+
+  var tries = document.createElement("div");
+  tries.className = "tries";
+  function drawTries(){
+    tries.innerHTML = "";
+    state.tries.forEach(function(t){
+      var chip = document.createElement("span");
+      chip.className = "try " + (t.n < secret ? "up" : t.n > secret ? "down" : "");
+      chip.textContent = String(t.n);      /* not-story: a number */
+      tries.appendChild(chip);
+    });
+  }
+
+  var pad = makeKeypad(2, function(entry, msg){
+    var n = parseInt(entry, 10);
+    if(!n || n < 1 || n > 50) return "reset";
+    state.tries.push({ n: n });
+    Save.write(S.save);
+    drawTries();
+    if(n === secret){
+      state.won = true;
+      Save.write(S.save);
+      msg.className = "padmsg good";
+      chromeText(msg, PAD_GOT_IT);
+      box.classList.add("done");
+      Sound.play("receive");
+      /* the whole point of Act III's version: it never has to guess */
+      if(m.__mocking) return "done";
+      return "done";
+    }
+    msg.className = "padmsg";
+    chromeText(msg, n < secret ? PAD_HIGHER : PAD_LOWER);
+    return "reset";
+  });
+
+  box.appendChild(tries);
+  box.appendChild(pad);
+  drawTries();
+  if(state.won) box.classList.add("done");
+  return box;
+}
 
 /* ============================================================================
    REACTIONS — the toy, and the trace.
@@ -1688,6 +1906,9 @@ window.__unread = {
   reactions: function(){ return reactionsBank(); },
   favouriteReaction: favouriteReaction,
   react: function(id, emoji){ setReaction(id, emoji); },
+  secretFor: secretFor,
+  isLocked: function(id){ return isLocked(Story.thread(id)); },
+  games: function(){ return (S.save && S.save.games) || {}; },
   haptics: Haptics,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){

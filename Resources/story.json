@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "contacts": [
     {
       "id": "c_mom",
@@ -25,6 +25,11 @@
       "id": "c_notify",
       "displayName": "Notify",
       "accentHex": "#8A8A8A"
+    },
+    {
+      "id": "c_archive",
+      "displayName": "+44 7700 900931",
+      "accentHex": "#5F6570"
     }
   ],
   "threads": [
@@ -71,6 +76,16 @@
       "startBeat": "b_unknown_1",
       "pinned": false,
       "accentHex": "#6E7480"
+    },
+    {
+      "id": "t_archive",
+      "displayName": "Archived",
+      "contactId": "c_archive",
+      "accentHex": "#4A5058",
+      "startBeat": "b_archive_1",
+      "pinned": false,
+      "archived": true,
+      "lockedBy": "8830"
     }
   ],
   "beats": [
@@ -999,6 +1014,67 @@
           "live": true,
           "delayMs": 0,
           "typingMs": 900,
+          "showTimestamp": true
+        }
+      ]
+    },
+    {
+      "id": "b_archive_1",
+      "threadId": "t_archive",
+      "messages": [
+        {
+          "id": "m_ar_01",
+          "from": "them",
+          "kind": "text",
+          "body": "is this still lauras",
+          "offsetMinutes": -20160,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_ar_02",
+          "from": "me",
+          "kind": "text",
+          "body": "wrong number mate",
+          "offsetMinutes": -20140,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_ar_03",
+          "from": "them",
+          "kind": "text",
+          "body": "ok",
+          "offsetMinutes": -20100,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_ar_04",
+          "from": "them",
+          "kind": "text",
+          "body": "the light out front is on a sensor isnt it",
+          "offsetMinutes": -14400,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_ar_05",
+          "from": "me",
+          "kind": "text",
+          "body": "who is this",
+          "offsetMinutes": -14380,
+          "delayMs": 0,
+          "typingMs": 0
+        },
+        {
+          "id": "m_ar_06",
+          "from": "them",
+          "kind": "text",
+          "body": "you asked me that last time",
+          "offsetMinutes": -14360,
+          "delayMs": 0,
+          "typingMs": 0,
           "showTimestamp": true
         }
       ]

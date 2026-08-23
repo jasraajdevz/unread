@@ -19,7 +19,10 @@ import sys
 PHOTO_EXTENSIONS = ("jpg", "jpeg", "png", "heic")
 AUDIO_EXTENSIONS = ("m4a", "mp3", "wav", "caf", "aiff", "aif")
 
-MESSAGE_KINDS = ("text", "photo", "audio", "system")
+MESSAGE_KINDS = ("text", "photo", "audio", "system", "game")
+
+# Playable things. A new one is engine work and has to be added here first.
+GAME_KINDS = ("guess",)
 MESSAGE_SENDERS = ("them", "me", "system")
 
 # D20: an ending declares the behaviour the engine runs for it. A new value here is a
@@ -41,7 +44,7 @@ WEEKDAY_NAMES = frozenset([
     "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
     "today", "yesterday", "tomorrow",
 ])
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # The shape of story.json. A required key must be present; an optional one may be
 # absent but must have the right type when it is there.
@@ -50,13 +53,13 @@ SCHEMA = {
                 "optional": {}},
     "thread": {"required": {"id": str, "displayName": str, "startBeat": str, "pinned": bool},
                "optional": {"contactId": str, "participantIds": list, "startsUnread": bool,
-                            "accentHex": str}},
+                            "accentHex": str, "lockedBy": str, "archived": bool}},
     "message": {"required": {"id": str, "from": str, "kind": str, "offsetMinutes": int,
                              "delayMs": int, "typingMs": int},
                 "optional": {"body": str, "asset": str, "durationMs": int,
                              "live": bool, "fromContactId": str,
                              "showTimestamp": bool, "requiresFlags": list,
-                             "emphasis": str}},
+                             "emphasis": str, "game": str}},
     "choice": {"required": {"id": str, "label": str, "next": str},
                "optional": {"setsFlags": list}},
     "notification": {"required": {"afterSeconds": int, "title": str, "body": str, "resumeBeat": str},
@@ -687,6 +690,8 @@ class Validator:
                                   % (message_id, beat_id, message.get("body")))
 
                 # -- mirrors testEveryReferencedAssetIsInBundle
+                if kind == "game":
+                    continue
                 if kind in ("text", "system"):
                     if message.get("asset") is not None:
                         self.fail("message '%s' in beat '%s' is kind '%s' but names an asset"
@@ -762,6 +767,35 @@ class Validator:
                 if kind not in EMPHASIS_KINDS:
                     self.fail("message '%s' has emphasis %r, which is not one of %s"
                               % (message.get("id"), kind, ", ".join(EMPHASIS_KINDS)))
+
+        # RULE 18 -- a lock code must be findable. A puzzle whose answer appears nowhere
+        # in the game is not a puzzle, it is a wall.
+        bodies = " ".join((m.get("body") or "")
+                          for b in story["beats"] for m in b.get("messages", []))
+        for thread in story["threads"]:
+            code = thread.get("lockedBy")
+            if code is None:
+                continue
+            if not code.isdigit() or len(code) < 3:
+                self.fail("thread '%s' is locked by %r, which is not a code anyone could type"
+                          % (thread.get("id"), code))
+            elif code not in bodies:
+                self.fail("thread '%s' is locked by '%s', which appears in no message. The "
+                          "answer has to exist somewhere the player can reach it."
+                          % (thread.get("id"), code))
+
+        # RULE 19 -- a game message names a game the engine implements.
+        for beat in story["beats"]:
+            for message in beat.get("messages", []):
+                if message.get("kind") != "game":
+                    continue
+                if message.get("game") not in GAME_KINDS:
+                    self.fail("message '%s' is a game but names %r, which is not one of %s"
+                              % (message.get("id"), message.get("game"),
+                                 ", ".join(GAME_KINDS)))
+                if message.get("body"):
+                    self.fail("message '%s' is a game and also carries a body; a game is "
+                              "played, not read" % message.get("id"))
 
         # RULE 16 -- every ending declares a mechanic the engine implements (D20).
         for ending in story["endings"]:
