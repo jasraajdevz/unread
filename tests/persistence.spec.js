@@ -209,21 +209,30 @@ test('D27 — answering records what Ren said and any clue it reveals', async ({
   // one pass: find a clue-revealing reply, open a thread, and take it. pickChoice
   // dispatches a real click on the real button, so the handler under test is the one
   // the player uses.
+  // D29: only the oldest unanswered question is on screen, so hunt for a clue-revealing
+  // reply among the choices actually offered -- answering earlier questions to reach it.
   const taken = await page.evaluate(() => {
     for (const entry of window.CONTENT.ladder.days) {
       if (entry.day === 1) continue;
       for (const phase of ['day', 'night']) {
         window.__unread.loadPhase(entry.day, phase);
-        const withClue = window.__unread.state.pendingChoices.find((c) => c.revealsClue);
-        if (!withClue) continue;
-        const thread = window.__unread.story.threads()
-          .find((t) => t.id === 't_flat') || window.__unread.story.threads()[0];
-        window.__unread.openThread(thread);
-        const clicked = window.__unread.pickChoice(withClue.id);
-        return {
-          clicked, day: entry.day, phase, id: withClue.id,
-          clue: withClue.revealsClue, tells: withClue.tells,
-        };
+        for (const thread of window.__unread.story.threads()) {
+          window.__unread.openThread(thread);
+          for (let step = 0; step < 8; step++) {
+            const offered = window.__unread.choicesForThread(thread.id);
+            if (!offered.length) break;
+            const match = window.__unread.state.pendingChoices
+              .find((c) => offered.indexOf(c.id) >= 0 && c.revealsClue);
+            if (match) {
+              const clicked = window.__unread.pickChoice(match.id);
+              return {
+                clicked, day: entry.day, phase, id: match.id,
+                clue: match.revealsClue, tells: match.tells, thread: thread.id,
+              };
+            }
+            window.__unread.pickChoice(offered[0]);   // answer and move to the next
+          }
+        }
       }
     }
     return null;
@@ -246,7 +255,7 @@ test('D27 — answering records what Ren said and any clue it reveals', async ({
   expect(next, 'the last authored phase still offers a reply').toBeGreaterThan(0);
 });
 
-test('D28 — a thread offers its own replies and nobody else\'s', async ({ page }) => {
+test('D29 — replies are per question: answering one leaves the others', async ({ page }) => {
   await page.addInitScript((now) => {
     window.localStorage.setItem('unread.save.v1', JSON.stringify({
       runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
@@ -258,42 +267,56 @@ test('D28 — a thread offers its own replies and nobody else\'s', async ({ page
 
   await page.evaluate(() => window.__unread.loadPhase(2, 'day'));
 
-  // the phase offers replies across more than one thread, or this proves nothing
-  const spread = await page.evaluate(() => {
+  const pending = await page.evaluate(() => {
     const byThread = {};
     window.__unread.state.pendingChoices.forEach((c) => {
-      byThread[c.threadId] = (byThread[c.threadId] || 0) + 1;
+      (byThread[c.threadId] = byThread[c.threadId] || []).push(c.templateId);
     });
     return byThread;
   });
-  const threads = Object.keys(spread);
+  const threads = Object.keys(pending);
   expect(threads.length, 'day 2 spans several threads').toBeGreaterThan(1);
 
-  // each thread shows exactly its own
-  for (const id of threads) {
-    await page.locator(`[data-thread="${id}"]`).click();
-    const onScreen = await page.locator('.choice').evaluateAll((els) =>
-      els.map((e) => e.getAttribute('data-choice')));
-    const expected = await page.evaluate((t) => window.__unread.choicesForThread(t), id);
-    expect(onScreen.sort(), `${id} shows only its own replies`).toEqual(expected.sort());
-    expect(onScreen.length).toBe(spread[id]);
-    await page.locator('.back').click();
-  }
+  // a thread that asked two separate questions, or this proves nothing
+  const multi = threads.find((id) => new Set(pending[id]).size > 1);
+  expect(multi, 'some thread asks more than one question in a phase').toBeTruthy();
 
-  // answering one thread spends only that thread's replies, and the reply lands in it
-  const first = threads[0];
-  const second = threads[1];
-  await page.locator(`[data-thread="${first}"]`).click();
-  const before = await page.locator('.msg').count();
+  // it offers only the first question's answers, not both questions' at once
+  await page.locator(`[data-thread="${multi}"]`).click();
+  const firstGroup = await page.evaluate((id) => window.__unread.choicesForThread(id), multi);
+  const onScreen = await page.locator('.choice').evaluateAll((els) =>
+    els.map((e) => e.getAttribute('data-choice')));
+  expect(onScreen).toEqual(firstGroup);
+  expect(onScreen.length, 'one question, not the whole thread')
+    .toBeLessThan(pending[multi].length);
+
+  const templates = await page.evaluate((id) =>
+    window.__unread.pendingInThread(id).map((c) => c.templateId), multi);
+  const firstTemplate = templates[0];
+  expect(new Set(templates).size, 'the thread has more than one question waiting')
+    .toBeGreaterThan(1);
+
+  // answering the first question reveals the next one, in the same thread
   const label = await page.locator('.choice').first().textContent();
   await page.locator('.choice').first().click();
-
-  await expect(page.locator('.choice'), `${first} is answered`).toHaveCount(0);
   await expect(page.locator('.msg.me').last()).toHaveText(label);
-  expect(await page.locator('.msg').count(), 'the reply is in the thread').toBe(before + 1);
 
+  const after = await page.evaluate((id) =>
+    window.__unread.pendingInThread(id).map((c) => c.templateId), multi);
+  expect(after, 'the answered question is spent').not.toContain(firstTemplate);
+  expect(after.length, 'the other question survives').toBeGreaterThan(0);
+
+  const nextGroup = await page.locator('.choice').evaluateAll((els) =>
+    els.map((e) => e.getAttribute('data-choice')));
+  expect(nextGroup.length, 'the next question is now offered').toBeGreaterThan(0);
+  expect(nextGroup, 'and it is a different question').not.toEqual(onScreen);
+
+  // a different thread is untouched throughout
+  const other = threads.find((id) => id !== multi);
   await page.locator('.back').click();
-  await page.locator(`[data-thread="${second}"]`).click();
-  await expect(page.locator('.choice'), `${second} still has its replies`)
-    .toHaveCount(spread[second]);
+  await page.locator(`[data-thread="${other}"]`).click();
+  const otherGroup = await page.evaluate((id) => window.__unread.choicesForThread(id), other);
+  await expect(page.locator('.choice'), `${other} still has its replies`)
+    .toHaveCount(otherGroup.length);
+  expect(otherGroup.length).toBeGreaterThan(0);
 });

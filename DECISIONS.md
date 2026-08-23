@@ -643,3 +643,30 @@ wrong the first time a human played day 3.
 
 The authored beat-5 choices on day 1 are unaffected: they are the ending, they belong to
 the one thread that matters at that moment, and they still end the run.
+
+---
+
+## D29 — a reply answers a question, not a thread
+
+**Status:** decided · **Supersedes:** D28's grouping (D28's other two points stand) ·
+**Scope:** `src/engine.html` · **Enforced by:** the gate
+
+D28 made replies per-thread, and flagged what that still got wrong: if Mom asked about
+the weekend *and* about the car in one phase, answering the weekend silently discarded
+the ability to answer about the car. That is the same bug D28 fixed, one level down.
+
+1. **Replies are grouped by the template that produced them.** Answering one question
+   spends that question's replies and nothing else.
+2. **A conversation offers one question's answers at a time**, oldest first. Four buttons
+   at once is a wall; two, then two more when the first is answered, reads as working
+   down a conversation.
+3. **The later reply lands at the bottom**, after the messages that came in while it went
+   unanswered. That is chronologically odd and exactly what a real messenger does when
+   you reply late to something further up.
+
+**Consequence for content:** a clue-revealing reply may sit behind an earlier question in
+the same thread, and the player has to answer through to reach it. That is acceptable —
+the clue is still reachable, and the gate proves all six are within days 1-10.
+
+D28 stands on the other two points: a thread never shows another thread's replies, and
+answering always lands the reply in the conversation as a message from the player.

@@ -591,10 +591,19 @@ function beat4(){
 }
 
 
-/* A reply belongs to the conversation it answers. Opening Mom must not offer Dave's
-   replies, and answering Mom must not silently consume them. */
-function choicesForThread(threadId){
+/* A reply belongs to the question it answers, not merely to the thread. If Mom asked
+   about the weekend and then about the car, answering one must not discard the other --
+   but four buttons at once is a wall, so a conversation offers one question's answers at
+   a time, in the order they were asked. Answer the weekend and the car is still there. */
+function pendingInThread(threadId){
   return S.pendingChoices.filter(function(c){ return c.threadId === threadId; });
+}
+
+function choicesForThread(threadId){
+  var all = pendingInThread(threadId);
+  if(!all.length) return [];
+  var oldest = all[0].templateId;
+  return all.filter(function(c){ return c.templateId === oldest; });
 }
 
 /* The player's reply lands in the thread as a message. Without this the choice vanishes
@@ -615,9 +624,9 @@ function answerInThread(item){
       __token: item.token
     });
   }
-  /* only this thread's replies are spent */
+  /* only this question's replies are spent; anything else the thread asked survives */
   S.pendingChoices = S.pendingChoices.filter(function(c){
-    return c.threadId !== item.threadId;
+    return !(c.threadId === item.threadId && c.templateId === item.templateId);
   });
   if(item.onPick) item.onPick(item);
 
@@ -777,7 +786,8 @@ function loadPhase(day, phase, options){
     S.pendingChoices = events
       .filter(function(e){ return e.kind === "choice"; })
       .map(function(e){
-        return { id: e.choiceId, threadId: e.threadId, label: e.label,
+        return { id: e.choiceId, threadId: e.threadId, templateId: e.templateId,
+                 label: e.label,
                  token: Generated.label(e), tells: e.tells,
                  revealsClue: e.revealsClue,
                  onPick: function(item){ recordTold(item.tells); recordClue(item.revealsClue); } };
@@ -859,6 +869,9 @@ window.__unread = {
   renderList: renderList,
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
+  pendingInThread: function(id){
+    return pendingInThread(id).map(function(c){ return { id: c.id, templateId: c.templateId }; });
+  },
   pickChoice: function(id){
     var el = document.querySelector('[data-choice="' + id + '"]');
     if(el) el.click();
