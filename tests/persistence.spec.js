@@ -1117,3 +1117,70 @@ test('D39 — nothing closes a thread you are reading', async ({ page }) => {
   await expect(page.locator('.row')).not.toHaveCount(0);
   expect(await page.evaluate(() => window.__unread.state.current)).toBeNull();
 });
+
+test('D40 — on a phone it is the phone, on a desktop it is a phone on a desk', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+
+  // a phone: the frame comes off and the app takes the whole screen
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto(BUILT);
+  const small = await page.evaluate(() => {
+    const p = document.querySelector('.phone');
+    const box = p.getBoundingClientRect();
+    const cs = getComputedStyle(p);
+    return {
+      wasted: Math.round(window.innerHeight - box.height),
+      spare: Math.round(window.innerWidth - box.width),
+      radius: cs.borderTopLeftRadius,
+      shadow: cs.boxShadow,
+      foot: getComputedStyle(document.querySelector('.foot')).display,
+      hScroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+    };
+  });
+  expect(small.wasted, 'the app fills the height').toBeLessThanOrEqual(1);
+  expect(small.spare, 'and the width').toBeLessThanOrEqual(1);
+  expect(small.radius, 'no bezel on a device that is already the bezel').toBe('0px');
+  expect(small.shadow, 'nothing to cast a shadow onto').toBe('none');
+  expect(small.foot, 'the footer would eat a row; Settings still says it').toBe('none');
+  expect(small.hScroll, 'nothing pushes the page sideways').toBe(false);
+
+  // the browser must not answer a gesture before the game does
+  await page.locator('[data-thread="t_flat"]').click();
+  const touch = await page.evaluate(() => ({
+    msg: getComputedStyle(document.querySelector('.msg')).touchAction,
+    select: getComputedStyle(document.querySelector('.msg')).webkitUserSelect,
+    convo: getComputedStyle(document.querySelector('.convo')).touchAction,
+    scroll: getComputedStyle(document.getElementById('scroll')).overscrollBehaviorY,
+  }));
+  expect(touch.msg, 'a double tap reacts, it does not zoom').toBe('manipulation');
+  expect(touch.select, 'a 420ms hold reacts, it does not select').toBe('none');
+  expect(touch.convo, 'the swipe is horizontal, the scroll is vertical').toBe('pan-y');
+  expect(touch.scroll, 'the page behind must not rubber-band').toBe('contain');
+
+  // a hold still opens the picker, and it stays inside the screen
+  const msg = page.locator('.msg').nth(2);
+  await msg.dispatchEvent('pointerdown');
+  await expect(page.locator('.picker')).toHaveCount(1, { timeout: 2000 });
+  const pick = await page.locator('.picker').boundingBox();
+  expect(pick.x, 'the picker fits').toBeGreaterThanOrEqual(0);
+  expect(pick.x + pick.width).toBeLessThanOrEqual(390);
+
+  // and the search field is big enough that iOS does not zoom the page on focus
+  await page.locator('#appbar .back').click();
+  await page.locator('#find').click();
+  const size = await page.evaluate(() => getComputedStyle(document.querySelector('#q')).fontSize);
+  expect(parseFloat(size), 'under 16px iOS zooms in and never back out')
+    .toBeGreaterThanOrEqual(16);
+
+  // a desktop: the frame is still there, because there it is what says "a phone"
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto(BUILT);
+  const big = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('.phone'));
+    return { radius: cs.borderTopLeftRadius, shadow: cs.boxShadow !== 'none',
+             foot: getComputedStyle(document.querySelector('.foot')).display };
+  });
+  expect(big.radius).not.toBe('0px');
+  expect(big.shadow).toBe(true);
+  expect(big.foot).not.toBe('none');
+});

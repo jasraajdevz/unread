@@ -13,9 +13,11 @@
     --ease:cubic-bezier(.32,.72,0,1);
   }
   *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
   body{
     background:radial-gradient(120% 80% at 50% 0%,#0A0D14 0%,var(--ground) 62%);
     color:var(--ink); margin:0; min-height:100vh; -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent; overscroll-behavior:none;
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     padding:16px; gap:12px;
@@ -388,6 +390,39 @@
   .match .note2{text-align:center;font-size:11px;color:var(--faint);
                 padding-top:10px;min-height:16px;}
   .match.done .note2{color:var(--good);}
+
+
+  /* ---- touch --------------------------------------------------------------
+     Nothing here changes a gesture. It stops the browser from answering first:
+     no double-tap zoom on a message you meant to react to, no selection
+     magnifier during a 420ms hold, no rubber-banding the page behind the app. */
+  button,.row,.msg,.choice,.tile,.opt,.hit,.photo,.spot .shot{
+    touch-action:manipulation;
+  }
+  #scroll{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  /* the swipe for timestamps is horizontal; the scroll is vertical. Say so, or a
+     phone gives the whole gesture to whichever it guesses first. */
+  .convo{touch-action:pan-y;}
+  .msg,.row,.choice,.tile,.opt,.divider,.who{
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
+
+  /* ---- on a phone, be the phone -------------------------------------------
+     svh, not dvh: the choices sit at the bottom edge, and a height that grows
+     and shrinks with the browser's own chrome would walk them off the screen. */
+  @media (max-width:520px),(max-height:560px){
+    body{padding:0; gap:0; min-height:100svh;}
+    .phone{
+      max-width:none; height:100vh; height:100svh;
+      border:none; border-radius:0; box-shadow:none;
+    }
+    .statusbar{padding-top:env(safe-area-inset-top,0px);}
+    .choices{padding-bottom:calc(13px + env(safe-area-inset-bottom,0px));}
+    .convo{padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));}
+    /* iOS zooms the page on focus for anything under 16px, and never zooms back */
+    .searchbar input{font-size:16px;}
+    .foot{display:none;}   /* the same words are in Settings, where there is room */
+  }
 
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2A313B;
         letter-spacing:.16em;}
@@ -2751,7 +2786,18 @@ applyPrefs();
 /* ============================================================================
    BOOT
    ========================================================================== */
+/* A phone laying the page out at 980px shows a doll's house. If whatever is hosting
+   this did not put a viewport in the head, put one there. */
+function ensureViewport(){
+  if(document.querySelector('head meta[name="viewport"]')) return;
+  var m = document.createElement("meta");
+  m.setAttribute("name", "viewport");
+  m.setAttribute("content", "width=device-width,initial-scale=1,viewport-fit=cover");
+  document.head.appendChild(m);
+}
+
 function boot(){
+  ensureViewport();
   var now = new Date().getTime();
   var save = Save.read();
   if(!save){ save = Save.fresh(now); }

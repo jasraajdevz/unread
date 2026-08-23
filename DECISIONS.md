@@ -1146,3 +1146,43 @@ is beautifully made and completely ordinary, and that is the target.
    first of them and got a `match`. It asks for `game === "guess"` by name.
 3. D35 loaded a phase from inside a thread and expected the list. Under the new rule it
    does not get one; it walks back the way a player would.
+
+---
+
+## D40 — on a phone, be the phone
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the gate
+
+The bezel, the corner radius and the drop shadow are how the page says *this is a phone*
+to someone holding a mouse. Say it to someone holding a phone and you have drawn a phone
+inside their phone: eighty wasted pixels, a footer eating a row, and the whole thing
+reading as a mockup of itself.
+
+Under 520px wide (or 560px tall, which catches a phone on its side) the frame comes off
+and the app fills the screen. That is the same illusion by other means, and it is the
+one that matters — the game is *about* holding someone's phone.
+
+`svh`, not `dvh`. The reply buttons sit on the bottom edge; a height that grows and
+shrinks with the browser's own chrome would walk them off the screen mid-tap.
+
+### Touch
+
+Every gesture was already pointer-based, so nothing needed rewriting. They were fighting
+the browser, which answers first by default:
+
+- a 420ms hold on a message raised iOS's selection magnifier instead of the reactions
+- a double tap zoomed the page instead of reacting
+- the swipe for timestamps competed with the scroll, and whichever the browser guessed
+  first won
+- the search field at 14px made iOS zoom in on focus and never zoom back out
+
+`touch-action`, `-webkit-touch-callout`, `overscroll-behavior` and a 16px input settle all
+four. None of them change a gesture; they change who gets asked.
+
+### The viewport tag
+
+`dist/unread.html` carries its own `<meta name="viewport">`, but any host that re-wraps
+the file supplies its own `<head>` and the tag lands in the body, where it is not
+reliably honoured — a phone then lays the page out at 980px and shows a doll's house.
+`ensureViewport()` puts one in the head at boot if nothing else did. Two lines, and the
+game is correct wherever it is embedded rather than correct only where it was built.
