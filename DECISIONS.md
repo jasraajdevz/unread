@@ -1186,3 +1186,37 @@ the file supplies its own `<head>` and the tag lands in the body, where it is no
 reliably honoured — a phone then lays the page out at 980px and shows a doll's house.
 `ensureViewport()` puts one in the head at boot if nothing else did. Two lines, and the
 game is correct wherever it is embedded rather than correct only where it was built.
+
+---
+
+## D41 — a public mirror, so the source can stay shut
+
+**Status:** decided · **Scope:** distribution · **Enforced by:** nothing; see the warning
+
+D2 keeps `jasraajdevz/unread` private because `story.json` is the punchline. That stands.
+It also means there is nothing at that link a friend can play, and `dist/` is gitignored
+by rule 5, so there never will be.
+
+So: a second repo, **`jasraajdevz/unread-play`**, public, containing `index.html` (a copy
+of `dist/unread.html`), a `.nojekyll`, and a README. GitHub Pages serves it from `main` at
+the root:
+
+    https://jasraajdevz.github.io/unread-play/
+
+The source repo is untouched and still private. Nothing about the build, the content
+files, the director, the decisions or the tests is public.
+
+### The honest part
+
+The built file contains the whole game. Anyone who opens the link can read the source of
+the page and find every branch, every ending and the archive code. The mirror does not
+protect the surprise — it protects the *workings*: the ladder, the templates, the
+director, and this file. That is a smaller claim than D2 makes and it should not be
+mistaken for the same one.
+
+### Redeploying
+
+A new build now has to go two places. `dist/unread.html` → `unread-play/index.html`,
+commit, push. Nothing automates this, and nothing checks it: the public site can sit a
+dozen commits behind the private repo and the gate will still say GREEN. If that starts
+to bite, the fix is a script, not a habit.
