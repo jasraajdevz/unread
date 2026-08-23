@@ -299,7 +299,7 @@ test('D29 — replies are per question: answering one leaves the others', async 
   // answering the first question reveals the next one, in the same thread
   const label = await page.locator('.choice').first().textContent();
   await page.locator('.choice').first().click();
-  await expect(page.locator('.msg.me').last()).toHaveText(label);
+  await expect(page.locator('.msg.me').last().locator('.body')).toHaveText(label);
 
   const after = await page.evaluate((id) =>
     window.__unread.pendingInThread(id).map((c) => c.templateId), multi);
@@ -691,4 +691,93 @@ test('D36 — the guessing game is playable and seeded', async ({ page }) => {
   // and the win is remembered
   const games = await page.evaluate(() => window.__unread.games());
   expect(Object.values(games).some((g) => g.won)).toBe(true);
+});
+
+test('D37 — the voice memo plays, scrubs, and hides something', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // find the day the memo arrives
+  const found = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(entry.day, phase);
+        if ((plan.phases[phase] || []).some((e) => e.kind === 'audio')) {
+          return { day: entry.day, phase };
+        }
+      }
+    }
+    return null;
+  });
+  expect(found, 'the memo arrives somewhere in the run').not.toBeNull();
+  expect(found.day, 'and it is an Act III thing').toBeGreaterThan(60);
+
+  await page.locator('[data-thread="t_unknown"]').click();
+  await expect(page.locator('.vm')).toHaveCount(1);
+  await expect(page.locator('.vm .wave i')).toHaveCount(34);
+  await expect(page.locator('.vm .dur')).toHaveText('0:07');
+
+  // the waveform is not flat, and the loud part is where the thing is
+  const shape = await page.locator('.vm .wave i').evaluateAll((bars) =>
+    bars.map((b) => parseInt(b.style.height, 10)));
+  const peak = shape.indexOf(Math.max(...shape));
+  expect(peak / shape.length, 'the event sits about two thirds in').toBeGreaterThan(0.6);
+  expect(peak / shape.length).toBeLessThan(0.78);
+  expect(Math.max(...shape) - Math.min(...shape),
+    'it is a bump, not a spike').toBeLessThan(40);
+
+  // scrubbing moves the playhead
+  const wave = page.locator('.vm .wave');
+  const box = await wave.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page.locator('.vm .wave i.past')).not.toHaveCount(0);
+  const remaining = await page.locator('.vm .dur').textContent();
+  expect(remaining).not.toBe('0:07');
+
+  // the same memo always sounds the same
+  const a = await page.evaluate(() => window.__unread.memo.envelope('x', 8).join(','));
+  const b = await page.evaluate(() => window.__unread.memo.envelope('x', 8).join(','));
+  const c = await page.evaluate(() => window.__unread.memo.envelope('y', 8).join(','));
+  expect(a).toBe(b);
+  expect(a).not.toBe(c);
+});
+
+test('D37 — swipe reveals when everything happened, and the battery stops', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_flat"]').click();
+
+  // every bubble knows its time, and it is hidden until asked for
+  const times = await page.locator('.when').evaluateAll((els) => els.map((e) => e.textContent));
+  expect(times.length).toBeGreaterThan(10);
+  expect(times.every((t) => /^\d{1,2}:\d{2}$/.test(t)), 'they are clock times').toBe(true);
+  await expect(page.locator('.convo')).not.toHaveClass(/shifted/);
+
+  // it is decoration, not the message: not selectable, not read out
+  await expect(page.locator('.when').first()).toHaveAttribute('aria-hidden', 'true');
+
+  const box = await page.locator('.convo').boundingBox();
+  await page.mouse.move(box.x + box.width - 30, box.y + 120);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 110, box.y + 120, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator('.convo')).toHaveClass(/shifted/);
+
+  // the battery falls through the run, then stops in Act III
+  const readings = await page.evaluate(() => {
+    const out = {};
+    [1, 20, 40, 60, 61, 100].forEach((day) => {
+      window.__unread.state.save.day = day;
+      window.__unread.drawStatusBar();
+      out[day] = document.querySelector('.batt .pct').textContent;
+    });
+    return out;
+  });
+  const pct = (d) => parseInt(readings[d], 10);
+  expect(pct(1)).toBeGreaterThan(pct(20));
+  expect(pct(20)).toBeGreaterThan(pct(40));
+  expect(pct(40)).toBeGreaterThan(pct(60));
+  expect(pct(61), 'and then it simply stops').toBe(pct(100));
 });

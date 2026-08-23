@@ -977,3 +977,50 @@ rewritten that line months of phases ago and my anchor no longer matched. It pas
 verification because the token I checked for (`isLocked(t)`) also matches the function
 *definition*. **Verify the call site, not the name.** The keypad simply never appeared, and
 only a screenshot found it.
+
+---
+
+## D37 — a memo you have to scrub, times you have to ask for, a battery that stops
+
+**Status:** decided · **Scope:** `src/engine.html`, `content/` · **Enforced by:** the gate
+
+Three more, and the first of them closes a gap that has been open since v1.
+
+### The voice memo
+
+**`kind: "audio"` has been in the schema since the first build and was never drawn.** It is
+now a player: press to play, drag the waveform to scrub, a countdown of what is left.
+
+Synthesised like the chimes (D34), for the same reason — the artifact loads nothing. Seven
+seconds of filtered noise is room tone, and about two thirds of the way through there is a
+breath. The waveform's bump and the audio's event come from the same seed, so what you see
+is where it is.
+
+**The scrubbing is the mini-game.** The event is quiet and short enough to pass straight
+over at normal speed, so you go back over it. The number sends it in Act III with
+`i recorded it` and `listen to the middle of it`, and the reply on offer is
+`thats you breathing`.
+
+The visual bump was tuned down after the gate caught it at 41 units against a 40 limit. I
+lowered the bump rather than raising the limit — the assertion was describing the design
+correctly, which is what an assertion is for.
+
+### Swipe to see when
+
+The offsets have been exact since D24 and the player has never been able to read one.
+Drag the conversation left and every message says its time.
+
+The first attempt translated the whole conversation and **clipped every left-aligned bubble
+off the screen edge**. It now opens a gutter instead — the same translate with a matching
+left pad — so nothing moves and nothing is lost. Asserted: zero bubbles outside the phone
+while shifted.
+
+The revealed time is `aria-hidden` and unselectable, because it is furniture on the bubble
+and not part of the message. A test caught that first, by reading `leave it21:30` where it
+expected `leave it`.
+
+### The status bar
+
+Signal and battery, both meaning something. The battery starts around 63% and falls across
+Acts I and II. **In Act III it stops at 4% and never moves again**, and nothing explains
+that. Signal drops a bar per act.

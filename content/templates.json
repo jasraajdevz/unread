@@ -2749,6 +2749,55 @@
           "tells": null
         }
       ]
+    },
+    {
+      "id": "tpl_p_memo",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "i recorded it"
+        },
+        {
+          "speaker": "c_unknown",
+          "kind": "audio",
+          "asset": "vm_01",
+          "durationMs": 7000,
+          "text": ""
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "listen to the middle of it"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_memo",
+          "label": "thats you breathing",
+          "tells": "said it was breathing"
+        },
+        {
+          "id": "ch_p_memo_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
     }
   ]
 }

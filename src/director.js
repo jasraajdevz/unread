@@ -251,6 +251,8 @@
           from: 'them',
           kind: line.kind || 'text',
           game: line.game || null,
+          asset: line.asset || null,
+          durationMs: line.durationMs || null,
           body: fillSlots(line.text, slots),
           emphasis: line.emphasis || null,
           isReply: isReply

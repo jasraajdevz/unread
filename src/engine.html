@@ -229,11 +229,51 @@
   .game.done .pad{display:none;}
   .row .lock{color:var(--faint);font-size:12px;flex:none;}
 
+
+  /* ---- voice memo --------------------------------------------------------- */
+  .vm{display:flex;align-items:center;gap:10px;min-width:210px;padding:9px 12px 9px 10px;}
+  .vm .play{flex:none;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;
+            background:#3A4551;color:#DDE3EA;font-size:13px;line-height:32px;padding:0;}
+  .vm .play:hover{background:#46525F;}
+  .vm .play:focus-visible{outline:2px solid var(--instr);outline-offset:2px;}
+  .vm .wave{flex:1;display:flex;align-items:center;gap:2px;height:26px;cursor:pointer;
+            touch-action:none;}
+  .vm .wave i{flex:1;background:#4C5765;border-radius:1px;min-width:2px;
+              transition:background .08s;}
+  body.reduce .vm .wave i{transition:none;}
+  .vm .wave i.past{background:#93A2B2;}
+  .vm .dur{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;
+           min-width:30px;text-align:right;}
+
+  /* ---- swipe to reveal the times ------------------------------------------ */
+  .convo{transition:transform .18s cubic-bezier(.4,0,.2,1);}
+  .convo.peeking{transition:none;}
+  .convo{padding-left:12px;}
+  .convo.shifted{padding-left:70px;}
+  body.reduce .convo{transition:none;}
+  .when{position:absolute;right:-58px;top:50%;transform:translateY(-50%);font-size:10px;
+        user-select:none;-webkit-user-select:none;
+        color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;
+        opacity:0;transition:opacity .15s;}
+  .convo.shifted .when{opacity:1;}
+  body.reduce .when{transition:none;}
+
+  /* ---- status bar --------------------------------------------------------- */
+  .statusbar .right{display:flex;align-items:center;gap:7px;}
+  .statusbar .bars{display:flex;align-items:flex-end;gap:2px;height:10px;}
+  .statusbar .bars i{width:3px;background:#4A535E;border-radius:1px;}
+  .statusbar .bars i.on{background:var(--dim);}
+  .batt{display:flex;align-items:center;gap:3px;}
+  .batt .cell{width:22px;height:11px;border:1px solid #4A535E;border-radius:3px;padding:1px;}
+  .batt .fill{height:100%;background:var(--dim);border-radius:1px;}
+  .batt.low .fill{background:var(--alert);}
+  .batt .pct{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums;}
+
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
 </style>
 
 <div class="phone">
-  <div class="statusbar"><span id="clock"></span><span>▮▮▮ ⌁</span></div>
+  <div class="statusbar"><span id="clock"></span><span class="right"><span class="bars" id="bars"></span><span class="batt" id="batt"></span></span></div>
   <div class="appbar" id="appbar"></div>
   <div class="scroll" id="scroll"></div>
   <div id="choices"></div>
@@ -620,11 +660,13 @@ function renderList(){
     scroll.appendChild(b);
   });
   scroll.scrollTop=0;
+  drawStatusBar();
   maybeAdvance();
 }
 
 function bubbleFor(m, prev){
   if(m.kind === "game"){ return gameWidget(m); }
+  if(m.kind === "audio"){ return memoWidget(m); }
   if(m.kind === "photo"){
     var p=document.createElement("div"); p.className="photo";
     p.setAttribute("data-src","story.photo");
@@ -677,11 +719,18 @@ function paint(t){
       div.textContent=dayLabel(d); wrap.appendChild(div);
       lastDay=dayKey(d); prev=null;
     }
-    wrap.appendChild(bubbleFor(m, prev));
+    var bubble = bubbleFor(m, prev);
+    var when = document.createElement("span");
+    when.className = "when";
+    when.textContent = hhmm(at(m.offsetMinutes));    /* not-story: a clock time */
+    when.setAttribute("aria-hidden", "true");
+    bubble.appendChild(when);
+    wrap.appendChild(bubble);
     appendStamp(wrap, m);
     prev=m;
   });
   scroll.innerHTML=""; scroll.appendChild(wrap);
+  wireSwipe(wrap);
   return wrap;
 }
 
@@ -948,6 +997,8 @@ function eventsToMessages(events, baseOffsetMin){
       from: "them",
       kind: e.kind || "text",
       game: e.game || null,
+      asset: e.asset || null,
+      durationMs: e.durationMs || null,
       fromContactId: e.speaker,
       __threadId: e.threadId,
       emphasis: e.emphasis || null,
@@ -1047,6 +1098,229 @@ function recordMemory(memory){
 
 
 
+
+
+/* ============================================================================
+   VOICE MEMO — kind:"audio" has been in the schema since v1 and never drawn.
+   Synthesised like the chimes: room tone, and one thing in it. The memo is the
+   mini-game -- you have to scrub to find the moment, and it is quiet enough that
+   you will go back over it.
+   ========================================================================== */
+/* not-story:begin — chrome and glyphs */
+var VM_PLAY = "▶";
+var VM_PAUSE = "❚❚";
+/* not-story:end */
+
+var Memo = (function(){
+  var buffers = {}, playing = null;
+
+  function hash32(text){
+    var h = 2166136261;
+    for(var i = 0; i < text.length; i++){
+      h ^= text.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h;
+  }
+
+  /* the shape you see, and the shape you hear, come from the same seed */
+  function envelope(id, bars){
+    var h = hash32(id), out = [];
+    for(var i = 0; i < bars; i++){
+      h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0;
+      out.push(0.18 + (h % 1000) / 1000 * 0.16);
+    }
+    /* the event: a little over two thirds through, and only a little louder */
+    var at = Math.floor(bars * 0.68);
+    [-1, 0, 1].forEach(function(d, k){
+      if(out[at + d] !== undefined) out[at + d] += [0.06, 0.19, 0.08][k];
+    });
+    return out;
+  }
+
+  function buffer(id, ms){
+    if(buffers[id]) return buffers[id];
+    var c = Sound.context();
+    if(!c) return null;
+    var rate = c.sampleRate, length = Math.floor(rate * ms / 1000);
+    var buf = c.createBuffer(1, length, rate);
+    var data = buf.getChannelData(0);
+    var h = hash32(id), last = 0;
+    for(var i = 0; i < length; i++){
+      h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0;
+      var white = ((h % 2000) / 1000) - 1;
+      /* one-pole low pass: room tone rather than hiss */
+      last = last + 0.06 * (white - last);
+      data[i] = last * 0.055;
+    }
+    /* the thing in it: a short breath in, at 68% */
+    var at = Math.floor(length * 0.68), span = Math.floor(rate * 0.42);
+    for(var j = 0; j < span; j++){
+      var t = j / span;
+      var shape = Math.sin(Math.PI * t);
+      h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0;
+      var n = ((h % 2000) / 1000) - 1;
+      if(at + j < length) data[at + j] += n * shape * 0.085;
+    }
+    buffers[id] = buf;
+    return buf;
+  }
+
+  function stop(){
+    if(playing){
+      try { playing.src.stop(); } catch(e){}
+      if(playing.raf) cancelAnimationFrame(playing.raf);
+      if(playing.onEnd) playing.onEnd();
+      playing = null;
+    }
+  }
+
+  function play(id, ms, from, onTick, onEnd){
+    stop();
+    Sound.unlock();
+    var c = Sound.context();
+    var buf = buffer(id, ms);
+    if(!c || !buf){ if(onEnd) onEnd(); return; }
+    var src = c.createBufferSource();
+    var gain = c.createGain();
+    gain.gain.value = prefs.sound ? 1 : 0;
+    src.buffer = buf;
+    src.connect(gain); gain.connect(c.destination);
+    var startedAt = c.currentTime;
+    src.start(0, (from / 1000) * (buf.duration / (ms / 1000)));
+    playing = { src: src, onEnd: onEnd, raf: null };
+    (function tick(){
+      if(!playing) return;
+      var at = from + (c.currentTime - startedAt) * 1000;
+      if(at >= ms){ stop(); return; }
+      onTick(at);
+      playing.raf = requestAnimationFrame(tick);
+    })();
+    src.onended = function(){ if(playing && playing.src === src) stop(); };
+  }
+
+  return { envelope: envelope, play: play, stop: stop, isPlaying: function(){ return !!playing; } };
+})();
+
+function memoWidget(m){
+  var ms = m.durationMs || 7000;
+  var bars = 34;
+  var shape = Memo.envelope(m.id, bars);
+  var at = 0;
+
+  var box = document.createElement("div");
+  box.className = "msg them vm";
+  box.setAttribute("data-src", "story.audio");
+  box.setAttribute("data-memo", m.id);
+
+  var play = document.createElement("button");
+  play.className = "play";
+  play.textContent = VM_PLAY;              /* not-story: a glyph */
+  var wave = document.createElement("div");
+  wave.className = "wave";
+  var dur = document.createElement("span");
+  dur.className = "dur";
+
+  shape.forEach(function(v){
+    var bar = document.createElement("i");
+    bar.style.height = Math.round(v * 100) + "%";
+    wave.appendChild(bar);
+  });
+
+  function drawAt(value){
+    at = Math.max(0, Math.min(ms, value));
+    var upto = Math.floor((at / ms) * bars);
+    Array.prototype.forEach.call(wave.children, function(bar, i){
+      bar.classList.toggle("past", i < upto);
+    });
+    var secs = Math.max(0, Math.round((ms - at) / 1000));
+    dur.textContent = "0:" + (secs < 10 ? "0" : "") + secs;
+  }
+
+  function stopUI(){ play.textContent = VM_PLAY; }
+
+  play.addEventListener("click", function(){
+    if(Memo.isPlaying()){ Memo.stop(); stopUI(); return; }
+    play.textContent = VM_PAUSE;           /* not-story: a glyph */
+    Memo.play(m.id, ms, at >= ms ? 0 : at, drawAt, function(){ stopUI(); drawAt(ms); });
+  });
+
+  /* scrubbing is the game: the thing in it is quiet and easy to pass over */
+  function scrubTo(clientX){
+    var box2 = wave.getBoundingClientRect();
+    drawAt(((clientX - box2.left) / box2.width) * ms);
+  }
+  var scrubbing = false;
+  wave.addEventListener("pointerdown", function(e){
+    scrubbing = true; Memo.stop(); stopUI(); scrubTo(e.clientX);
+    wave.setPointerCapture(e.pointerId);
+  });
+  wave.addEventListener("pointermove", function(e){ if(scrubbing) scrubTo(e.clientX); });
+  wave.addEventListener("pointerup", function(){ scrubbing = false; });
+
+  box.appendChild(play); box.appendChild(wave); box.appendChild(dur);
+  drawAt(0);
+  return box;
+}
+
+/* ============================================================================
+   SWIPE THE CONVERSATION TO SEE WHEN THINGS HAPPENED
+   The offsets have been exact since D24 and the player has never been able to
+   read them. Drag left, and every message says when.
+   ========================================================================== */
+function wireSwipe(wrap){
+  var startX = 0, dragging = false, shifted = false;
+  var MAX = 58;   /* matched by .convo.shifted padding-left */
+  function setShift(px){
+    wrap.style.transform = "translateX(" + (-px) + "px)";
+    wrap.classList.toggle("shifted", px > 20);
+  }
+  wrap.addEventListener("pointerdown", function(e){
+    if(e.target.closest(".wave") || e.target.closest(".pad")) return;
+    startX = e.clientX; dragging = true; wrap.classList.add("peeking");
+  });
+  wrap.addEventListener("pointermove", function(e){
+    if(!dragging) return;
+    var dx = startX - e.clientX;
+    if(dx > 4) setShift(Math.min(MAX, dx));
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function(type){
+    wrap.addEventListener(type, function(){
+      if(!dragging) return;
+      dragging = false; wrap.classList.remove("peeking");
+      shifted = !shifted && wrap.classList.contains("shifted");
+      setShift(shifted ? MAX : 0);
+    });
+  });
+}
+
+/* ============================================================================
+   THE STATUS BAR
+   A phone that has been on for a hundred days. In act III the battery stops
+   moving, and nothing explains that either.
+   ========================================================================== */
+function drawStatusBar(){
+  var day = (S.save && S.save.day) || 1;
+  var bars = document.getElementById("bars");
+  var batt = document.getElementById("batt");
+  if(!bars || !batt) return;
+
+  var strength = day < 21 ? 4 : day < 61 ? 3 : 2;
+  bars.innerHTML = "";
+  for(var i = 1; i <= 4; i++){
+    var b = document.createElement("i");
+    b.style.height = (3 + i * 2) + "px";
+    if(i <= strength) b.className = "on";
+    bars.appendChild(b);
+  }
+
+  /* falls through acts I and II, then simply stops */
+  var pct = day >= 61 ? 4 : Math.max(4, 64 - Math.floor(day * 1.0));
+  batt.className = "batt" + (pct <= 10 ? " low" : "");
+  batt.innerHTML = '<span class="cell"><span class="fill"></span></span><span class="pct"></span>';
+  batt.querySelector(".fill").style.width = pct + "%";
+  batt.querySelector(".pct").textContent = pct + "%";   /* not-story: a number */
+}
 
 /* ============================================================================
    KEYPAD — one component, two uses: a locked thread and a guessing game.
@@ -1497,6 +1771,7 @@ var Sound = (function(){
   return {
     play: play,
     unlock: unlock,
+    context: context,
     log: function(){ return log.slice(); },
     clear: function(){ log = []; }
   };
@@ -1909,6 +2184,8 @@ window.__unread = {
   secretFor: secretFor,
   isLocked: function(id){ return isLocked(Story.thread(id)); },
   games: function(){ return (S.save && S.save.games) || {}; },
+  memo: Memo,
+  drawStatusBar: drawStatusBar,
   haptics: Haptics,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){
