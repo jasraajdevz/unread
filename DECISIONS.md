@@ -1024,3 +1024,44 @@ expected `leave it`.
 Signal and battery, both meaning something. The battery starts around 63% and falls across
 Acts I and II. **In Act III it stops at 4% and never moves again**, and nothing explains
 that. Signal drops a bar per act.
+
+---
+
+## D38 — search, and a second photograph
+
+**Status:** decided · **Scope:** `src/engine.html`, `content/` · **Enforced by:** the gate
+
+### Search
+
+A hundred days of messages and no way to find one. A magnifier on the thread list, results
+newest first, the match highlighted, tap to open the thread it came from.
+
+**A locked thread is not searched.** A lock you can read through is not a lock, and search
+is exactly the hole a player would try. Unlock the archive and it joins the index — which
+makes the code worth finding twice over.
+
+The highlight is built by splitting the body and painting three fragments through D19's
+ingress. No markup is ever assembled from a message, so a line containing angle brackets
+stays a line.
+
+### Spot the difference
+
+The hallway is generated, so a second photograph taken later costs one parameter. The
+number sends both — `tuesday` and `tonight` — and one thing is different. Tap where.
+A wrong tap leaves a small ring where you looked; the right one rings both photographs.
+
+The difference is on the floor, and the line under it is `you left it there`.
+
+### Three test bugs, no engine bugs
+
+All three were the test being wrong, which is worth recording because it is the opposite
+of the usual direction:
+
+1. The magnifier lives on the thread list, and the test reached for it from inside a
+   conversation.
+2. The test searched for `is this stil` to prove the lock hides the archive — but that
+   also matches `is this still ren's` in the *unlocked* thread. It now picks a phrase that
+   exists nowhere else, computed rather than typed.
+3. The test unlocked the archive by writing `localStorage` directly, and the engine's
+   `beforeunload` handler wrote its in-memory save straight over the top on reload. That
+   is correct engine behaviour. The test now unlocks through the keypad, as a player does.

@@ -269,6 +269,49 @@
   .batt.low .fill{background:var(--alert);}
   .batt .pct{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums;}
 
+
+  /* ---- search ------------------------------------------------------------- */
+  .find{background:none;border:none;color:var(--dim);font-size:16px;line-height:1;
+        padding:4px 6px;cursor:pointer;}
+  .find:hover{color:var(--ink);}
+  .searchbar{display:flex;align-items:center;gap:8px;width:100%;}
+  .searchbar input{flex:1;min-width:0;background:#11151B;border:1px solid var(--line);
+                   border-radius:16px;padding:7px 12px;color:var(--ink);font-family:inherit;
+                   font-size:14px;}
+  .searchbar input:focus{outline:none;border-color:#33414F;}
+  .searchbar input::placeholder{color:var(--faint);}
+  .hit{display:flex;flex-direction:column;gap:2px;padding:11px 14px;width:100%;
+       border:none;border-bottom:1px solid var(--line);background:none;text-align:left;
+       cursor:pointer;font-family:inherit;}
+  .hit:hover{background:#171C23;}
+  .hit .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+  .hit .who3{font-size:13px;font-weight:600;color:var(--ink);}
+  .hit .at{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;}
+  .hit .line{font-size:13px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;
+             white-space:nowrap;}
+  .hit mark{background:none;color:var(--instr);}
+  .empty{padding:26px 16px;text-align:center;font-size:12px;color:var(--faint);}
+
+  /* ---- spot the difference ------------------------------------------------ */
+  .spot{align-self:stretch;margin:6px 0 2px;padding:10px;border-radius:14px;
+        background:#171C24;border:1px solid var(--line);}
+  .spot .head{font-size:12px;color:var(--dim);text-align:center;padding-bottom:8px;}
+  .spot .pair{display:flex;gap:8px;}
+  .spot .shot{position:relative;flex:1;border-radius:8px;overflow:hidden;cursor:crosshair;
+              line-height:0;}
+  .spot canvas{width:100%;display:block;}
+  .spot .tag{position:absolute;top:4px;left:5px;font-size:9px;color:#B9C2CC;
+             background:rgba(0,0,0,.55);padding:1px 5px;border-radius:6px;line-height:1.4;}
+  .spot .ring{position:absolute;width:38px;height:38px;margin:-19px 0 0 -19px;
+              border:2px solid var(--instr);border-radius:50%;pointer-events:none;
+              opacity:0;transition:opacity .2s;}
+  .spot.solved .ring{opacity:1;}
+  body.reduce .spot .ring{transition:none;}
+  .spot .miss{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;
+              border:1px solid #5A626D;pointer-events:none;}
+  .spot .note2{text-align:center;font-size:11px;color:var(--faint);padding-top:8px;min-height:16px;}
+  .spot.solved .note2{color:#7FA087;}
+
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
 </style>
 
@@ -563,7 +606,7 @@ function sortedThreads(){
 /* ============================================================================
    THE HALLWAY, DRAWN NOT FETCHED
    ========================================================================== */
-function hallway(scale, detail){
+function hallway(scale, detail, variant){
   scale = scale || 1;
   var W=260*scale,H=190*scale,c=document.createElement("canvas");
   c.width=W; c.height=H;
@@ -596,6 +639,15 @@ function hallway(scale, detail){
     g.beginPath();
     g.ellipse(fx,fy-fh+7*s2,fw*0.34,fw*0.40,0,0,Math.PI*2); g.fill();
     g.fillRect(fx-fw*0.5,fy-fh+12*s2,fw,fh-12*s2);
+  }
+
+  if(variant === 1){
+    /* the difference: something left on the floor, in the spill, near the left wall */
+    g.fillStyle="rgba(9,8,8,0.72)";
+    g.beginPath();
+    g.ellipse(W*0.34,H*0.86,10*s2,4.5*s2,-0.18,0,Math.PI*2); g.fill();
+    g.fillStyle="rgba(14,12,11,0.55)";
+    g.fillRect(W*0.34-8*s2,H*0.86-6*s2,15*s2,6*s2);
   }
 
   var vg=g.createRadialGradient(W/2,H/2,H*0.22,W/2,H/2,H*0.95);
@@ -631,8 +683,11 @@ function previewToken(t){
 
 function renderList(){
   S.current=null; choicesEl.innerHTML="";
-  appbar.innerHTML='<span class="title"></span><button class="cog" id="cog" aria-label="Settings">⚙</button>';
+  appbar.innerHTML='<span class="title"></span>'
+    + '<button class="find" id="find" aria-label="Search">' + FIND_GLYPH + '</button>'
+    + '<button class="cog" id="cog" aria-label="Settings">⚙</button>';
   Text.paint(appbar.querySelector(".title"), Text.mint("ui.chrome", APP_NAME));
+  appbar.querySelector("#find").addEventListener("click", openSearch);
   appbar.querySelector("#cog").addEventListener("click", openSettings);
   scroll.innerHTML="";
   sortedThreads().forEach(function(t){
@@ -665,7 +720,9 @@ function renderList(){
 }
 
 function bubbleFor(m, prev){
-  if(m.kind === "game"){ return gameWidget(m); }
+  if(m.kind === "game"){
+    return m.game === "spot" ? spotWidget(m) : gameWidget(m);
+  }
   if(m.kind === "audio"){ return memoWidget(m); }
   if(m.kind === "photo"){
     var p=document.createElement("div"); p.className="photo";
@@ -1099,6 +1156,174 @@ function recordMemory(memory){
 
 
 
+
+
+/* ============================================================================
+   SEARCH — a hundred days of messages and no way to find one.
+   Locked threads are not searched: a lock you can read through is not a lock.
+   ========================================================================== */
+/* not-story:begin — chrome */
+var FIND_GLYPH = "⌕";
+var FIND_PLACEHOLDER = "Search";
+var FIND_NOTHING = "No messages found";
+var FIND_PROMPT = "Type to search your messages";
+var SPOT_HEAD = "one thing is different";
+var SPOT_A = "tuesday";
+var SPOT_B = "tonight";
+var SPOT_FOUND = "found it";
+var SPOT_MISS = "not there";
+/* not-story:end */
+
+function searchable(){
+  var out = [];
+  Story.threads().forEach(function(t){
+    if(isLocked(t)) return;                 /* a lock you can read through is not a lock */
+    (S.shown[t.id] || []).forEach(function(m){
+      if(!m.body) return;
+      out.push({ thread: t, m: m });
+    });
+  });
+  return out;
+}
+
+function runSearch(query){
+  scroll.innerHTML = "";
+  var q = query.trim().toLowerCase();
+  if(!q){
+    var prompt = document.createElement("div");
+    prompt.className = "empty";
+    chromeText(prompt, FIND_PROMPT);
+    scroll.appendChild(prompt);
+    return 0;
+  }
+  var hits = searchable().filter(function(h){
+    return h.m.body.toLowerCase().indexOf(q) >= 0;
+  }).sort(function(a, b){ return b.m.offsetMinutes - a.m.offsetMinutes; });
+
+  if(!hits.length){
+    var none = document.createElement("div");
+    none.className = "empty";
+    chromeText(none, FIND_NOTHING);
+    scroll.appendChild(none);
+    return 0;
+  }
+
+  hits.slice(0, 60).forEach(function(h){
+    var b = document.createElement("button");
+    b.className = "hit";
+    b.setAttribute("data-hit", h.m.id);
+    var top = document.createElement("span");
+    top.className = "top";
+    var who = document.createElement("span");
+    who.className = "who3";
+    Text.paint(who, Story.threadName(h.thread));
+    var when = document.createElement("span");
+    when.className = "at";
+    when.textContent = listStamp(h.m.offsetMinutes);   /* not-story: a stamp */
+    top.appendChild(who); top.appendChild(when);
+
+    /* the match is highlighted by splitting, never by building markup from the body */
+    var line = document.createElement("span");
+    line.className = "line";
+    var body = h.m.body;
+    var at = body.toLowerCase().indexOf(q);
+    var before = document.createElement("span");
+    Text.paint(before, Text.mint("story.message", body.slice(0, at)));
+    var hitPart = document.createElement("mark");
+    Text.paint(hitPart, Text.mint("story.message", body.slice(at, at + q.length)));
+    var after = document.createElement("span");
+    Text.paint(after, Text.mint("story.message", body.slice(at + q.length)));
+    line.appendChild(before); line.appendChild(hitPart); line.appendChild(after);
+
+    b.appendChild(top); b.appendChild(line);
+    b.addEventListener("click", function(){ closeSearch(); openThread(h.thread); });
+    scroll.appendChild(b);
+  });
+  return hits.length;
+}
+
+function openSearch(){
+  S.searching = true;
+  choicesEl.innerHTML = "";
+  appbar.innerHTML = '<div class="searchbar"><button class="back" aria-label="Back">‹</button>'
+                   + '<input id="q" type="search" autocomplete="off"></div>';
+  var input = appbar.querySelector("#q");
+  input.setAttribute("placeholder", FIND_PLACEHOLDER);   /* not-story: chrome */
+  input.setAttribute("aria-label", FIND_PLACEHOLDER);
+  appbar.querySelector(".back").addEventListener("click", closeSearch);
+  input.addEventListener("input", function(){ runSearch(input.value); });
+  input.addEventListener("keydown", function(e){ if(e.key === "Escape") closeSearch(); });
+  runSearch("");
+  input.focus();
+}
+function closeSearch(){ S.searching = false; renderList(); }
+
+/* ============================================================================
+   SPOT THE DIFFERENCE
+   The hallway is generated, so a second one taken later costs nothing but a
+   parameter. One thing is different, and it is on the floor.
+   ========================================================================== */
+var SPOT_TARGET = { x: 0.34, y: 0.86, r: 0.20 };
+
+function spotWidget(m){
+  var box = document.createElement("div");
+  box.className = "spot";
+  box.setAttribute("data-src", "story.game");
+  box.setAttribute("data-game", "spot");
+  var state = gameState(m.id);
+
+  var head = document.createElement("div");
+  head.className = "head";
+  chromeText(head, SPOT_HEAD);
+  var pair = document.createElement("div");
+  pair.className = "pair";
+  var note = document.createElement("div");
+  note.className = "note2";
+
+  [[0, SPOT_A], [1, SPOT_B]].forEach(function(pairing){
+    var shot = document.createElement("div");
+    shot.className = "shot";
+    shot.appendChild(hallway(1, 0, pairing[0]));
+    var tag = document.createElement("span");
+    tag.className = "tag";
+    chromeText(tag, pairing[1]);
+    shot.appendChild(tag);
+    var ring = document.createElement("span");
+    ring.className = "ring";
+    ring.style.left = (SPOT_TARGET.x * 100) + "%";
+    ring.style.top = (SPOT_TARGET.y * 100) + "%";
+    shot.appendChild(ring);
+    if(pairing[0] === 1){
+      shot.addEventListener("click", function(e){
+        if(state.won) return;
+        var b = shot.getBoundingClientRect();
+        var nx = (e.clientX - b.left) / b.width;
+        var ny = (e.clientY - b.top) / b.height;
+        var dx = nx - SPOT_TARGET.x, dy = ny - SPOT_TARGET.y;
+        if(Math.sqrt(dx * dx + dy * dy) <= SPOT_TARGET.r){
+          state.won = true;
+          Save.write(S.save);
+          box.classList.add("solved");
+          chromeText(note, SPOT_FOUND);
+          Sound.play("receive");
+        } else {
+          var miss = document.createElement("span");
+          miss.className = "miss";
+          miss.style.left = (nx * 100) + "%";
+          miss.style.top = (ny * 100) + "%";
+          shot.appendChild(miss);
+          chromeText(note, SPOT_MISS);
+          Sound.play("send");
+        }
+      });
+    }
+    pair.appendChild(shot);
+  });
+
+  box.appendChild(head); box.appendChild(pair); box.appendChild(note);
+  if(state.won){ box.classList.add("solved"); chromeText(note, SPOT_FOUND); }
+  return box;
+}
 
 /* ============================================================================
    VOICE MEMO — kind:"audio" has been in the schema since v1 and never drawn.
@@ -2186,6 +2411,9 @@ window.__unread = {
   games: function(){ return (S.save && S.save.games) || {}; },
   memo: Memo,
   drawStatusBar: drawStatusBar,
+  openSearch: openSearch,
+  search: function(q){ openSearch(); return runSearch(q); },
+  spotTarget: SPOT_TARGET,
   haptics: Haptics,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){

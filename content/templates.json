@@ -2798,6 +2798,54 @@
           "tells": null
         }
       ]
+    },
+    {
+      "id": "tpl_p_spot",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "i took another one"
+        },
+        {
+          "speaker": "c_unknown",
+          "kind": "game",
+          "game": "spot",
+          "text": ""
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you left it there"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_spot",
+          "label": "thats not mine",
+          "tells": "denied the bag was his"
+        },
+        {
+          "id": "ch_p_spot_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
     }
   ]
 }

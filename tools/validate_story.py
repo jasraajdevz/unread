@@ -22,7 +22,7 @@ AUDIO_EXTENSIONS = ("m4a", "mp3", "wav", "caf", "aiff", "aif")
 MESSAGE_KINDS = ("text", "photo", "audio", "system", "game")
 
 # Playable things. A new one is engine work and has to be added here first.
-GAME_KINDS = ("guess",)
+GAME_KINDS = ("guess", "spot")
 MESSAGE_SENDERS = ("them", "me", "system")
 
 # D20: an ending declares the behaviour the engine runs for it. A new value here is a

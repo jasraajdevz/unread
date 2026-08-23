@@ -781,3 +781,105 @@ test('D37 — swipe reveals when everything happened, and the battery stops', as
   expect(pct(40)).toBeGreaterThan(pct(60));
   expect(pct(61), 'and then it simply stops').toBe(pct(100));
 });
+
+test('D38 — search finds messages, and cannot see through a lock', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  await page.locator('#find').click();
+  await expect(page.locator('#q')).toBeFocused();
+  await expect(page.locator('.empty')).toHaveText('Type to search your messages');
+
+  await page.locator('#q').fill('bin');
+  await expect(page.locator('.hit')).not.toHaveCount(0);
+  await expect(page.locator('.hit mark').first()).toHaveText('bin');
+
+  // results carry the thread they came from, and open it
+  const first = await page.locator('.hit .who3').first().textContent();
+  expect(['the flat', 'Mom', 'Dave', 'Notify', '+44 7700 900931']).toContain(first);
+  await page.locator('.hit').first().click();
+  await expect(page.locator('.convo')).toHaveCount(1);
+  await expect(page.locator('#appbar .title')).toHaveText(first);
+
+  // nothing matches nothing. the magnifier lives on the list, so leave the thread first
+  await page.locator('#appbar .back').click();
+  await page.locator('#find').click();
+  await page.locator('#q').fill('zzzznotathing');
+  await expect(page.locator('.empty')).toHaveText('No messages found');
+
+  // the archive is locked, so its contents are not searchable. pick a phrase that exists
+  // ONLY behind the lock -- "is this still..." also opens the unlocked thread.
+  const archiveOnly = await page.evaluate(() => {
+    const archive = window.STORY.beats.find((b) => b.id === 'b_archive_1');
+    const elsewhere = window.STORY.beats
+      .filter((b) => b.id !== 'b_archive_1')
+      .flatMap((b) => b.messages.map((m) => (m.body || '').toLowerCase()));
+    return archive.messages.map((m) => m.body)
+      .find((body) => !elsewhere.some((other) => other.includes(body.toLowerCase())));
+  });
+  expect(archiveOnly, 'the archive says something nothing else does').toBeTruthy();
+  await page.locator('#q').fill(archiveOnly);
+  await expect(page.locator('.hit')).toHaveCount(0);
+
+  // unlock it the way a player would, and now it is searchable.
+  // (poking localStorage directly does not work: the engine writes its in-memory save
+  // over the top on beforeunload, which is correct behaviour and a bad test.)
+  await page.locator('#appbar .back').click();
+  await page.locator('[data-thread="t_archive"]').click();
+  const code = await page.evaluate(() =>
+    window.STORY.threads.find((t) => t.id === 't_archive').lockedBy);
+  for (const d of code.split('')) await page.locator(`.pad [data-key="${d}"]`).click();
+  await page.locator('.pad .go').click();
+  await expect(page.locator('.msg')).not.toHaveCount(0);
+
+  await page.reload();
+  expect(await page.evaluate(() => window.__unread.isLocked('t_archive'))).toBe(false);
+  const found = await page.evaluate((q) => window.__unread.search(q), archiveOnly);
+  expect(found, 'an unlocked thread is searchable').toBeGreaterThan(0);
+});
+
+test('D38 — spot the difference is solvable, and only in one place', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const found = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(entry.day, phase);
+        if ((plan.phases[phase] || []).some((e) => e.game === 'spot')) {
+          return { day: entry.day, phase };
+        }
+      }
+    }
+    return null;
+  });
+  expect(found, 'the pair of photos arrives').not.toBeNull();
+
+  await page.locator('[data-thread="t_unknown"]').click();
+  await expect(page.locator('.spot')).toHaveCount(1);
+  await expect(page.locator('.spot canvas')).toHaveCount(2);
+  await expect(page.locator('.spot .tag').first()).toHaveText('tuesday');
+  await expect(page.locator('.spot .tag').last()).toHaveText('tonight');
+
+  // the two photos really do differ
+  const [a, b] = await page.locator('.spot canvas').evaluateAll(
+    (cs) => cs.map((c) => c.toDataURL().length));
+  expect(a).not.toBe(b);
+
+  // a wrong tap is marked and says so
+  const shot = page.locator('.spot .shot').last();
+  const box = await shot.boundingBox();
+  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.2);
+  await expect(page.locator('.spot .note2')).toHaveText('not there');
+  await expect(page.locator('.spot .miss')).toHaveCount(1);
+  await expect(page.locator('.spot')).not.toHaveClass(/solved/);
+
+  // the right one solves it, and it stays solved
+  const target = await page.evaluate(() => window.__unread.spotTarget);
+  await page.mouse.click(box.x + box.width * target.x, box.y + box.height * target.y);
+  await expect(page.locator('.spot')).toHaveClass(/solved/);
+  await expect(page.locator('.spot .note2')).toHaveText('found it');
+
+  const games = await page.evaluate(() => window.__unread.games());
+  expect(Object.values(games).some((g) => g.won)).toBe(true);
+});
