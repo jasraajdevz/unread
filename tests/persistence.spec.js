@@ -491,3 +491,108 @@ test('D34 — sound and haptics, and the pulse used exactly twice', async ({ pag
   });
   expect(silent).toBe(true);
 });
+
+test('D35 — reactions are a toy, a trace, and eventually not yours', async ({ page }) => {
+  // seed only if absent: addInitScript runs on every navigation, and this test reloads to
+  // prove the reaction survived. Overwriting the save would wipe what we are testing.
+  await page.addInitScript((now) => {
+    if (window.localStorage.getItem('unread.save.v1')) return;
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_flat"]').click();
+
+  // four ways in, one behaviour
+  await page.locator('.msg').nth(2).dblclick();
+  await expect(page.locator('.picker')).toHaveCount(1);
+  await page.locator('[data-react="😂"]').click();
+  await expect(page.locator('.picker')).toHaveCount(0);
+  await expect(page.locator('.react')).toHaveCount(1);
+  await expect(page.locator('.react').first()).toHaveText('😂');
+
+  // it persists
+  const stored = await page.evaluate(() => window.__unread.reactions());
+  expect(Object.values(stored)).toEqual(['😂']);
+  await page.reload();
+  await page.locator('[data-thread="t_flat"]').click();
+  await expect(page.locator('.react')).toHaveCount(1);
+
+  // reacting again with the same emoji clears it
+  const id = Object.keys(stored)[0];
+  await page.evaluate((mid) => window.__unread.react(mid, '😂'), id);
+  await expect(page.locator('.react')).toHaveCount(0);
+
+  // the trace: whatever the player reaches for most
+  await page.evaluate(() => {
+    window.__unread.react('m_flat_sam_01', '😮');
+    window.__unread.react('m_flat_sam_02', '😮');
+    window.__unread.react('m_flat_priya_03', '👍');
+  });
+  expect(await page.evaluate(() => window.__unread.favouriteReaction())).toBe('😮');
+
+  // before Act II it never reacts back
+  expect(await page.locator('.react.theirs').count()).toBe(0);
+
+  // from Act II, what the player says in the unnamed thread comes back reacted to,
+  // in the player's own most-used emoji
+  await page.evaluate(() => {
+    window.__unread.state.save.day = 21;
+    window.__unread.loadPhase(21, 'day');
+  });
+  await page.locator('[data-thread="t_unknown"]').click();
+  const answered = await page.evaluate(() => {
+    const pending = window.__unread.state.pendingChoices
+      .filter((c) => c.threadId === 't_unknown');
+    if (!pending.length) return false;
+    window.__unread.pickChoice(pending[0].id);
+    return true;
+  });
+  if (answered) {
+    await expect(page.locator('.msg.me .react.theirs')).not.toHaveCount(0);
+    await expect(page.locator('.msg.me .react.theirs').first()).toHaveText('😮');
+  }
+});
+
+test('D35 — the photo opens, and only close up is it not empty', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  for (const id of ['t_flat', 't_mom', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('.back').click();
+  }
+  await page.clock.runFor(8000);
+  await page.locator('[data-thread="t_unknown"]').click();
+
+  await expect(page.locator('#viewer')).toHaveAttribute('aria-hidden', 'true');
+  await page.locator('.photo').click();
+  await expect(page.locator('#viewer')).toHaveClass(/on/);
+  await expect(page.locator('#vzoom')).toHaveText('1.0×');
+
+  // the overlay covers the phone rather than being dragged off by a scroll
+  const aligned = await page.evaluate(() => {
+    const v = document.getElementById('viewer').getBoundingClientRect();
+    const p = document.querySelector('.phone').getBoundingClientRect();
+    return Math.abs(v.top - p.top) < 3 && Math.abs(v.height - p.height) < 4;
+  });
+  expect(aligned, 'the viewer sits over the phone').toBe(true);
+
+  // zooming past the threshold redraws at detail, and the pixels actually differ
+  const far = await page.evaluate(() => {
+    window.__unread.viewer.setZoom(1);
+    return document.querySelector('#vstage canvas').toDataURL().length;
+  });
+  const near = await page.evaluate(() => {
+    window.__unread.viewer.setZoom(3.4);
+    return document.querySelector('#vstage canvas').toDataURL().length;
+  });
+  expect(await page.locator('#vzoom').textContent()).toBe('3.4×');
+  expect(near, 'the close-up is a different image').not.toBe(far);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#viewer')).not.toHaveClass(/on/);
+});

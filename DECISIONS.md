@@ -877,3 +877,49 @@ Nothing else in a hundred days is allowed to buzz like that.
 and `[90, 130, 110]` for the two moments above. Both are logged so the gate can assert what
 was felt without a device: the suite plays night one and checks the pulse fires exactly
 once, last, immediately before the choices.
+
+---
+
+## D35 — give the player a toy, then let the game use it
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the gate
+
+The game was only ever tap-a-reply. Two things you can actually *do*, both chosen because
+they are fun on their own and can turn without a single new line of dialogue.
+
+### Reactions — the toy, and the trace
+
+Hold, double-click, right-click or press Enter on any message to react to it. Five emoji.
+It is the most ordinary thing a messenger does and it is genuinely nice to use. Reactions
+persist, and reacting again with the same one clears it.
+
+**It is also the only part of the game that records how the player behaves rather than
+what they chose.** Every other trace — flags, memory, clues — comes from a reply the
+player picked off a list. Reactions are unprompted.
+
+**The turn:** from Act II, anything the player said in the unnamed thread comes back
+already reacted to, in the player's own most-used emoji. Nobody taught it that, and the
+game never mentions it. A player who never reacts never sees it, which is correct — the
+mechanic is built out of their own habit or it does not exist.
+
+### The photo — the reward for looking
+
+The hallway is drawn, not fetched, so zooming is not a bigger download: it is a bigger
+draw. Tap it, and it opens; scroll, pinch, double-click or `+`/`-` to zoom to 6×, drag to
+pan, Escape to close.
+
+**Past 2.6× the canvas is redrawn with detail on, and the doorway is not empty.**
+
+Getting that right took three passes, all of them looked at rather than asserted. The
+first was a black cutout of a person — a jump scare, which is the failure mode. The second
+was invisible, which is not a reward. The third resolves out of the grain: you are not
+sure, then you are. At thumbnail size it is not there at all.
+
+### Two bugs worth recording
+
+- `.phone` had `overflow:hidden`, which still permits *programmatic* scrolling. Focusing
+  the photo made the browser scroll the phone to reveal it, dragging both overlays out of
+  place with it. `overflow:clip` cannot be scrolled at all.
+- A test seeded `localStorage` in `addInitScript`, which re-runs on every navigation — so
+  its own reload wiped the reaction it was about to assert. The seed is now conditional.
+  The engine was right and the test was lying.
