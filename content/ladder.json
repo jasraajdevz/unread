@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "phaseWindowMs": 600000,
+  "fastWindowMs": 30000,
+  "acts": [
+    {
+      "id": 1,
+      "name": "normal",
+      "days": [1, 20],
+      "mechanic": "decay",
+      "note": "Twenty days of nothing being wrong. The player must have normal to lose."
+    }
+  ],
+  "days": [
+    { "day": 1,  "act": 1, "pressure": 0.00, "replyBudget": 1.00, "dayMessages": 8, "nightMessages": 6, "authored": true },
+    { "day": 2,  "act": 1, "pressure": 0.00, "replyBudget": 1.00, "dayMessages": 8, "nightMessages": 6 },
+    { "day": 3,  "act": 1, "pressure": 0.02, "replyBudget": 0.95, "dayMessages": 8, "nightMessages": 6 },
+    { "day": 4,  "act": 1, "pressure": 0.04, "replyBudget": 0.90, "dayMessages": 7, "nightMessages": 6 },
+    { "day": 5,  "act": 1, "pressure": 0.06, "replyBudget": 0.85, "dayMessages": 7, "nightMessages": 5 },
+    { "day": 6,  "act": 1, "pressure": 0.08, "replyBudget": 0.75, "dayMessages": 7, "nightMessages": 5 },
+    { "day": 7,  "act": 1, "pressure": 0.10, "replyBudget": 0.70, "dayMessages": 6, "nightMessages": 5 },
+    { "day": 8,  "act": 1, "pressure": 0.12, "replyBudget": 0.60, "dayMessages": 6, "nightMessages": 4 },
+    { "day": 9,  "act": 1, "pressure": 0.14, "replyBudget": 0.55, "dayMessages": 6, "nightMessages": 4 },
+    { "day": 10, "act": 1, "pressure": 0.16, "replyBudget": 0.45, "dayMessages": 5, "nightMessages": 4 }
+  ]
+}

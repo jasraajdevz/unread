@@ -441,3 +441,115 @@ honour the same rulings without reverse-engineering anything.
 
 **That is the entire cost of keeping iOS open. Do not pay more than that today** — no
 abstraction layers, no shared-format ceremony, no "we might need this later" schema fields.
+
+---
+
+## D19 — rule 15 is replaced, not tightened
+
+**Status:** decided · **Supersedes:** rule 15's word-count form · **Scope:** `src/`
+**Enforced by:** construction, plus the old grep as a smoke test
+
+`[delete this conversation]` passes at exactly three words. Tightening the threshold would
+false-positive on real dialogue, because these characters answer "when?" with "tuesday".
+The rule is the wrong *shape*, not the wrong number.
+
+1. **Construction.** The engine has exactly one function that puts text into a message
+   bubble or a choice label, and it accepts only values that came out of `window.STORY`.
+   No other code path may assign `.textContent` or `.innerHTML` on a bubble or a choice.
+   This makes story text in the engine impossible rather than merely detectable.
+2. **Lint, kept and deliberately weakened.** The word-count grep stays as a cheap smoke
+   test with its floor documented in the suite. It is now the second line, not the first.
+
+A grep can be fooled by a short string. A single ingress point cannot.
+
+---
+
+## D20 — endings declare a mechanic; text stays in story.json
+
+**Status:** decided · **Scope:** schema v5, `Ending` · **Enforced by:** validator
+
+`ENDING_TIMING` keyed by ending id is not a leak. Endings are *behaviour*, not prose: the
+silence ending is a typing indicator that never resolves, which is a mechanic and belongs
+in the engine. What was wrong is that the binding was implicit.
+
+`Ending.mechanic` is an enum:
+
+- `linear` — deliver the closing messages, then the card. (found)
+- `hold` — a typing indicator that never resolves, then the card. (silence)
+- `reappear` — remove the thread, restore it after a delay with one new message. (delete)
+
+A fourth ending reusing an existing mechanic needs zero engine work. A fourth ending
+needing new behaviour legitimately needs engine work, and now says so in the schema.
+
+---
+
+## D21 — CI moves to `ci/gate.yml` and stops blocking anything
+
+**Status:** decided · **Applies:** D17 · **Scope:** repo
+
+`git push` is rejected *only* for commits touching `.github/workflows/`. Everything else
+pushes with the token already present. Two phases have waited on a scope grant that has
+not come, which is exactly the condition D17 says makes a path dead.
+
+- The workflow moves to **`ci/gate.yml`**. Not a workflow path; pushes without the scope.
+- A README line says to copy it to `.github/workflows/gate.yml` when the scope exists.
+- **`tools/gate.sh` is the canonical gate.** It runs the validators, the build, the rule
+  suites and Playwright locally and exits non-zero on any failure. That is what "green"
+  means from now on.
+- Push everything. Getting nine phases of work off a single machine matters more than CI.
+
+CI stays unproven. That is now an accepted, recorded state rather than an open blocker.
+
+---
+
+## D22 — verify every append before reporting it
+
+**Status:** decided · **Scope:** process · **Enforced by:** the append scripts
+
+A `DECISIONS.md` append once silently did not land and was reported as success. After any
+append, re-read the file and assert the new headings are present before reporting. A
+decisions file that can silently drop a decision is worse than no decisions file, because
+it is trusted.
+
+---
+
+## D23 — recovering artifacts is a standing procedure
+
+**Status:** record · **Scope:** process
+
+Files sent in chat never reach the filesystem. When a brief references an implementation
+that cannot be found: list the published artifacts, fetch the relevant one by URL, and
+work from that source. This is the documented route, not a workaround.
+
+---
+
+## D24 — the game runs on real elapsed time between sessions
+
+**Status:** decided · **Scope:** architecture · **Enforced by:** the persistence tests
+
+100 days at 20 minutes is not one sitting. The player closes the game and comes back, so
+the game must know how long they were gone and act on it.
+
+Persisted to `localStorage`: `runSeed` (random once, never regenerated), `day` (1..100),
+`phase` (`day` | `night`), `phaseStartedAt`, `lastSeenAt` (written on `visibilitychange`
+and unload), `flags`, `contactState`, `cluesFound`.
+
+On return, `awayMs = now - lastSeenAt` branches:
+
+| away | behaviour |
+|---|---|
+| < 2 min | resume in place, nothing changed |
+| 2 min – 1 h | the phase advanced without you: 1-3 messages are already waiting, delivered as history, timestamped while you were gone |
+| 1 h – 12 h | the phase completed. You may read what arrived but not reply — the reply options are gone |
+| > 12 h | the day advanced. One day per 12 hours away, capped at +3 |
+
+**"You can read it but not reply" is the mechanic.** Missing a message is a real loss,
+permanent, and the game never says so. A player who leaves during Act II comes back to a
+mother who was waiting for an answer that never came, and the thread has moved on.
+
+This is also the notification hook with no server and no push permission: the phone kept
+going while you were gone. Web Push stays a later option, never a dependency.
+
+**Anti-abuse: none.** Clock-shifting is not defended against. A player who sets their
+clock forward to skip is a player choosing to skip. Do not build a cheat check into a
+horror game.

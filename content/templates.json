@@ -1,0 +1,296 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "tpl_flat_chore",
+      "threadId": "t_flat",
+      "acts": [1, 1],
+      "phases": ["day"],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "CHORE": ["the bins", "the recycling", "the washing up", "the front step"],
+        "WHEN": ["last week", "two weeks ago", "in january", "before easter"]
+      },
+      "lines": [
+        { "speaker": "c_sam", "text": "did anyone do {CHORE}" },
+        { "speaker": "c_priya", "text": "not me" },
+        { "speaker": "c_sam", "text": "i did it {WHEN}" },
+        { "speaker": "c_priya", "text": "{WHEN} is when it was yours" },
+        { "speaker": "c_sam", "text": "thats not how it works" },
+        { "speaker": "c_priya", "text": "it is how it works" }
+      ],
+      "choices": [
+        { "id": "ch_ill_do_it", "label": "ill do it", "tells": "offered to do {CHORE}" },
+        { "id": "ch_not_mine", "label": "not mine either", "tells": "denied doing {CHORE}" }
+      ]
+    },
+    {
+      "id": "tpl_flat_delivery",
+      "threadId": "t_flat",
+      "acts": [1, 1],
+      "phases": ["day", "night"],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "PLACE": ["behind the door", "on the stairs", "in the porch", "under the mat"],
+        "THING": ["a box", "a jiffy bag", "a parcel", "something in a bin bag"]
+      },
+      "lines": [
+        { "speaker": "c_priya", "text": "theres {THING} {PLACE}" },
+        { "speaker": "c_sam", "text": "whos is it" },
+        { "speaker": "c_priya", "text": "no name on it" },
+        { "speaker": "c_sam", "text": "then its not ours" },
+        { "speaker": "c_priya", "text": "its been there since yesterday" }
+      ],
+      "choices": [
+        { "id": "ch_leave_it", "label": "leave it", "tells": "said to leave {THING}" },
+        { "id": "ch_open_it", "label": "open it", "tells": "said to open {THING}" }
+      ]
+    },
+    {
+      "id": "tpl_flat_heating",
+      "threadId": "t_flat",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "HOUR": ["six", "half five", "four", "some point in the night"]
+      },
+      "lines": [
+        { "speaker": "c_sam", "text": "the heating came on at {HOUR} again" },
+        { "speaker": "c_priya", "text": "thats the timer" },
+        { "speaker": "c_sam", "text": "who set the timer" },
+        { "speaker": "c_priya", "text": "it came like that" },
+        { "speaker": "c_sam", "text": "cool" }
+      ],
+      "choices": []
+    },
+    {
+      "id": "tpl_flat_noise",
+      "threadId": "t_flat",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "SOUND": ["a bang", "the pipes", "someone on the stairs", "a door"]
+      },
+      "lines": [
+        { "speaker": "c_priya", "text": "did anyone else hear {SOUND}" },
+        { "speaker": "c_sam", "text": "no" },
+        { "speaker": "c_priya", "text": "ok" },
+        { "speaker": "c_sam", "text": "it was probably the boiler" }
+      ],
+      "choices": [
+        { "id": "ch_heard_it", "label": "i heard it", "tells": "said he heard {SOUND}" },
+        { "id": "ch_nothing", "label": "[say nothing]", "tells": null }
+      ]
+    },
+    {
+      "id": "tpl_flat_rota_again",
+      "threadId": "t_flat",
+      "acts": [1, 1],
+      "phases": ["day"],
+      "weight": 2,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": ["flat_rota_mentioned"],
+      "slots": {},
+      "lines": [
+        { "speaker": "c_priya", "text": "sam wheres the rota" },
+        { "speaker": "c_sam", "text": "on the fridge" },
+        { "speaker": "c_priya", "text": "its not on the fridge" },
+        { "speaker": "c_sam", "text": "then someone took it off the fridge" },
+        { "speaker": "c_priya", "text": "why would someone take a rota off a fridge" }
+      ],
+      "choices": []
+    },
+    {
+      "id": "tpl_mom_car",
+      "threadId": "t_mom",
+      "acts": [1, 1],
+      "phases": ["day"],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "PART": ["the oil", "the tyre pressure", "the coolant", "the wipers"],
+        "PERSON": ["dad", "your uncle", "the man at the garage"]
+      },
+      "lines": [
+        { "speaker": "c_mom", "text": "did you check {PART}" },
+        { "speaker": "c_mom", "text": "ren" },
+        { "speaker": "c_mom", "text": "{PERSON} says you have to do it before winter" }
+      ],
+      "choices": [
+        { "id": "ch_did_it", "label": "yeah did it", "tells": "said he checked {PART}" },
+        { "id": "ch_will_do", "label": "ill sort it", "tells": "said he would sort {PART}" }
+      ]
+    },
+    {
+      "id": "tpl_mom_visit",
+      "threadId": "t_mom",
+      "acts": [1, 1],
+      "phases": ["day", "night"],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "WHEN": ["sunday", "the weekend", "next weekend", "saturday"],
+        "FOOD": ["a roast", "too much food", "that thing you like"]
+      },
+      "lines": [
+        { "speaker": "c_mom", "text": "are you coming {WHEN}" },
+        { "speaker": "c_mom", "text": "im doing {FOOD}" },
+        { "speaker": "c_mom", "text": "let me know either way" }
+      ],
+      "choices": [
+        { "id": "ch_coming", "label": "yeah ill come", "tells": "said he would come {WHEN}" },
+        { "id": "ch_working", "label": "im working", "tells": "said he was working {WHEN}" }
+      ]
+    },
+    {
+      "id": "tpl_mom_dad",
+      "threadId": "t_mom",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "THING": ["the shed", "the gutter", "that hedge", "the back gate"]
+      },
+      "lines": [
+        { "speaker": "c_mom", "text": "dad did {THING} today" },
+        { "speaker": "c_mom", "text": "he shouldnt be up a ladder" },
+        { "speaker": "c_mom", "text": "tell him" }
+      ],
+      "choices": [
+        { "id": "ch_tell_him", "label": "ill ring him", "tells": "said he would ring dad" }
+      ]
+    },
+    {
+      "id": "tpl_mom_repeat",
+      "threadId": "t_mom",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        { "speaker": "c_mom", "text": "did you eat" },
+        { "speaker": "c_mom", "text": "ren" },
+        { "speaker": "c_mom", "text": "did you eat" }
+      ],
+      "choices": [
+        { "id": "ch_ate", "label": "yeah", "tells": "said he ate" }
+      ]
+    },
+    {
+      "id": "tpl_dave_slot",
+      "threadId": "t_dave",
+      "acts": [1, 1],
+      "phases": ["day"],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "DAY": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "WINDOW": ["8 and 12", "12 and 4", "1 and 5", "9 and 1"]
+      },
+      "lines": [
+        { "speaker": "c_dave", "text": "{DAY} between {WINDOW} for the boiler?" },
+        { "speaker": "c_dave", "text": "Let me know either way please." }
+      ],
+      "choices": [
+        { "id": "ch_dave_yes", "label": "that works", "tells": "agreed to {DAY}" },
+        { "id": "ch_dave_no", "label": "im at work", "tells": "said he was working {DAY}" }
+      ]
+    },
+    {
+      "id": "tpl_dave_rent",
+      "threadId": "t_dave",
+      "acts": [1, 1],
+      "phases": ["day"],
+      "weight": 2,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": ["dave_rent_mentioned"],
+      "slots": {},
+      "lines": [
+        { "speaker": "c_dave", "text": "The rent went out fine this month, thanks Ren." },
+        { "speaker": "c_dave", "text": "I'll be in touch about the boiler." }
+      ],
+      "choices": []
+    },
+    {
+      "id": "tpl_dave_chase",
+      "threadId": "t_dave",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "DAY": ["Monday", "Tuesday", "Thursday", "Friday"]
+      },
+      "lines": [
+        { "speaker": "c_dave", "text": "Sorry to chase. Is {DAY} still alright?" }
+      ],
+      "choices": [
+        { "id": "ch_dave_ok", "label": "yeah fine", "tells": "confirmed {DAY} to dave" }
+      ]
+    },
+    {
+      "id": "tpl_notify_code",
+      "threadId": "t_notify",
+      "acts": [1, 1],
+      "phases": ["day", "night"],
+      "weight": 2,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "CODE": ["2291", "5106", "7734", "4417", "8830", "6248"]
+      },
+      "lines": [
+        { "speaker": "c_notify", "text": "Your verification code is {CODE}. Never share this code." }
+      ],
+      "choices": []
+    },
+    {
+      "id": "tpl_notify_login",
+      "threadId": "t_notify",
+      "acts": [1, 1],
+      "phases": ["night"],
+      "weight": 1,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "PLACE": ["a new device", "an unrecognised browser", "a new location"]
+      },
+      "lines": [
+        { "speaker": "c_notify", "text": "A sign-in from {PLACE} was approved." }
+      ],
+      "choices": []
+    }
+  ]
+}

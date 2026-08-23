@@ -22,6 +22,10 @@ AUDIO_EXTENSIONS = ("m4a", "mp3", "wav", "caf", "aiff", "aif")
 MESSAGE_KINDS = ("text", "photo", "audio", "system")
 MESSAGE_SENDERS = ("them", "me", "system")
 
+# D20: an ending declares the behaviour the engine runs for it. A new value here is a
+# deliberate statement that new engine work is needed.
+ENDING_MECHANICS = ("linear", "hold", "reappear")
+
 # Phase 2b. Older versions are rejected outright; there is no migration path and none
 # should ever be added.
 
@@ -32,7 +36,7 @@ WEEKDAY_NAMES = frozenset([
     "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
     "today", "yesterday", "tomorrow",
 ])
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # The shape of story.json. A required key must be present; an optional one may be
 # absent but must have the right type when it is there.
@@ -55,7 +59,7 @@ SCHEMA = {
              "optional": {"setsFlags": list, "requiresFlags": list,
                           "choices": list, "notification": dict, "next": str}},
     "ending": {"required": {"id": str, "requiresFlags": list, "beatId": str,
-                            "title": str, "body": str},
+                            "title": str, "body": str, "mechanic": str},
                "optional": {}},
 }
 
@@ -89,24 +93,32 @@ def _strip_blocks(text, open_tag, close_tag):
         index = len(text) if end < 0 else end + len(close_tag)
 
 
+OPT_OUT = "not-story"
+
+
 def _js_string_literals(source):
-    """Walk a script body and yield its string literals, skipping comments.
+    """Walk a script body and yield (literal, line_number), skipping comments.
 
     Deliberately simple: it does not model regex literals, because the engine contains
     none. If one is ever added, this may mis-scan and should be revisited.
     """
     literals = []
-    i, n = 0, len(source)
+    i, n, line = 0, len(source), 1
     while i < n:
         ch = source[i]
-        if ch == "/" and i + 1 < n and source[i + 1] == "/":
+        if ch == "\n":
+            line += 1
+            i += 1
+        elif ch == "/" and i + 1 < n and source[i + 1] == "/":
             newline = source.find("\n", i)
             i = n if newline < 0 else newline
         elif ch == "/" and i + 1 < n and source[i + 1] == "*":
             end = source.find("*/", i + 2)
+            chunk = source[i:(n if end < 0 else end + 2)]
+            line += chunk.count("\n")
             i = n if end < 0 else end + 2
         elif ch in "\"'`":
-            quote, j, buf = ch, i + 1, []
+            quote, j, buf, start_line = ch, i + 1, [], line
             while j < n:
                 if source[j] == "\\":
                     buf.append(source[j + 1] if j + 1 < n else "")
@@ -114,9 +126,11 @@ def _js_string_literals(source):
                     continue
                 if source[j] == quote:
                     break
+                if source[j] == "\n":
+                    line += 1
                 buf.append(source[j])
                 j += 1
-            literals.append("".join(buf))
+            literals.append(("".join(buf), start_line))
             i = j + 1
         else:
             i += 1
@@ -142,6 +156,15 @@ def audit_engine(path):
     source = _strip_blocks(source, "<!--", "-->")
     source = _strip_blocks(source, "<style", "</style>")
 
+    lines = source.splitlines()
+
+    def opted_out(line_number):
+        """A literal is exempt if its own line, or the line above, carries the marker."""
+        for index in (line_number - 1, line_number - 2):
+            if 0 <= index < len(lines) and OPT_OUT in lines[index]:
+                return True
+        return False
+
     candidates = []
     remainder = source
     while True:
@@ -152,16 +175,22 @@ def audit_engine(path):
         end = remainder.find("</script>", body_start if body_start > 0 else start)
         if body_start < 0 or end < 0:
             break
-        candidates.extend(_js_string_literals(remainder[body_start + 1:end]))
+        offset = source[:source.find(remainder[body_start + 1:end])].count("\n") \
+            if remainder[body_start + 1:end] in source else 0
+        for literal, line_number in _js_string_literals(remainder[body_start + 1:end]):
+            candidates.append((literal, line_number + offset))
         remainder = remainder[:start] + " " + remainder[end + len("</script>"):]
 
     # whatever markup is left contributes its text nodes
-    candidates.extend(re.sub(r"<[^>]*>", "\n", remainder).splitlines())
+    for text in re.sub(r"<[^>]*>", "\n", remainder).splitlines():
+        candidates.append((text, None))
 
     violations = []
-    for raw in candidates:
+    for raw, line_number in candidates:
         normalised = " ".join(raw.split())
         if not normalised or normalised.lower() in RULE_15_ALLOWLIST:
+            continue
+        if line_number is not None and opted_out(line_number):
             continue
         words = _visible_words(normalised)
         if len(words) > RULE_15_MAX_WORDS:
@@ -169,6 +198,89 @@ def audit_engine(path):
                 "%d-word string literal in the engine: %r -- story text belongs in "
                 "story.json (rule 15)" % (len(words), normalised[:90]))
     return violations
+
+
+# ------------------------------------------------------------ content audit ----
+# Gate 8: every template validates. Known cast, valid act range, resolvable flags,
+# no orphan slot.
+
+def audit_content(content_dir):
+    problems = []
+
+    def read(name):
+        with open(os.path.join(content_dir, name), encoding="utf-8") as handle:
+            return json.load(handle)
+
+    try:
+        cast = read("cast.json")
+        templates = read("templates.json")
+        ladder = read("ladder.json")
+    except (OSError, ValueError) as error:
+        return ["content bundle could not be read: %s" % error]
+
+    cast_ids = {c["id"] for c in cast.get("cast", [])}
+    acts = {a["id"] for a in ladder.get("acts", [])}
+    act_range = (min(acts), max(acts)) if acts else (0, 0)
+
+    produced = set()
+    for template in templates.get("templates", []):
+        produced.update(template.get("setsFlags") or [])
+
+    seen_ids = set()
+    for template in templates.get("templates", []):
+        tid = template.get("id", "<no id>")
+        if tid in seen_ids:
+            problems.append("duplicate template id '%s'" % tid)
+        seen_ids.add(tid)
+
+        for speaker in {line.get("speaker") for line in template.get("lines", [])}:
+            if speaker not in cast_ids:
+                problems.append("template '%s' names speaker '%s', who is not in the cast"
+                                % (tid, speaker))
+
+        span = template.get("acts") or []
+        if len(span) != 2 or span[0] > span[1]:
+            problems.append("template '%s' has act range %r, which is not [low, high]"
+                            % (tid, span))
+        elif span[0] < act_range[0] or span[1] > act_range[1]:
+            problems.append("template '%s' spans acts %r, but the ladder only defines %s"
+                            % (tid, span, sorted(acts)))
+
+        for flag in template.get("requiresFlags") or []:
+            if flag not in produced:
+                problems.append("template '%s' requires flag '%s', which no template sets"
+                                % (tid, flag))
+
+        # no orphan slot: every {SLOT} used is declared, and every declared slot is used
+        slots = template.get("slots") or {}
+        used = set()
+        for line in template.get("lines", []):
+            used.update(re.findall(r"\{([A-Z_]+)\}", line.get("text", "")))
+        for choice in template.get("choices") or []:
+            used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("tells") or ""))
+            used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("label") or ""))
+        for name in sorted(used - set(slots)):
+            problems.append("template '%s' uses slot {%s}, which it does not declare" % (tid, name))
+        for name in sorted(set(slots) - used):
+            problems.append("template '%s' declares slot {%s}, which nothing uses" % (tid, name))
+        for name, options in slots.items():
+            if not isinstance(options, list) or not options:
+                problems.append("template '%s' slot {%s} has no options" % (tid, name))
+
+    days = [d.get("day") for d in ladder.get("days", [])]
+    if days != sorted(days):
+        problems.append("ladder days are not in order")
+    budgets = [d.get("replyBudget") for d in ladder.get("days", [])]
+    for i in range(1, len(budgets)):
+        if budgets[i] > budgets[i - 1]:
+            problems.append("ladder replyBudget rises at day %d (%.2f -> %.2f); Act I decays"
+                            % (days[i], budgets[i - 1], budgets[i]))
+    for entry in ladder.get("days", []):
+        if entry.get("act") not in acts:
+            problems.append("ladder day %s names act %r, which is not defined"
+                            % (entry.get("day"), entry.get("act")))
+
+    return problems
 
 
 class Validator:
@@ -283,8 +395,8 @@ class Validator:
         # rejected, never migrated. A v2 file fails here naming the phase that moved it on.
         if story["version"] != SCHEMA_VERSION:
             self.fail("root: version is %r, but only version %d is supported. v3 was "
-                      "superseded by Phase W1, which added the live beats, the endings and "
-                      "the fields they need; there is no migration path"
+                      "superseded by Phase W2a, which added Ending.mechanic (D20); "
+                      "there is no migration path"
                       % (story["version"], SCHEMA_VERSION))
 
         threads_by_id = {t.get("id"): t for t in story["threads"]}
@@ -485,6 +597,14 @@ class Validator:
                               "starts at %d, going backwards in time"
                               % (beat.get("id"), here[-1], target_id, there[0]))
 
+        # RULE 16 -- every ending declares a mechanic the engine implements (D20).
+        for ending in story["endings"]:
+            mechanic = ending.get("mechanic")
+            if mechanic not in ENDING_MECHANICS:
+                self.fail("ending '%s' declares mechanic %r, which is not one of %s. A new "
+                          "mechanic is new engine work and must be added deliberately."
+                          % (ending.get("id"), mechanic, ", ".join(ENDING_MECHANICS)))
+
         # -- mirrors testEveryEndingBeatExists
         for ending in story["endings"]:
             if ending.get("beatId") not in beat_ids:
@@ -510,7 +630,7 @@ def main(argv):
         if skip:
             skip = False
             continue
-        if arg == "--engine":
+        if arg in ("--engine", "--content"):
             skip = True
             continue
         if arg.startswith("-"):
@@ -536,6 +656,17 @@ def main(argv):
             engine = candidate
     if engine:
         errors = errors + audit_engine(engine)
+
+    content_dir = None
+    if "--content" in argv:
+        content_dir = argv[argv.index("--content") + 1]
+    else:
+        root = os.path.dirname(os.path.dirname(validator.story_path))
+        candidate = os.path.join(root, "content")
+        if os.path.isdir(candidate):
+            content_dir = candidate
+    if content_dir:
+        errors = errors + audit_content(content_dir)
 
     if errors:
         print("story validation FAILED (%d problem%s)"

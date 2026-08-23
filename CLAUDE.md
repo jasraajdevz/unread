@@ -35,12 +35,13 @@ portable, and for the instruction not to pay more than that.
    day this is wrapped for a store.)
 10. Story text is inserted with `textContent`, never `innerHTML`. `innerHTML` is for
     fixed markup with no story in it.
-11. **Rule 15 (the engine string audit).** No string literal longer than three words may
-    appear in `src/engine.html` outside CSS, comments, or the UI-chrome allowlist.
-    `python3 tools/validate_story.py Resources/story.json --engine src/engine.html`
-    fails the build. Known limit: three words or fewer passes, so it catches prose, not
-    one-liners.
-12. The build gate is CI, not your judgment. A phase is done when the `gate` workflow is
+11. **One ingress (D19).** Exactly one function puts story text on screen, and it takes
+    only tokens minted by the Story or Director modules. Nothing else may assign
+    `.textContent` on a bubble, a choice or a preview. `__unread.auditIngress()` returns
+    anything that got there another way, and the suite asserts it is empty.
+    Rule 15's word-count grep is kept as a second-line smoke test with a per-line
+    `not-story` opt-out; `grep not-story src/engine.html` lists every exemption.
+12. **`bash tools/gate.sh` is the gate** (D21). CI lives at `ci/gate.yml` and is unproven. A phase is done when the `gate` workflow is
     green and the screenshot artifact shows the intended screen. Name the run.
 13. Every beat must be reachable and photographed by `tests/beats.spec.js`. A beat CI
     cannot photograph does not exist.
@@ -50,26 +51,34 @@ portable, and for the instruction not to pay more than that.
     that path is dead. Route around it or stop (D17).
 
 ## File tree — the whole project
+README.md
 CLAUDE.md
 DECISIONS.md                   append-only rulings; read before CLAUDE.md
 package.json                   dev-only: Playwright
 playwright.config.js
 Resources/
-  story.json                   the only place a line of dialogue exists
-  Images/
-  Audio/
+  story.json                   day 1; the only place a line of dialogue exists
+  Images/  Audio/
+content/
+  cast.json                    characters, voice rules, reply budgets
+  templates.json               event templates: slots, act range, flags, weight
+  ladder.json                  the 100-day schedule
 src/
   engine.html                  markup, CSS, engine. Zero story text.
+  director.js                  seeded generation. No DOM, no Date, no Math.random.
 tools/
-  validate_story.py            schema + graph + rule 15
+  gate.sh                      THE gate (D21)
+  validate_story.py            schema + graph + rule 15 + content audit
   beat_duration.py             counts and playback time; reports, never gates
-  build.py                     story.json + engine.html -> dist/unread.html
+  build.py                     story + content + director -> dist/unread.html
+  director/content/transcript/check_run.js   determinism, decay, transcripts
 tests/
-  beats.spec.js                drives every beat headless, screenshots each
-.github/workflows/
-  gate.yml                     the only source of "done"
-dist/                          generated, gitignored
-shots/                         generated, gitignored
+  beats.spec.js                day 1's five beats, screenshotted
+  days.spec.js                 days 1-10 in fast mode, 20 screenshots
+  persistence.spec.js          the four away bands, and the ingress audit
+ci/
+  gate.yml                     a copy of the gate that has never run (D21)
+dist/  shots/                  generated, gitignored
 
 ## Definition of done for any task
 - `python3 tools/validate_story.py Resources/story.json` exits 0.

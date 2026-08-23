@@ -17,10 +17,14 @@ import os
 import sys
 
 MARKER = "<!--STORY-->"
+CONTENT_MARKER = "<!--CONTENT-->"
+DIRECTOR_MARKER = "<!--DIRECTOR-->"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STORY = os.path.join(ROOT, "Resources", "story.json")
 ENGINE = os.path.join(ROOT, "src", "engine.html")
+DIRECTOR = os.path.join(ROOT, "src", "director.js")
+CONTENT_DIR = os.path.join(ROOT, "content")
 OUT = os.path.join(ROOT, "dist", "unread.html")
 
 DOCTYPE = "<!doctype html>\n<html lang=\"en\">\n"
@@ -52,14 +56,41 @@ def build():
         print("cannot read %s: %s" % (ENGINE, error), file=sys.stderr)
         return None
 
+    for marker in (MARKER, CONTENT_MARKER, DIRECTOR_MARKER):
+        if engine.count(marker) != 1:
+            print("%s must contain exactly one %s (found %d)"
+                  % (ENGINE, marker, engine.count(marker)), file=sys.stderr)
+            return None
     if engine.count(MARKER) != 1:
         print("%s must contain exactly one %s insertion point (found %d)"
               % (ENGINE, MARKER, engine.count(MARKER)), file=sys.stderr)
         return None
 
-    payload = escape_for_script(json.dumps(story, ensure_ascii=False, separators=(",", ":")))
-    block = "<script>window.STORY=%s;</script>" % payload
-    return DOCTYPE + engine.replace(MARKER, block, 1) + CLOSE
+    bundle = {}
+    for name in ("cast", "templates", "ladder"):
+        path = os.path.join(CONTENT_DIR, name + ".json")
+        try:
+            with io.open(path, encoding="utf-8") as handle:
+                bundle[name] = json.load(handle)
+        except (OSError, ValueError) as error:
+            print("cannot read %s: %s" % (path, error), file=sys.stderr)
+            return None
+
+    try:
+        with io.open(DIRECTOR, encoding="utf-8") as handle:
+            director = handle.read()
+    except OSError as error:
+        print("cannot read %s: %s" % (DIRECTOR, error), file=sys.stderr)
+        return None
+
+    def inline(obj):
+        return escape_for_script(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+
+    engine = engine.replace(MARKER, "<script>window.STORY=%s;</script>" % inline(story), 1)
+    engine = engine.replace(CONTENT_MARKER,
+                            "<script>window.CONTENT=%s;</script>" % inline(bundle), 1)
+    engine = engine.replace(DIRECTOR_MARKER, "<script>\n%s\n</script>" % director, 1)
+    return DOCTYPE + engine + CLOSE
 
 
 def main(argv):

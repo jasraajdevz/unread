@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "contacts": [
     {
       "id": "c_mom",
@@ -1011,7 +1011,8 @@
       ],
       "beatId": "b_end_found",
       "title": "Ending — found",
-      "body": "You told it where you were.\n\nIt never asked you to."
+      "body": "You told it where you were.\n\nIt never asked you to.",
+      "mechanic": "linear"
     },
     {
       "id": "e_silence",
@@ -1020,7 +1021,8 @@
       ],
       "beatId": "b_end_silence",
       "title": "Ending — silence",
-      "body": "It is still typing.\n\nIt has been typing for a while now."
+      "body": "It is still typing.\n\nIt has been typing for a while now.",
+      "mechanic": "hold"
     },
     {
       "id": "e_delete",
@@ -1029,7 +1031,8 @@
       ],
       "beatId": "b_end_delete",
       "title": "Ending — deleted",
-      "body": "It came back.\n\nIt was never in the phone."
+      "body": "It came back.\n\nIt was never in the phone.",
+      "mechanic": "reappear"
     }
   ]
 }

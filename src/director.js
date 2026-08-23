@@ -1,0 +1,322 @@
+/* The director: turns (runSeed, day) into a transcript.
+ *
+ * Pure. No DOM, no Date, no Math.random -- everything derives from the seed, so the same
+ * run produces the same transcript and a bug is reproducible from its seed alone (D24).
+ * Loads as a CommonJS module in the tests and as a global in the built page.
+ *
+ * Act I's mechanic is decay (ladder.json): each day slightly fewer people reply. Nothing
+ * else changes for twenty days, and that restraint is the point.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Director = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /* ---- seeded randomness ------------------------------------------------- */
+
+  function xmur3(str) {
+    var h = 1779033703 ^ str.length;
+    for (var i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return h >>> 0;
+    };
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function seededRandom(parts) {
+    return mulberry32(xmur3(parts.join('|'))());
+  }
+
+  function pickWeighted(rand, items, weightOf) {
+    var total = 0, i;
+    for (i = 0; i < items.length; i++) total += Math.max(0, weightOf(items[i]));
+    if (total <= 0) return null;
+    var roll = rand() * total;
+    for (i = 0; i < items.length; i++) {
+      roll -= Math.max(0, weightOf(items[i]));
+      if (roll <= 0) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
+  /* ---- content access ---------------------------------------------------- */
+
+  function indexCast(cast) {
+    var byId = {};
+    (cast.cast || []).forEach(function (c) { byId[c.id] = c; });
+    return byId;
+  }
+
+  function ladderFor(ladder, day) {
+    var found = null;
+    (ladder.days || []).forEach(function (d) { if (d.day === day) found = d; });
+    return found;
+  }
+
+  function actFor(ladder, day) {
+    var entry = ladderFor(ladder, day);
+    return entry ? entry.act : null;
+  }
+
+  function fillSlots(text, chosen) {
+    return text.replace(/\{([A-Z_]+)\}/g, function (whole, key) {
+      return Object.prototype.hasOwnProperty.call(chosen, key) ? chosen[key] : whole;
+    });
+  }
+
+  function chooseSlots(rand, template) {
+    var chosen = {};
+    Object.keys(template.slots || {}).sort().forEach(function (key) {
+      var options = template.slots[key];
+      chosen[key] = options[Math.floor(rand() * options.length) % options.length];
+    });
+    return chosen;
+  }
+
+  /* ---- eligibility ------------------------------------------------------- */
+
+  function eligible(template, context) {
+    var act = context.act;
+    if (template.acts && (act < template.acts[0] || act > template.acts[1])) return false;
+    if (template.phases && template.phases.indexOf(context.phase) < 0) return false;
+    if (template.once && context.fired[template.id]) return false;
+    var need = template.requiresFlags || [];
+    for (var i = 0; i < need.length; i++) {
+      if (!context.flags[need[i]]) return false;
+    }
+    return true;
+  }
+
+  /* ---- planning ----------------------------------------------------------
+     The ladder's reply budget is the primary driver, not the message count. Decay is
+     "fewer people reply", so a phase keeps drawing templates until its budget is spent
+     or the pool runs dry; the message target is a floor, not a cap. That makes
+     replies-per-day an exact function of the ladder, which is what lets the gate assert
+     the curve numerically instead of eyeballing it.
+     -------------------------------------------------------------------------- */
+
+  function totalBudget(budget) {
+    var sum = 0;
+    Object.keys(budget).forEach(function (k) { sum += budget[k]; });
+    return sum;
+  }
+
+  function planPhase(content, options) {
+    var castById = indexCast(content.cast);
+    var rand = seededRandom([options.runSeed, options.day, options.phase]);
+    var events = [];
+    var used = {};
+    var replies = 0;
+    var dropped = 0;
+
+    var pool = (content.templates.templates || []).filter(function (t) {
+      return eligible(t, {
+        act: options.act, phase: options.phase,
+        fired: options.fired, flags: options.flags
+      });
+    });
+
+    var guard = 0;
+    while (guard++ < 60) {
+      if (events.length >= options.target && totalBudget(options.budget) <= 0) break;
+
+      var available = pool.filter(function (t) { return !used[t.id]; });
+      if (!available.length) break;
+
+      /* Prefer templates whose speakers still have budget: a contact with nothing left
+         to say should not be the one picked to say it. */
+      var withBudget = available.filter(function (t) {
+        return t.lines.some(function (l) { return (options.budget[l.speaker] || 0) > 0; });
+      });
+      var template = pickWeighted(rand, withBudget.length ? withBudget : available,
+        function (t) { return t.weight || 1; });
+      if (!template) break;
+
+      used[template.id] = true;
+      if (template.once) options.fired[template.id] = true;
+      (template.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
+
+      var slots = chooseSlots(rand, template);
+      var openedBy = {};
+
+      template.lines.forEach(function (line) {
+        if (!castById[line.speaker]) return;
+
+        /* The first line a contact says in a template opens; everything after it is a
+           reply, and replies are what the ladder takes away. */
+        var isReply = !!openedBy[line.speaker];
+        if (isReply) {
+          if ((options.budget[line.speaker] || 0) <= 0) { dropped++; return; }
+          options.budget[line.speaker] -= 1;
+          replies += 1;
+        }
+        openedBy[line.speaker] = true;
+
+        events.push({
+          templateId: template.id,
+          threadId: template.threadId,
+          speaker: line.speaker,
+          from: 'them',
+          kind: 'text',
+          body: fillSlots(line.text, slots),
+          isReply: isReply
+        });
+      });
+
+      (template.choices || []).forEach(function (choice) {
+        events.push({
+          templateId: template.id,
+          threadId: template.threadId,
+          kind: 'choice',
+          choiceId: choice.id,
+          label: choice.label,
+          tells: choice.tells ? fillSlots(choice.tells, slots) : null
+        });
+      });
+    }
+
+    return { events: events, replies: replies, dropped: dropped };
+  }
+
+  /* Day 1 is authored: its morning is beat 1's history and its night is the live beats
+     that already exist in story.json. It enters the system as the first entry, not as an
+     exception to it. */
+  function authoredDay(content, day, entry) {
+    var story = content.story || { beats: [] };
+    var live = [], history = [];
+    (story.beats || []).forEach(function (beat) {
+      var isLive = beat.messages.some(function (m) { return m.live === true; });
+      (isLive ? live : history).push(beat);
+    });
+
+    function eventsFrom(beats) {
+      var out = [];
+      beats.slice().sort(function (a, b) { return a.id < b.id ? -1 : 1; }).forEach(function (beat) {
+        var opened = {};
+        beat.messages.forEach(function (m) {
+          if (m.from !== 'them') return;
+          var who = m.fromContactId || beat.threadId;
+          var isReply = !!opened[who];
+          opened[who] = true;
+          out.push({
+            templateId: 'authored',
+            threadId: beat.threadId,
+            speaker: m.fromContactId || null,
+            from: 'them',
+            kind: m.kind,
+            body: m.body || '',
+            isReply: isReply
+          });
+        });
+      });
+      return out;
+    }
+
+    var dayEvents = eventsFrom(history);
+    var nightEvents = eventsFrom(live);
+    var replies = function (list) {
+      return list.filter(function (e) { return e.isReply; }).length;
+    };
+    return {
+      day: day,
+      act: entry.act,
+      authored: true,
+      phases: { day: dayEvents, night: nightEvents },
+      replies: replies(dayEvents) + replies(nightEvents),
+      dropped: 0,
+      messages: dayEvents.length + nightEvents.length,
+      budgetAtStart: {},
+      budgetLeft: {}
+    };
+  }
+
+  function planDay(content, runSeed, day, carried) {
+    var entry = ladderFor(content.ladder, day);
+    if (!entry) return null;
+    if (entry.authored) return authoredDay(content, day, entry);
+
+    var castById = indexCast(content.cast);
+    var state = carried || { flags: {}, fired: {} };
+
+    /* Split the day's budget between the phases so night is never left mute by a
+       talkative morning. */
+    var dayBudget = {}, nightBudget = {};
+    Object.keys(castById).forEach(function (id) {
+      var whole = Math.max(0, Math.round((castById[id].baseReplies || 0) * entry.replyBudget));
+      dayBudget[id] = Math.ceil(whole * 0.6);
+      nightBudget[id] = whole - dayBudget[id];
+    });
+
+    var out = {
+      day: day,
+      act: entry.act,
+      authored: false,
+      budgetAtStart: {
+        day: JSON.parse(JSON.stringify(dayBudget)),
+        night: JSON.parse(JSON.stringify(nightBudget))
+      },
+      phases: {},
+      replies: 0,
+      dropped: 0,
+      messages: 0
+    };
+
+    [['day', dayBudget], ['night', nightBudget]].forEach(function (pair) {
+      var result = planPhase(content, {
+        runSeed: runSeed,
+        day: day,
+        phase: pair[0],
+        act: entry.act,
+        target: pair[0] === 'day' ? entry.dayMessages : entry.nightMessages,
+        budget: pair[1],
+        flags: state.flags,
+        fired: state.fired
+      });
+      out.phases[pair[0]] = result.events;
+      out.replies += result.replies;
+      out.dropped += result.dropped;
+      out.messages += result.events.filter(function (e) { return e.kind !== 'choice'; }).length;
+    });
+
+    out.budgetLeft = { day: dayBudget, night: nightBudget };
+    return out;
+  }
+
+  function planRun(content, runSeed, fromDay, toDay) {
+    var state = { flags: {}, fired: {} };
+    var days = [];
+    for (var day = fromDay; day <= toDay; day++) {
+      var planned = planDay(content, runSeed, day, state);
+      if (planned) days.push(planned);
+    }
+    return days;
+  }
+
+  return {
+    xmur3: xmur3,
+    mulberry32: mulberry32,
+    seededRandom: seededRandom,
+    fillSlots: fillSlots,
+    ladderFor: ladderFor,
+    actFor: actFor,
+    planPhase: planPhase,
+    planDay: planDay,
+    planRun: planRun
+  };
+});

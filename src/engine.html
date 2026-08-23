@@ -107,15 +107,39 @@
 <p class="foot">A WORK OF FICTION</p>
 
 <!--STORY-->
+<!--CONTENT-->
+<!--DIRECTOR-->
 
 <script>
 (function(){
 "use strict";
 
 /* ============================================================================
-   STORY LAYER
-   Knows the story.json schema. Touches no DOM. A native renderer can reimplement
-   the layer below this one and keep all of it. (D18)
+   D19 — SINGLE INGRESS
+   Exactly one function puts story text on screen. It accepts only tokens minted
+   by the Story or Director modules, and it stamps what it touched. Anything that
+   reaches a bubble by another route has no stamp, and auditIngress() finds it.
+   ========================================================================== */
+var Text = (function(){
+  var MINT = {};                       /* private brand; unreachable from outside */
+  function mint(origin, value){
+    return { __brand: MINT, origin: origin, value: value == null ? "" : String(value) };
+  }
+  function isToken(t){ return !!t && t.__brand === MINT; }
+  function paint(el, token){
+    if(!isToken(token)){
+      /* not-story: developer-facing */
+      throw new Error("story text must be a minted token (D19)");
+    }
+    el.textContent = token.value;
+    el.setAttribute("data-src", token.origin);
+    return el;
+  }
+  return { mint: mint, isToken: isToken, paint: paint };
+})();
+
+/* ============================================================================
+   STORY LAYER — knows the schema, touches no DOM (D18)
    ========================================================================== */
 var Story = (function(data){
   var beatsById = {}, contactsById = {}, threadsById = {};
@@ -124,24 +148,31 @@ var Story = (function(data){
   (data.threads || []).forEach(function(t){ threadsById[t.id] = t; });
 
   return {
+    raw: data,
     threads: function(){ return data.threads || []; },
     thread: function(id){ return threadsById[id]; },
     beat: function(id){ return beatsById[id]; },
+    contact: function(id){ return contactsById[id]; },
     contactName: function(id){
       var c = contactsById[id];
-      return c ? c.displayName : null;
+      return c ? Text.mint("story.contact", c.displayName) : null;
     },
+    threadName: function(t){ return Text.mint("story.thread", t.displayName); },
+    bodyOf: function(m){ return Text.mint("story.message", m.body || ""); },
+    labelOf: function(c){ return Text.mint("story.choice", c.label); },
+    endingTitle: function(e){ return Text.mint("story.ending", e.title); },
+    endingBody: function(e){ return Text.mint("story.ending", e.body); },
     endingFor: function(flags){
-      var list = data.endings || [];
-      for(var i=0;i<list.length;i++){
-        var need = list[i].requiresFlags || [];
-        var ok = true;
-        for(var j=0;j<need.length;j++){ if(!flags[need[j]]) { ok = false; break; } }
-        if(ok && need.length) return list[i];
-      }
-      return null;
+      var list = data.endings || [], found = null;
+      list.forEach(function(e){
+        if(found) return;
+        var need = e.requiresFlags || [];
+        if(!need.length) return;
+        for(var i=0;i<need.length;i++){ if(!flags[need[i]]) return; }
+        found = e;
+      });
+      return found;
     },
-    /* Messages of a beat, minus any gated on a flag the player has not set. */
     messagesOf: function(beatId, flags){
       var b = beatsById[beatId];
       if(!b) return [];
@@ -159,16 +190,26 @@ var Story = (function(data){
       var b = beatsById[beatId];
       return b && b.next;
     },
-    isLive: function(m){ return m.live === true; },
     speakerOf: function(m){
       return m.fromContactId ? this.contactName(m.fromContactId) : null;
     }
   };
 })(window.STORY);
 
+/* Director output is story-derived too, so it mints through the same door. */
+var Generated = {
+  body: function(event){ return Text.mint("director.message", event.body); },
+  label: function(event){ return Text.mint("director.choice", event.label); },
+  speaker: function(event){
+    var cast = (window.CONTENT && window.CONTENT.cast && window.CONTENT.cast.cast) || [];
+    var found = null;
+    cast.forEach(function(c){ if(c.id === event.speaker) found = c; });
+    return found ? Text.mint("director.contact", found.displayName) : null;
+  }
+};
+
 /* ============================================================================
    CLOCK
-   offsetMinutes are relative to first launch. Everything displayed is derived.
    ========================================================================== */
 var LAUNCH = new Date();
 var WEEKDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -199,15 +240,91 @@ function stampLabel(offsetMin){
 }
 
 /* ============================================================================
+   D24 — PERSISTENCE AND ELAPSED TIME
+   ========================================================================== */
+var STORAGE_KEY = "unread.save.v1";
+var MINUTE = 60000, HOUR = 60*MINUTE;
+var BANDS = {
+  RESUME:   2*MINUTE,      /* < 2m  : nothing changed          */
+  ADVANCED: HOUR,          /* < 1h  : messages already waiting */
+  MISSED:   12*HOUR        /* < 12h : phase closed, no replies */
+};
+
+function randomSeed(){
+  try {
+    var buf = new Uint32Array(2);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    return buf[0].toString(36) + buf[1].toString(36);
+  } catch(e){
+    return String(new Date().getTime());
+  }
+}
+
+var Save = {
+  read: function(){
+    try { return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null"); }
+    catch(e){ return null; }
+  },
+  write: function(state){
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ /* private mode: the run simply does not persist */ }
+  },
+  clear: function(){
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch(e){}
+  },
+  fresh: function(now){
+    return {
+      runSeed: randomSeed(),
+      day: 1,
+      phase: "day",
+      phaseStartedAt: now,
+      lastSeenAt: now,
+      flags: {},
+      contactState: {},
+      cluesFound: {}
+    };
+  }
+};
+
+/* The whole of D24 in one pure function, so the gate can assert it without a browser
+   clock: given a save and a wall-clock now, what changed while you were gone? */
+function applyAway(save, now){
+  var awayMs = Math.max(0, now - (save.lastSeenAt || now));
+  var result = { awayMs: awayMs, band: "resume", daysAdvanced: 0,
+                 waiting: 0, repliesLocked: false };
+
+  if(awayMs < BANDS.RESUME){
+    result.band = "resume";
+  } else if(awayMs < BANDS.ADVANCED){
+    result.band = "advanced";
+    /* 1-3 messages arrived while you were gone, scaled by how long that was */
+    result.waiting = Math.min(3, 1 + Math.floor(awayMs / (20*MINUTE)));
+  } else if(awayMs < BANDS.MISSED){
+    result.band = "missed";
+    result.repliesLocked = true;
+  } else {
+    result.band = "dayAdvanced";
+    result.daysAdvanced = Math.min(3, Math.floor(awayMs / (12*HOUR)));
+    result.repliesLocked = true;
+  }
+  return result;
+}
+
+/* ============================================================================
    RUNTIME STATE
    ========================================================================== */
-var PHOTO_REVEAL_MS = 600;   /* a photo has no typing indicator; it just lands */
-var INTER_BEAT_MS   = 6000;  /* pause between the last message of a beat and the next */
-var PHOTO_ARRIVE_MS = 5000;  /* beat 2: how long after the trigger the photo shows up */
-var THREADS_TO_READ = 3;     /* beat 1 -> 2 trigger */
-
+var PHOTO_REVEAL_MS = 600;
+var INTER_BEAT_MS   = 6000;
+var PHOTO_ARRIVE_MS = 5000;
+var THREADS_TO_READ = 3;
 var UNKNOWN = "t_unknown";
 var APP_NAME = "Loop";   /* the fictional messenger. Guideline 4.1: not anyone else's. */
+
+var params = new URLSearchParams(window.location.search);
+var FAST = params.has("fast");
+var CONTENT = window.CONTENT || {};
+var LADDER = CONTENT.ladder || { days: [], phaseWindowMs: 600000, fastWindowMs: 30000 };
+var PHASE_WINDOW_MS = FAST ? (LADDER.fastWindowMs || 30000) : (LADDER.phaseWindowMs || 600000);
 
 var S = {
   beat: 1,
@@ -217,7 +334,11 @@ var S = {
   current: null,
   ended: false,
   leftDuringLive: false,
-  shown: {}      /* threadId -> array of messages currently in that thread */
+  shown: {},
+  save: null,
+  away: null,
+  repliesLocked: false,
+  pendingChoices: []
 };
 
 var scroll  = document.getElementById("scroll"),
@@ -227,25 +348,20 @@ var scroll  = document.getElementById("scroll"),
 
 document.getElementById("clock").textContent = hhmm(LAUNCH);
 
-Story.threads().forEach(function(t){
-  S.shown[t.id] = Story.messagesOf(t.startBeat, S.flags).slice();
-});
+function resetThreads(){
+  S.shown = {};
+  Story.threads().forEach(function(t){
+    S.shown[t.id] = Story.messagesOf(t.startBeat, S.flags).slice();
+  });
+}
+resetThreads();
 
 function shownOf(t){ return S.shown[t.id] || []; }
 function lastOffset(t){
   var m = shownOf(t);
   return m.length ? m[m.length-1].offsetMinutes : -999999;
 }
-function preview(t){
-  var m = shownOf(t);
-  if(!m.length) return "";
-  var last = m[m.length-1];
-  var who = Story.speakerOf(last);
-  return (who ? who+": " : "") + (last.kind === "photo" ? "Photo" : (last.body || ""));
-}
-function isUnread(t){
-  return (t.startsUnread || t.forcedUnread) && !S.opened[t.id];
-}
+function isUnread(t){ return (t.startsUnread || t.forcedUnread) && !S.opened[t.id]; }
 function sortedThreads(){
   return Story.threads()
     .filter(function(t){ return !S.hidden[t.id]; })
@@ -255,8 +371,6 @@ function sortedThreads(){
 
 /* ============================================================================
    THE HALLWAY, DRAWN NOT FETCHED
-   The photo message names an asset; until a real one is shot, the renderer draws
-   a stand-in. Swapping to the asset is a change here and nowhere else.
    ========================================================================== */
 function hallway(){
   var W=260,H=190,c=document.createElement("canvas");
@@ -294,10 +408,23 @@ function hallway(){
 /* ============================================================================
    RENDER LAYER
    ========================================================================== */
+function previewToken(t){
+  var m = shownOf(t);
+  if(!m.length) return Text.mint("story.preview", "");
+  var last = m[m.length-1];
+  if(last.kind === "photo") return Text.mint("ui.chrome", "Photo");
+  /* Only a group chat names its speaker. In a one-to-one thread the name is already
+     the thread title, and "Mom: ren" reads like a bug. */
+  var group = (t.participantIds || []).length > 1;
+  var who = (group && last.fromContactId) ? Story.contact(last.fromContactId) : null;
+  var prefix = who ? who.displayName + ": " : "";
+  return Text.mint("story.preview", prefix + (last.body || ""));
+}
+
 function renderList(){
   S.current=null; choicesEl.innerHTML="";
   appbar.innerHTML='<span class="title"></span>';
-  appbar.querySelector(".title").textContent = APP_NAME;
+  Text.paint(appbar.querySelector(".title"), Text.mint("ui.chrome", APP_NAME));
   scroll.innerHTML="";
   sortedThreads().forEach(function(t){
     var b=document.createElement("button");
@@ -308,9 +435,9 @@ function renderList(){
     var av=b.querySelector(".avatar");
     av.style.background = t.accentHex || "#6E7480";
     av.textContent = (t.displayName || "").charAt(0).toUpperCase();
-    b.querySelector(".rn").textContent    = t.displayName;
+    Text.paint(b.querySelector(".rn"), Story.threadName(t));
     b.querySelector(".rtime").textContent = listStamp(lastOffset(t));
-    b.querySelector(".rp").textContent    = preview(t);
+    Text.paint(b.querySelector(".rp"), previewToken(t));
     if(isUnread(t)){ var d=document.createElement("span"); d.className="dot"; b.appendChild(d); }
     b.addEventListener("click", function(){ openThread(t); });
     scroll.appendChild(b);
@@ -321,19 +448,28 @@ function renderList(){
 
 function bubbleFor(m, prev){
   if(m.kind === "photo"){
-    var p=document.createElement("div"); p.className="photo"; p.appendChild(hallway());
+    var p=document.createElement("div"); p.className="photo";
+    p.setAttribute("data-src","story.photo");
+    p.appendChild(hallway());
     return p;
   }
-  var same = prev && prev.from === m.from &&
-             Story.speakerOf(prev) === Story.speakerOf(m);
+  var prevWho = prev && prev.fromContactId, thisWho = m.fromContactId;
+  var same = prev && prev.from === m.from && prevWho === thisWho;
   var el=document.createElement("div");
   el.className = "msg " + (m.from === "me" ? "me" : "them") + (same ? " run" : "");
-  var who = Story.speakerOf(m);
-  if(who && !same){
-    var w=document.createElement("span"); w.className="who"; w.textContent=who;
+  var thread = m.__threadId ? Story.thread(m.__threadId) : S.current;
+  var isGroup = !!(thread && (thread.participantIds || []).length > 1);
+  var whoToken = (isGroup && m.fromContactId) ? Story.contactName(m.fromContactId) : null;
+  if(whoToken && !same){
+    var w=document.createElement("span"); w.className="who";
+    Text.paint(w, whoToken);
     el.appendChild(w);
   }
-  el.appendChild(document.createTextNode(m.body || ""));
+  var body=document.createElement("span");
+  body.className="body";
+  Text.paint(body, m.__token || Story.bodyOf(m));
+  el.appendChild(body);
+  el.setAttribute("data-src", body.getAttribute("data-src"));
   return el;
 }
 
@@ -349,8 +485,7 @@ function paint(t){
   var lastDay=null, prev=null;
   shownOf(t).forEach(function(m){
     var d=at(m.offsetMinutes);
-    /* D5: a divider needs a calendar-day change AND a gap of at least 30 minutes,
-       so a conversation running over midnight is never cut in half. */
+    /* D5: a divider needs a calendar-day change AND a gap of at least 30 minutes. */
     var gapOK = !prev || (m.offsetMinutes - prev.offsetMinutes) >= 30;
     if(dayKey(d)!==lastDay && (lastDay===null || gapOK)){
       var div=document.createElement("div"); div.className="divider";
@@ -369,12 +504,13 @@ function openThread(t){
   S.current=t; S.opened[t.id]=true; t.forcedUnread=false;
   choicesEl.innerHTML="";
   appbar.innerHTML='<button class="back" aria-label="Back">‹</button><span class="title"></span>';
-  appbar.querySelector(".title").textContent = t.displayName;
+  Text.paint(appbar.querySelector(".title"), Story.threadName(t));
   appbar.querySelector(".back").addEventListener("click", function(){
     if(!S.ended) renderList();
   });
   paint(t);
   scroll.scrollTop=0;
+  if(S.pendingChoices.length && !S.repliesLocked) renderChoices(S.pendingChoices);
   if(t.id === UNKNOWN) runQueue();
   else maybeAdvance();
 }
@@ -413,9 +549,7 @@ function deliver(threadId, list, done){
 }
 
 /* ============================================================================
-   BEATS
-   Trigger conditions live here; every line of text they deliver comes from
-   story.json.
+   BEATS (day 1 night)
    ========================================================================== */
 function maybeAdvance(){
   var read=Object.keys(S.opened).length;
@@ -447,27 +581,40 @@ function beat4(){
   var t=Story.thread(UNKNOWN);
   if(S.current !== t){ t.forcedUnread=true; S.opened[UNKNOWN]=false; renderList(); return; }
   if(S.leftDuringLive) S.flags["left_during_live"]=true;
-  deliver(UNKNOWN, Story.messagesOf("b_unknown_4", S.flags), showChoices);
+  deliver(UNKNOWN, Story.messagesOf("b_unknown_4", S.flags), function(){
+    S.beat=5;
+    renderChoices(Story.choicesOf("b_unknown_4").map(function(c){
+      return { id: c.id, token: Story.labelOf(c), choice: c };
+    }));
+  });
 }
 
-function showChoices(){
-  S.beat=5;
-  Story.choicesOf("b_unknown_4").forEach(function(o){
+/* One place choices are built, for the same reason as one place text is painted. */
+function renderChoices(items){
+  choicesEl.innerHTML="";
+  if(S.repliesLocked) return;
+  items.forEach(function(item){
     var b=document.createElement("button");
     b.className="choice";
-    b.setAttribute("data-choice", o.id);
-    b.textContent=o.label;
-    b.addEventListener("click", function(){ choicesEl.innerHTML=""; finish(o); });
+    b.setAttribute("data-choice", item.id);
+    Text.paint(b, item.token);
+    b.addEventListener("click", function(){
+      choicesEl.innerHTML="";
+      S.pendingChoices=[];
+      if(item.choice) finish(item.choice);
+      else if(item.onPick) item.onPick(item);
+    });
     choicesEl.appendChild(b);
   });
 }
 
-/* Each ending is choreographed differently -- that is the mechanic, not the text.
-   The text, including the titles and bodies, comes from story.json. */
-var ENDING_TIMING = {
-  e_found:   { reveal: 3600 },
-  e_silence: { typingAfter: 4000, reveal: 26000 },
-  e_delete:  { removeAfter: 700, returnAfter: 7000, reveal: 12500 }
+/* ============================================================================
+   D20 — ENDINGS DECLARE A MECHANIC
+   ========================================================================== */
+var MECHANIC_TIMING = {
+  linear:   { reveal: 3600 },
+  hold:     { typingAfter: 4000, reveal: 26000 },
+  reappear: { removeAfter: 700, returnAfter: 7000, reveal: 12500 }
 };
 
 function finish(choice){
@@ -475,10 +622,11 @@ function finish(choice){
   (choice.setsFlags || []).forEach(function(f){ S.flags[f]=true; });
   var ending=Story.endingFor(S.flags);
   if(!ending) return;
-  var timing=ENDING_TIMING[ending.id] || { reveal: 3000 };
+  var mechanic = ending.mechanic || "linear";
+  var timing = MECHANIC_TIMING[mechanic] || MECHANIC_TIMING.linear;
   var messages=Story.messagesOf(ending.beatId, S.flags);
 
-  if(ending.id === "e_delete"){
+  if(mechanic === "reappear"){
     setTimeout(function(){ S.hidden[UNKNOWN]=true; renderList(); }, timing.removeAfter);
     setTimeout(function(){
       S.hidden[UNKNOWN]=false;
@@ -490,7 +638,7 @@ function finish(choice){
     return;
   }
 
-  if(ending.id === "e_silence"){
+  if(mechanic === "hold"){
     var wrap=scroll.querySelector(".convo");
     setTimeout(function(){
       if(!wrap) return;
@@ -502,7 +650,6 @@ function finish(choice){
     return;
   }
 
-  /* the reply the player sends lands instantly; the answer is delivered */
   var immediate=messages.filter(function(m){ return m.from==="me"; });
   var rest=messages.filter(function(m){ return m.from!=="me"; });
   var wrap2=scroll.querySelector(".convo");
@@ -518,26 +665,174 @@ function finish(choice){
 }
 
 function reveal(ending){
-  document.getElementById("endTitle").textContent = ending.title;
-  document.getElementById("endBody").textContent  = ending.body;
+  Text.paint(document.getElementById("endTitle"), Story.endingTitle(ending));
+  Text.paint(document.getElementById("endBody"), Story.endingBody(ending));
   endEl.classList.add("on");
 }
 
-document.getElementById("again").addEventListener("click", function(){ location.reload(); });
-
-/* the away hook: it keeps going while you are gone */
-document.addEventListener("visibilitychange", function(){
-  if(document.hidden && S.beat>=3 && !S.ended) S.leftDuringLive=true;
+document.getElementById("again").addEventListener("click", function(){
+  Save.clear(); window.location.reload();
 });
 
-/* test hook: lets CI drive the beats without waiting on real time */
+/* ============================================================================
+   THE DAY RUNNER — generated days 2..N
+   ========================================================================== */
+function planFor(day){
+  if(!window.Director || !CONTENT.templates) return null;
+  var carried = { flags: S.flags, fired: (S.save && S.save.fired) || {} };
+  return window.Director.planDay(
+    { cast: CONTENT.cast, templates: CONTENT.templates, ladder: CONTENT.ladder,
+      story: Story.raw },
+    (S.save && S.save.runSeed) || "default", day, carried);
+}
+
+/* Turn generated events into messages the renderer already understands. Offsets are
+   spread across the phase window so the thread list stamps them plausibly. */
+function eventsToMessages(events, baseOffsetMin){
+  var out = [], n = 0;
+  events.forEach(function(e){
+    if(e.kind === "choice") return;
+    out.push({
+      id: "g_" + (baseOffsetMin) + "_" + (n),
+      from: "them",
+      kind: "text",
+      fromContactId: e.speaker,
+      __threadId: e.threadId,
+      body: e.body,
+      offsetMinutes: baseOffsetMin + n,
+      live: false,
+      delayMs: 0,
+      typingMs: 0,
+      __token: Text.mint("director.message", e.body)
+    });
+    n += 1;
+  });
+  return out;
+}
+
+function loadPhase(day, phase, options){
+  options = options || {};
+  var plan = planFor(day);
+  if(!plan) return null;
+  S.save.day = day; S.save.phase = phase;
+  var events = plan.phases[phase] || [];
+
+  if(!plan.authored){
+    resetThreads();
+    var byThread = {};
+    events.forEach(function(e){
+      if(e.kind === "choice") return;
+      (byThread[e.threadId] = byThread[e.threadId] || []).push(e);
+    });
+    Object.keys(byThread).forEach(function(threadId){
+      if(!S.shown[threadId]) return;
+      var base = -(60 - Math.min(50, byThread[threadId].length));
+      S.shown[threadId] = S.shown[threadId].concat(
+        eventsToMessages(byThread[threadId], base));
+      var t = Story.thread(threadId);
+      if(t) { t.forcedUnread = true; S.opened[threadId] = false; }
+    });
+    S.pendingChoices = events
+      .filter(function(e){ return e.kind === "choice"; })
+      .map(function(e){
+        return { id: e.choiceId, token: Generated.label(e), tells: e.tells,
+                 onPick: function(item){ recordTold(item.tells); } };
+      });
+  }
+  Save.write(S.save);
+  if(!options.silent) renderList();
+  return plan;
+}
+
+/* Act I only writes lastToldByRen. Act II reads it. Retrofitting memory onto twenty days
+   of already-played history is not possible, so it is written from day one. */
+function recordTold(tells){
+  if(!tells) return;
+  var state = S.save.contactState || (S.save.contactState = {});
+  var told = state.lastToldByRen || (state.lastToldByRen = []);
+  told.push({ day: S.save.day, phase: S.save.phase, said: tells });
+  Save.write(S.save);
+}
+
+/* ============================================================================
+   BOOT
+   ========================================================================== */
+function boot(){
+  var now = new Date().getTime();
+  var save = Save.read();
+  if(!save){ save = Save.fresh(now); }
+  S.save = save;
+  S.flags = save.flags || {};
+
+  S.away = applyAway(save, now);
+  if(S.away.band === "missed" || S.away.band === "dayAdvanced"){
+    S.repliesLocked = true;
+    S.pendingChoices = [];
+  }
+  if(S.away.daysAdvanced > 0){
+    save.day = Math.min(100, (save.day || 1) + S.away.daysAdvanced);
+    save.phase = "day";
+  }
+  save.lastSeenAt = now;
+  Save.write(save);
+
+  if(save.day > 1) loadPhase(save.day, save.phase, { silent: true });
+  renderList();
+}
+
+function touch(){
+  if(!S.save) return;
+  S.save.lastSeenAt = new Date().getTime();
+  Save.write(S.save);
+}
+document.addEventListener("visibilitychange", function(){
+  if(document.hidden && S.beat>=3 && !S.ended) S.leftDuringLive=true;
+  touch();
+});
+window.addEventListener("pagehide", touch);
+window.addEventListener("beforeunload", touch);
+
+/* ============================================================================
+   TEST HOOKS
+   ========================================================================== */
 window.__unread = {
   state: S,
   story: Story,
+  save: Save,
+  applyAway: applyAway,
+  bands: BANDS,
+  phaseWindowMs: PHASE_WINDOW_MS,
   openThread: openThread,
-  renderList: renderList
+  renderList: renderList,
+  loadPhase: function(day, phase){ return loadPhase(day, phase); },
+  /* D19: every element that shows story text carries the ingress stamp. Anything that
+     reached the screen another way has none, and shows up here. */
+  auditIngress: function(){
+    var offenders = [];
+    /* not-story: a CSS selector */
+    var nodes = document.querySelectorAll(".msg, .choice, .rp, .rn, .photo");
+    Array.prototype.forEach.call(nodes, function(el){
+      if(!el.getAttribute("data-src")) offenders.push(el.className + ":" + el.textContent.slice(0,40));
+    });
+    return offenders;
+  },
+  paintUnminted: function(){
+    /* the seeded negative: a second path into a bubble */
+    var wrap = scroll.querySelector(".convo") || scroll;
+    var rogue = document.createElement("div");
+    rogue.className = "msg them";
+    /* not-story: the seeded negative deliberately bypasses the ingress */
+    rogue.textContent = "this did not come from story.json";
+    wrap.appendChild(rogue);
+    return rogue;
+  },
+  mintedPaintRejects: function(){
+    var el = document.createElement("div");
+    try { Text.paint(el, "a raw string"); return false; }
+    catch(e){ return true; }
+  }
 };
 
-renderList();
+boot();
 })();
 </script>

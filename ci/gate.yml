@@ -1,5 +1,9 @@
 name: gate
 
+# D21: this file lives at ci/gate.yml, not .github/workflows/. Pushing to a workflow path
+# needs a scope this repo has waited two phases for. Copy it into place when that exists;
+# tools/gate.sh is the canonical gate until then.
+#
 # D16: everything runs on ubuntu-latest at 1x. The 200-macOS-minutes-a-month constraint
 # that shaped half of Phase 1.5 is gone, so paths-ignore is dropped -- at 1x it is not
 # worth an unverified glob. cancel-in-progress stays: it is free and it is correct.
@@ -33,6 +37,9 @@ jobs:
       - name: Rule 15 — no story text in the engine
         run: python3 tools/validate_story.py Resources/story.json --engine src/engine.html
 
+      - name: Content templates
+        run: python3 tools/validate_story.py Resources/story.json --content content
+
       - name: Build
         run: |
           python3 tools/build.py
@@ -49,7 +56,10 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      - name: Beats
+      - name: Determinism and decay
+        run: node tools/check_run.js
+
+      - name: Beats, days and persistence
         run: npx playwright test
 
       - uses: actions/upload-artifact@v4

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "cast": [
+    {
+      "id": "c_sam",
+      "displayName": "sam",
+      "thread": "t_flat",
+      "side": "them",
+      "capitalisation": "lower",
+      "punctuation": "sparse",
+      "voice": "blunt, escalates to capitals when annoyed, never apologises first",
+      "baseReplies": 6
+    },
+    {
+      "id": "c_priya",
+      "displayName": "priya",
+      "thread": "t_flat",
+      "side": "them",
+      "capitalisation": "lower",
+      "punctuation": "none",
+      "voice": "flat, factual, wins arguments by repeating herself",
+      "baseReplies": 6
+    },
+    {
+      "id": "c_mom",
+      "displayName": "Mom",
+      "thread": "t_mom",
+      "side": "them",
+      "capitalisation": "lower",
+      "punctuation": "none",
+      "voice": "asks the same question twice, never uses a question mark",
+      "baseReplies": 5
+    },
+    {
+      "id": "c_dave",
+      "displayName": "Dave",
+      "thread": "t_dave",
+      "side": "them",
+      "capitalisation": "sentence",
+      "punctuation": "full",
+      "voice": "the only character who writes in full sentences. Never normalise anyone to match him, and never normalise him down.",
+      "baseReplies": 2
+    },
+    {
+      "id": "c_notify",
+      "displayName": "Notify",
+      "thread": "t_notify",
+      "side": "them",
+      "capitalisation": "sentence",
+      "punctuation": "full",
+      "voice": "automated. Never varies. Does not know anyone is gone.",
+      "baseReplies": 0
+    }
+  ]
+}
