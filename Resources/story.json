@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "contacts": [
     {
       "id": "c_mom",
@@ -1033,6 +1033,16 @@
       "title": "Ending — deleted",
       "body": "It came back.\n\nIt was never in the phone.",
       "mechanic": "reappear"
+    },
+    {
+      "id": "e_unanswered",
+      "requiresFlags": [
+        "unanswered"
+      ],
+      "beatId": "b_end_silence",
+      "title": "Ending — unanswered",
+      "body": "You never said anything at all.\n\nIt stayed for a hundred days anyway.",
+      "mechanic": "hold"
     }
   ]
 }

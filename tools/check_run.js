@@ -13,7 +13,7 @@ const { ROOT, load } = require('./content.js');
 
 const content = load();
 const FROM = 1;
-const TO = 60;
+const TO = 100;
 
 let failures = 0;
 function check(label, fn) {
@@ -132,8 +132,10 @@ check('the silence is the same conversations, shortened', () => {
   const run = Director.planRun(content, 'alpha', FROM, TO);
   const ids = (d) => new Set(['day', 'night']
     .flatMap((p) => d.phases[p].map((e) => e.templateId)));
-  const early = ids(run[1]);
-  const late = ids(run[run.length - 1]);
+  // day 20 by name. "the last day" meant day 20 when Act I was the whole ladder; it
+  // means day 100 now, which is the same mistake the sibling check already made.
+  const early = ids(run.find((d) => d.day === 2));
+  const late = ids(run.find((d) => d.day === 20));
   const shared = [...late].filter((id) => early.has(id));
   assert.ok(shared.length > 0,
     'day 20 shares no template with day 2, so the player has nothing to recognise');
@@ -287,6 +289,54 @@ check('determinism survives: same seed AND same memory, same transcript', () => 
     { flags: {}, fired: {}, spent: {}, memory: {} }));
   assert.notStrictEqual(withMem, without,
     'the same Act II day plays identically with and without memory');
+});
+
+console.log('\nAct III - presence');
+const clueGated = content.templates.templates.filter((t) => t.requiresClue);
+
+check('a clue found in Act I is confirmed in Act III', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const fired = new Set();
+  run.filter((d) => d.act === 3).forEach((d) => ['day', 'night'].forEach((p) =>
+    d.phases[p].forEach((e) => {
+      if (clueGated.some((t) => t.id === e.templateId)) fired.add(e.templateId);
+    })));
+  console.log('        ' + fired.size + '/' + clueGated.length + ' clue payoffs fire');
+  assert.strictEqual(fired.size, clueGated.length, 'some clue is never confirmed');
+});
+
+check('a clue never found is never confirmed', () => {
+  // no clues in the state: nothing gated on one may fire, however far the run goes
+  const state = { flags: {}, fired: {}, memory: {}, spent: {}, clues: {} };
+  for (let day = 61; day <= TO; day++) {
+    const planned = Director.planDay(content, 'alpha', day, state);
+    ['day', 'night'].forEach((p) => planned.phases[p].forEach((e) => {
+      const gated = clueGated.find((t) => t.id === e.templateId);
+      assert.ok(!gated, 'day ' + day + ' confirmed ' + (gated && gated.requiresClue) +
+        ' without the player ever finding it');
+    }));
+  }
+});
+
+check('Act III is the unknown number, and the others are gone', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const byThread = {};
+  run.filter((d) => d.act === 3).forEach((d) => ['day', 'night'].forEach((p) =>
+    d.phases[p].forEach((e) => {
+      if (e.kind !== 'choice') byThread[e.threadId] = (byThread[e.threadId] || 0) + 1;
+    })));
+  const unknown = byThread.t_unknown || 0;
+  const others = Object.keys(byThread)
+    .filter((k) => k !== 't_unknown').reduce((n, k) => n + byThread[k], 0);
+  console.log('        the number says ' + unknown + '; everyone else says ' + others);
+  assert.ok(unknown > others * 4, 'Act III is not dominated by the number');
+});
+
+check('the run reaches day 100', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  const last = run[run.length - 1];
+  assert.strictEqual(last.day, 100, 'the ladder stops at ' + last.day);
+  assert.ok(last.phases.night.length > 0, 'day 100 night is empty');
 });
 
 console.log('\nD27 - clues');

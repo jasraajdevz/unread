@@ -138,7 +138,7 @@ test('every beat fires, and each one is photographed', async ({ page }) => {
   expect(errors, 'the page threw no errors').toEqual([]);
 });
 
-test('choosing an ending reaches its screen', async ({ page }) => {
+test('choosing on night one is kept, and does not end the run (D32)', async ({ page }) => {
   await page.clock.install({ time: LAUNCH });
   await page.goto(BUILT);
 
@@ -156,17 +156,15 @@ test('choosing an ending reaches its screen', async ({ page }) => {
   await page.locator(`[data-choice="${choice.id}"]`).click();
   await page.clock.runFor(60000);
 
-  await expect(page.locator('#end')).toHaveClass(/on/);
-  await expect(page.locator('#endTitle')).toHaveText(ending.title);
-  await expect(page.locator('#endBody')).toHaveText(ending.body);
-
-  // The ending fades in over 1.6s of REAL time -- a CSS transition is driven by the
-  // compositor, not by the mocked clock, so wait it out or the artifact is a ghost.
-  await page.waitForFunction(() => {
-    const el = document.getElementById('end');
-    return parseFloat(getComputedStyle(el).opacity) > 0.99;
-  }, null, { timeout: 5000 });
+  // the answer is recorded and the game carries on; the card waits ninety nine days
+  await expect(page.locator('#end')).not.toHaveClass(/on/);
+  const state = await page.evaluate(() => ({
+    ended: window.__unread.state.ended,
+    flags: Object.keys(window.__unread.state.flags),
+  }));
+  expect(state.ended).toBe(false);
+  expect(state.flags).toContain(choice.setsFlags[0]);
 
   fs.mkdirSync(SHOTS, { recursive: true });
-  await page.locator('.phone').screenshot({ path: path.join(SHOTS, '07-ending.png') });
+  await page.locator('.phone').screenshot({ path: path.join(SHOTS, '07-answered.png') });
 });

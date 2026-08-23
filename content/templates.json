@@ -1874,6 +1874,788 @@
           "tells": null
         }
       ]
+    },
+    {
+      "id": "tpl_p_light",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the front light came on at ten past three"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "it was me"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_light",
+          "label": "what were you doing there",
+          "tells": "asked what it was doing there"
+        },
+        {
+          "id": "ch_p_none1",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_light"
+    },
+    {
+      "id": "tpl_p_parcel",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 4,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the box under the mat was mine"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "i wanted to know if youd open it"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_parcel",
+          "label": "why",
+          "tells": "asked why"
+        },
+        {
+          "id": "ch_p_none2",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_parcel"
+    },
+    {
+      "id": "tpl_p_heating",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the heating comes on at four because i set it"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "the flat is warm when i get there"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_heat",
+          "label": "when do you get there",
+          "tells": "asked when it gets there"
+        },
+        {
+          "id": "ch_p_none3",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_heating"
+    },
+    {
+      "id": "tpl_p_rota",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 4,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "i took the rota off the fridge"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "your handwriting is on it"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_rota",
+          "label": "thats not mine",
+          "tells": "denied the handwriting"
+        },
+        {
+          "id": "ch_p_none4",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_rota"
+    },
+    {
+      "id": "tpl_p_noise",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "you were right about the stairs"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "priya heard me on the ninth"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_noise",
+          "label": "is that why she left",
+          "tells": "asked if that was why priya left"
+        },
+        {
+          "id": "ch_p_none5",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_noise"
+    },
+    {
+      "id": "tpl_p_signin",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the sign in was from the kitchen"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "the codes come to this phone"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_signin",
+          "label": "youre in the flat",
+          "tells": "said it was in the flat"
+        },
+        {
+          "id": "ch_p_none6",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresClue": "clue_signin"
+    },
+    {
+      "id": "tpl_p_close_1",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        75
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "youve had that phone ninety days"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you havent charged it anywhere new"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_c1",
+          "label": "how would you know",
+          "tells": "asked how it knew"
+        },
+        {
+          "id": "ch_p_none7",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_close_2",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        70,
+        90
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the screen is the brightest thing in that room"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_c2",
+          "label": "which room",
+          "tells": "asked which room",
+          "memory": {
+            "tag": "asked_room",
+            "fragment": "you asked which room"
+          }
+        },
+        {
+          "id": "ch_p_none8",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_room",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        72,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "the one youre in"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_r1",
+          "label": "im putting it down",
+          "tells": "said he was putting it down"
+        },
+        {
+          "id": "ch_p_none9",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresMemory": "asked_room",
+      "quotesMemory": false
+    },
+    {
+      "id": "tpl_p_close_3",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        85,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "you read these the second they arrive now"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you didnt used to"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_c3",
+          "label": "im not ren",
+          "tells": "admitted he was not ren",
+          "memory": {
+            "tag": "admitted_not_ren",
+            "fragment": "you said you werent ren"
+          }
+        },
+        {
+          "id": "ch_p_none10",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_notren",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        86,
+        100
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 6,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "i know"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "i stopped asking on the fourteenth"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_n1",
+          "label": "what happened to ren",
+          "tells": "asked what happened to ren"
+        },
+        {
+          "id": "ch_p_none11",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ],
+      "requiresMemory": "admitted_not_ren",
+      "quotesMemory": false
+    },
+    {
+      "id": "tpl_p_final",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        96,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 9,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "ninety nine days"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you could have put it down on any of them"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_f1",
+          "label": "i couldnt",
+          "tells": "said he could not put it down"
+        },
+        {
+          "id": "ch_p_none12",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_p_alone",
+      "threadId": "t_flat",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 2,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "im giving notice on the flat"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "you can keep the deposit"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_sam",
+          "label": "where will you go",
+          "tells": "asked where sam would go"
+        },
+        {
+          "id": "ch_p_sam_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_mom_p_stop",
+      "threadId": "t_mom",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 2,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_mom",
+          "text": "i rang the flat"
+        },
+        {
+          "speaker": "c_mom",
+          "text": "sam says he hasnt seen you since october"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_mom",
+          "label": "im here",
+          "tells": "told mom he was there"
+        },
+        {
+          "id": "ch_p_mom_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_daily_seen",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "THING": [
+          "the kettle",
+          "the hall light",
+          "the back door",
+          "the tap"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{THING} was still on this morning"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_d1",
+          "label": "i turned it off",
+          "tells": "said he turned it off"
+        },
+        {
+          "id": "ch_p_d1_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_daily_count",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "N": [
+          "four",
+          "nine",
+          "twelve",
+          "twenty six"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "youve read this {N} seconds after i sent it"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_d2",
+          "label": "stop counting",
+          "tells": "told it to stop counting"
+        },
+        {
+          "id": "ch_p_d2_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_daily_quiet",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "WHEN": [
+          "last night",
+          "this morning",
+          "at four",
+          "on the stairs"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "i was there {WHEN}"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_d3",
+          "label": "i didnt see you",
+          "tells": "said he did not see it"
+        },
+        {
+          "id": "ch_p_d3_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_nightly",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "days": [
+        61,
+        100
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {
+        "THING": [
+          "the sensor",
+          "the boiler",
+          "the front step",
+          "the landing"
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{THING} again"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_d4",
+          "label": "what about it",
+          "tells": "asked what about it"
+        },
+        {
+          "id": "ch_p_d4_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
     }
   ]
 }

@@ -746,3 +746,50 @@ digits, so `{MEMORY2}` was neither substituted by the director nor seen by the v
 declared-versus-used check. The gate was green over output that printed `{MEMORY2}` on
 screen. There is now an assertion that no line reaches the player with an unfilled slot in
 it, checked across three seeds.
+
+---
+
+## D32 — Act III is presence, and the run finally reaches day 100
+
+**Status:** decided · **Scope:** `content/`, `src/director.js`, `src/engine.html` ·
+**Enforced by:** the gate
+
+The ladder declared act 3 as `presence` with the mechanic deliberately unnamed, because
+naming it early would have been guessing. The data had already named it: `cluesFound` has
+been written since day 1 and read by nothing.
+
+**Act III is the clues paying off, and every confirmation is that someone was there.**
+
+    the front light came on at ten past three     it was me
+    the heating comes on at four because i set it  the flat is warm when i get there
+    the box under the mat was mine                 i wanted to know if youd open it
+    the sign in was from the kitchen               the codes come to this phone
+
+**A clue never found is never confirmed.** That silence is the cost of not having looked
+in Act I, and the game never mentions it. The gate asserts both directions: all six fire
+for a player who found them, and none can fire for a player who did not.
+
+### The blocker this had to resolve
+
+**Answering on night one ended the run.** Days 2-100 have never been reachable in play —
+every act written so far existed only in the transcript tool. That is a nine-phase-old
+inconsistency, latent since the 100-day structure replaced the twenty-minute game.
+
+Day 1's answer now sets its flag and the run continues. **The ending it chose arrives on
+day 100**, ninety nine days later, which is a better use of that choice than ending on the
+night it was made. A run that reaches day 100 having never answered gets `e_unanswered`.
+
+### Act I's mechanics kept leaking forward
+
+Two rules written for Act I have now broken each later act, in the same way both times:
+
+- The **human-preference fallback** — "prefer the cast who used to answer" — excludes the
+  unknown number, which has no reply budget. It locked the number out of Act II, was fixed
+  narrowly, and locked it out of Act III again through a different gate. It is now scoped
+  to act 1, which is the only act it was ever for.
+- The **reply budget** ate the second line of every Act III event, so
+  `sam says he hasnt seen you since october` never arrived. Decay is Act I's mechanic;
+  the budget now applies only in act 1.
+
+**The general lesson: a rule that implements one act's mechanic must be scoped to that
+act.** Both of these read as general machinery and were not.

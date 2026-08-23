@@ -668,9 +668,17 @@ var MECHANIC_TIMING = {
   reappear: { removeAfter: 700, returnAfter: 7000, reveal: 12500 }
 };
 
+var FINAL_DAY = 100;
+
+/* Day 1's answer used to end the run, which made days 2-100 unreachable in play. It now
+   sets the flag and the game carries on: the ending it chose arrives on day 100, ninety
+   nine days later. */
 function finish(choice){
-  S.ended=true;
   (choice.setsFlags || []).forEach(function(f){ S.flags[f]=true; });
+  S.save.flags = S.flags;
+  Save.write(S.save);
+  if((S.save.day || 1) < FINAL_DAY) return;
+  S.ended=true;
   var ending=Story.endingFor(S.flags);
   if(!ending) return;
   var mechanic = ending.mechanic || "linear";
@@ -733,7 +741,8 @@ function planFor(day){
   var carried = {
     flags: S.flags,
     fired: (S.save && S.save.fired) || {},
-    memory: (S.save && S.save.contactState && S.save.contactState.memory) || {}
+    memory: (S.save && S.save.contactState && S.save.contactState.memory) || {},
+    clues: (S.save && S.save.cluesFound) || {}
   };
   return window.Director.planDay(
     { cast: CONTENT.cast, templates: CONTENT.templates, ladder: CONTENT.ladder,
@@ -803,7 +812,17 @@ function loadPhase(day, phase, options){
   }
   Save.write(S.save);
   if(!options.silent) renderList();
+  if(day >= FINAL_DAY && phase === "night") revealFinalEnding();
   return plan;
+}
+
+/* One hundred days later. Whatever was said on night one is what it says back. */
+function revealFinalEnding(){
+  if(S.ended) return;
+  var ending = Story.endingFor(S.flags) || Story.endingFor({ unanswered: true });
+  if(!ending) return;
+  S.ended = true;
+  reveal(ending);
 }
 
 /* Act I only writes lastToldByRen. Act II reads it. Retrofitting memory onto twenty days
@@ -888,6 +907,7 @@ window.__unread = {
   renderList: renderList,
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
+  finalDay: FINAL_DAY,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){
     return pendingInThread(id).map(function(c){ return { id: c.id, templateId: c.templateId }; });

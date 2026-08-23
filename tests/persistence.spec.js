@@ -320,3 +320,42 @@ test('D29 — replies are per question: answering one leaves the others', async 
     .toHaveCount(otherGroup.length);
   expect(otherGroup.length).toBeGreaterThan(0);
 });
+
+test('D32 — day 1 no longer ends the run, and day 100 does', async ({ page }) => {
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // answer on night one exactly as a player would, through the real beat
+  for (const id of ['t_flat', 't_mom', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('.back').click();
+  }
+  await page.clock.runFor(8000);
+  await page.locator('[data-thread="t_unknown"]').click();
+  await page.clock.runFor(120000);
+  await expect(page.locator('.choice')).toHaveCount(3);
+  await page.locator('[data-choice="c_found"]').click();
+  await page.clock.runFor(60000);
+
+  // the run continues: no ending card, and the flag is kept for ninety nine days
+  await expect(page.locator('#end')).not.toHaveClass(/on/);
+  const mid = await page.evaluate(() => ({
+    ended: window.__unread.state.ended,
+    flags: Object.keys(window.__unread.state.flags),
+    finalDay: window.__unread.finalDay,
+  }));
+  expect(mid.ended, 'day 1 does not end the run').toBe(false);
+  expect(mid.flags).toContain('chose_found');
+  expect(mid.finalDay).toBe(100);
+
+  // ...and the ending it chose arrives on the last night
+  await page.evaluate(() => window.__unread.loadPhase(100, 'night'));
+  await expect(page.locator('#end')).toHaveClass(/on/);
+  await expect(page.locator('#endTitle')).toHaveText('Ending — found');
+});

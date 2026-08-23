@@ -118,6 +118,11 @@
     /* Act II: a template that quotes the player back can only fire if the player
        actually said it. This is why Act I wrote memory from day one -- it cannot be
        retrofitted onto history someone has already lived through. */
+    /* Act III: presence. A clue found in Act I is confirmed in Act III -- the light was
+       on a sensor, and something was standing under it. A clue never found is never
+       confirmed, and that silence is the cost of not having looked. */
+    if (template.requiresClue && !context.clues[template.requiresClue]) return false;
+
     var tags = memoryTags(template);
     for (var j = 0; j < tags.length; j++) {
       if (!context.memory[tags[j]]) return false;
@@ -164,7 +169,8 @@
       return eligible(t, {
         act: options.act, phase: options.phase,
         fired: options.fired, flags: options.flags, day: options.day,
-        memory: options.memory || {}, spent: options.spent || {}, recallUsed: false
+        memory: options.memory || {}, spent: options.spent || {},
+        clues: options.clues || {}, recallUsed: false
       });
     });
 
@@ -189,13 +195,18 @@
       /* Once nobody has budget the withBudget list is empty, and a no-reply sender like
          Notify would otherwise win the endgame by default. Prefer the cast who used to
          answer: the point of day 20 is a person talking to nobody. */
-      var human = available.filter(function (t) {
-        return t.lines.some(function (l) {
-          return castById[l.speaker] && (castById[l.speaker].baseReplies || 0) > 0;
-        });
-      });
+      /* Act I only. Its endgame wants a person talking to nobody, so it prefers the cast
+         who used to answer. Applied later it silently excludes the unknown number, which
+         is the one voice acts II and III are built on. */
+      var human = options.act === 1
+        ? available.filter(function (t) {
+            return t.lines.some(function (l) {
+              return castById[l.speaker] && (castById[l.speaker].baseReplies || 0) > 0;
+            });
+          })
+        : available;
       var recall = recallAllowed
-        ? available.filter(function (t) { return t.requiresMemory; })
+        ? available.filter(function (t) { return t.requiresMemory || t.requiresClue; })
         : [];
       var candidates = withBudget.length
         ? withBudget
@@ -226,7 +237,7 @@
            is the cast losing the will to answer each other; the thing quoting you back
            has no such problem, and cutting it off mid-sentence loses the whole point of
            "ren stopped answering on the tuesday / you started on the sunday". */
-        if (isReply && !template.requiresMemory) {
+        if (isReply && !template.requiresMemory && options.act === 1) {
           if ((options.budget[line.speaker] || 0) <= 0) { dropped++; return; }
           options.budget[line.speaker] -= 1;
           replies += 1;
@@ -372,9 +383,10 @@
     if (entry.authored) return authoredDay(content, day, entry);
 
     var castById = indexCast(content.cast);
-    var state = carried || { flags: {}, fired: {}, memory: {}, spent: {} };
+    var state = carried || { flags: {}, fired: {}, memory: {}, spent: {}, clues: {} };
     state.memory = state.memory || {};
     state.spent = state.spent || {};
+    state.clues = state.clues || {};
 
     /* Split the day's budget between the phases so night is never left mute by a
        talkative morning. */
@@ -411,6 +423,7 @@
         fired: state.fired,
         memory: state.memory,
         spent: state.spent,
+        clues: state.clues,
         recallWeight: entry.recallWeight || 1,
         recallChance: entry.recallChance === undefined ? 1 : entry.recallChance
       });
@@ -432,7 +445,7 @@
        make the second identical call start from the first one's leftovers. */
     var seeded = {};
     Object.keys(memory || {}).forEach(function (k) { seeded[k] = memory[k]; });
-    var state = { flags: {}, fired: {}, memory: seeded, spent: {} };
+    var state = { flags: {}, fired: {}, memory: seeded, spent: {}, clues: {} };
     var days = [];
     for (var day = fromDay; day <= toDay; day++) {
       var planned = planDay(content, runSeed, day, state);
@@ -441,9 +454,11 @@
         /* a run remembers forward: what was said on day 3 is still quotable on day 30 */
         ['day', 'night'].forEach(function (phase) {
           (planned.phases[phase] || []).forEach(function (e) {
-            if (e.kind === 'choice' && e.memory && !state.memory[e.memory.tag]) {
+            if (e.kind !== 'choice') return;
+            if (e.memory && !state.memory[e.memory.tag]) {
               state.memory[e.memory.tag] = e.memory.fragment;
             }
+            if (e.revealsClue) state.clues[e.revealsClue] = true;
           });
         });
       }

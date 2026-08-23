@@ -36,7 +36,7 @@ WEEKDAY_NAMES = frozenset([
     "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
     "today", "yesterday", "tomorrow",
 ])
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # The shape of story.json. A required key must be present; an optional one may be
 # absent but must have the right type when it is there.
@@ -316,6 +316,18 @@ def audit_content(content_dir):
                 problems.append("template '%s' choice '%s' reveals '%s', which is not a "
                                 "declared clue" % (template.get("id"), choice.get("id"), cid))
 
+    # Act III: a template may be gated on a clue having been found.
+    for template in templates.get("templates", []):
+        cid = template.get("requiresClue")
+        if cid is None:
+            continue
+        if cid not in clue_ids:
+            problems.append("template '%s' requires clue '%s', which is not declared"
+                            % (template.get("id"), cid))
+        elif cid not in revealed:
+            problems.append("template '%s' requires clue '%s', which no choice can reveal"
+                            % (template.get("id"), cid))
+
     for cid in sorted(clue_ids - revealed):
         problems.append("orphan clue '%s': nothing can ever reveal it. Content that cannot "
                         "be found is worse than content that is missing, because nothing "
@@ -360,8 +372,10 @@ def audit_content(content_dir):
                 problems.append("template '%s' quotes memory '%s', which no choice records"
                                 % (template.get("id"), tag))
             slot = "{MEMORY}" if index == 0 else "{MEMORY%d}" % (index + 1)
-            if slot not in said:
-                problems.append("template '%s' requires memory '%s' but never says %s"
+            if slot not in said and template.get("quotesMemory") is not False:
+                problems.append("template '%s' requires memory '%s' but never says %s. If "
+                                "the memory is a precondition rather than a quote, say "
+                                "\"quotesMemory\": false."
                                 % (template.get("id"), tag, slot))
 
         span = template.get("days")
@@ -489,7 +503,8 @@ class Validator:
         # rejected, never migrated. A v2 file fails here naming the phase that moved it on.
         if story["version"] != SCHEMA_VERSION:
             self.fail("root: version is %r, but only version %d is supported. v3 was "
-                      "superseded by Phase W2a, which added Ending.mechanic (D20); "
+                      "superseded by Phase W2c, which added the unanswered ending for a run that "
+                      "reaches day 100 without ever having replied; "
                       "there is no migration path"
                       % (story["version"], SCHEMA_VERSION))
 
