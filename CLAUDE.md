@@ -74,6 +74,7 @@ tools/
   gate.sh                      THE gate (D21)
   validate_story.py            schema + graph + rule 15 + content audit
   beat_duration.py             counts and playback time; reports, never gates
+  glitchhunt.js                drives every day and phase and reports what looks wrong
   build.py                     story + content + director -> dist/unread.html
   director/content/transcript/check_run.js   determinism, decay, transcripts
 tests/

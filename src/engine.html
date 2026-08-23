@@ -4,21 +4,27 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --ground:#08090C; --phone:#14171C; --bar:#171B21; --line:#1C222B;
-    --them:#1E232B; --me:#2E3A45;
-    --ink:#D6D9DE; --dim:#8A929C; --faint:#5C6672;
-    --alert:#A63D40; --instr:#B8863F;
+    /* a colder ground, a warmer ink: the phone should feel lit from inside */
+    --ground:#05060A; --phone:#101319; --bar:#141821; --line:#1D2330;
+    --them:#1C222C; --them2:#20262F; --me:#2F3E4C; --me2:#374858;
+    --ink:#E4E8ED; --dim:#8E97A3; --faint:#5D6773;
+    --alert:#C0484B; --instr:#C79647; --good:#7FA087;
+    --lift:0 1px 0 rgba(255,255,255,.028) inset;
+    --ease:cubic-bezier(.32,.72,0,1);
   }
   *{box-sizing:border-box;}
   body{
-    background:var(--ground); color:var(--ink); margin:0; min-height:100vh;
+    background:radial-gradient(120% 80% at 50% 0%,#0A0D14 0%,var(--ground) 62%);
+    color:var(--ink); margin:0; min-height:100vh; -webkit-font-smoothing:antialiased;
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     padding:16px; gap:12px;
   }
   .phone{
     width:100%; max-width:390px; height:min(780px,88vh); background:var(--phone);
-    border:1px solid var(--line); border-radius:22px; overflow:clip;
+    border:1px solid #232A36; border-radius:30px; overflow:clip;
+    box-shadow:0 34px 90px -30px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.02) inset,
+               0 1px 0 rgba(255,255,255,.05) inset;
     display:flex; flex-direction:column; position:relative;
   }
   .statusbar{
@@ -26,10 +32,12 @@
     padding:0 20px; font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums;
   }
   .appbar{
-    flex:none; height:50px; border-bottom:1px solid var(--line); background:var(--bar);
-    display:flex; align-items:center; gap:8px; padding:0 12px;
+    flex:none; height:52px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#171C26,#141821);
+    box-shadow:var(--lift), 0 6px 18px -12px rgba(0,0,0,.9);
+    display:flex; align-items:center; gap:6px; padding:0 10px; position:relative; z-index:2;
   }
-  .appbar .title{font-size:17px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0;
+  .appbar .title{font-size:17px;font-weight:650;letter-spacing:-.015em;flex:1;min-width:0;
                  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .back{background:none;border:none;padding:4px 8px;margin-left:-8px;color:var(--dim);
         font-size:22px;line-height:1;cursor:pointer;}
@@ -43,25 +51,40 @@
   .row{display:flex;gap:12px;align-items:center;padding:12px 14px;
        border:none;border-bottom:1px solid var(--line);background:none;width:100%;
        text-align:left;cursor:pointer;font-family:inherit;}
-  .row:hover{background:#171C23;}
-  .avatar{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
-          font-size:15px;font-weight:600;color:#08090C;}
+  .row{transition:background .12s var(--ease);}
+  .row:hover{background:#161B24;}
+  .row:active{background:#1A2029;}
+  .avatar{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;
+          font-size:16px;font-weight:650;color:#0A0C10;position:relative;
+          box-shadow:0 1px 0 rgba(255,255,255,.14) inset, 0 4px 10px -6px rgba(0,0,0,.9);}
+  .avatar::after{content:"";position:absolute;inset:0;border-radius:50%;
+                 background:linear-gradient(160deg,rgba(255,255,255,.20),transparent 62%);}
   .rb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .rt{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
-  .rn{font-size:15px;font-weight:600;letter-spacing:-.01em;}
+  .rn{font-size:15px;font-weight:650;letter-spacing:-.012em;}
   .rtime{font-size:12px;color:var(--faint);flex:none;font-variant-numeric:tabular-nums;}
   .rp{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--alert);flex:none;}
+  .dot{min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--alert);
+       flex:none;color:#fff;font-size:11px;font-weight:650;line-height:19px;text-align:center;
+       font-variant-numeric:tabular-nums;
+       box-shadow:0 2px 8px -3px rgba(192,72,75,.9);}
 
-  .convo{display:flex;flex-direction:column;gap:3px;padding:14px 12px 20px;}
-  .msg{max-width:76%;padding:8px 12px;border-radius:16px;font-size:15px;line-height:1.35;
-       word-wrap:break-word;}
-  .msg.them{background:var(--them);align-self:flex-start;border-bottom-left-radius:5px;}
-  .msg.me{background:var(--me);color:#E8EBEF;align-self:flex-end;border-bottom-right-radius:5px;}
-  .msg.run{border-radius:16px;}
-  .msg.live{animation:pop .22s ease-out;}
-  .who{display:block;font-size:11px;color:var(--faint);margin-bottom:2px;}
-  .divider{align-self:center;font-size:11px;color:var(--faint);padding:16px 0 10px;letter-spacing:.04em;}
+  .convo{display:flex;flex-direction:column;gap:3px;padding:16px 12px 22px;}
+  .msg{max-width:76%;padding:9px 13px;border-radius:19px;font-size:var(--text);
+       line-height:1.38;word-wrap:break-word;letter-spacing:-.004em;
+       box-shadow:var(--lift);}
+  .msg.them{background:linear-gradient(180deg,var(--them2),var(--them));
+             align-self:flex-start;border-bottom-left-radius:7px;}
+  .msg.me{background:linear-gradient(180deg,var(--me2),var(--me));color:#EEF2F6;
+          align-self:flex-end;border-bottom-right-radius:7px;}
+  .msg.run{border-radius:19px;}
+  .msg.them.run{border-bottom-left-radius:19px;}
+  .msg.me.run{border-bottom-right-radius:19px;}
+  .msg.live{animation:pop .3s var(--ease);}
+  .who{display:block;font-size:11px;color:var(--faint);margin-bottom:3px;
+       letter-spacing:.02em;font-weight:550;}
+  .divider{align-self:center;font-size:11px;color:var(--faint);padding:18px 0 12px;
+           letter-spacing:.07em;text-transform:uppercase;font-weight:550;}
   .stamp{align-self:center;font-size:11px;color:var(--faint);padding:6px 0 2px;}
   .photo{align-self:flex-start;max-width:76%;border-radius:14px;overflow:hidden;
          border-bottom-left-radius:5px;line-height:0;animation:pop .22s ease-out;}
@@ -71,15 +94,21 @@
   .typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:blink 1.3s infinite;}
   .typing i:nth-child(2){animation-delay:.2s;} .typing i:nth-child(3){animation-delay:.4s;}
   @keyframes blink{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
-  @keyframes pop{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @keyframes pop{from{opacity:0;transform:translateY(7px) scale(.985);}
+                 to{opacity:1;transform:none;}}
   @media (prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.55;}.msg.live,.photo{animation:none;}}
 
-  .choices{flex:none;border-top:1px solid var(--line);background:var(--bar);
-           padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
-  .choice{width:100%;padding:11px 14px;border:1px solid #2A323D;border-radius:20px;
-          background:transparent;color:var(--ink);font-family:inherit;font-size:14px;
-          text-align:left;cursor:pointer;transition:background .15s,border-color .15s;}
-  .choice:hover{background:#1E232B;border-color:#3A434F;}
+  .choices{flex:none;border-top:1px solid var(--line);
+           background:linear-gradient(180deg,#141821,#11151D);
+           box-shadow:0 -10px 24px -18px rgba(0,0,0,.95);
+           padding:11px 12px 13px;display:flex;flex-direction:column;gap:8px;}
+  .choice{width:100%;padding:12px 15px;border:1px solid #29313D;border-radius:22px;
+          background:linear-gradient(180deg,#1A2029,#161B23);color:var(--ink);
+          font-family:inherit;font-size:14px;letter-spacing:-.004em;
+          text-align:left;cursor:pointer;box-shadow:var(--lift);
+          transition:transform .12s var(--ease),background .15s,border-color .15s;}
+  .choice:hover{background:linear-gradient(180deg,#1F2732,#1A202A);border-color:#3B4653;}
+  .choice:active{transform:scale(.985);}
   .choice:focus-visible{outline:2px solid var(--instr);outline-offset:2px;}
 
   .end{position:absolute;inset:0;background:#08090C;display:flex;flex-direction:column;
@@ -312,7 +341,56 @@
   .spot .note2{text-align:center;font-size:11px;color:var(--faint);padding-top:8px;min-height:16px;}
   .spot.solved .note2{color:#7FA087;}
 
-  .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
+
+  /* ---- an unread row ------------------------------------------------------ */
+  .row.new .rn{color:#F2F5F8;}
+  .row.new .rp{color:#B6BEC8;font-weight:550;}
+  .row.new .rtime{color:var(--alert);}
+
+  /* ---- recall ------------------------------------------------------------- */
+  .recall{align-self:stretch;margin:6px 0 2px;padding:12px;border-radius:14px;
+          background:#171C24;border:1px solid var(--line);}
+  .recall .head{font-size:12px;color:var(--dim);text-align:center;padding-bottom:10px;}
+  .recall .opts{display:flex;flex-direction:column;gap:7px;}
+  .recall .opt{width:100%;padding:10px 13px;border:1px solid #29313D;border-radius:12px;
+               background:linear-gradient(180deg,#1A2029,#161B23);color:var(--ink);
+               font-family:inherit;font-size:13.5px;text-align:left;cursor:pointer;
+               box-shadow:var(--lift);
+               transition:transform .12s var(--ease),border-color .15s,background .15s;}
+  .recall .opt:hover{border-color:#3B4653;}
+  .recall .opt:active{transform:scale(.985);}
+  .recall .opt.right{border-color:var(--good);background:rgba(127,160,135,.10);}
+  .recall .opt.wrong{border-color:#4A3034;opacity:.55;}
+  .recall.done .opt{cursor:default;}
+  .recall .note2{text-align:center;font-size:11px;color:var(--faint);
+                 padding-top:10px;min-height:16px;}
+  .recall.done .note2{color:var(--good);}
+
+
+  /* ---- match -------------------------------------------------------------- */
+  .match{align-self:stretch;margin:6px 0 2px;padding:12px;border-radius:14px;
+         background:#171C24;border:1px solid var(--line);}
+  .match .head{font-size:12px;color:var(--dim);text-align:center;padding-bottom:10px;}
+  .match .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+  .match .tile{aspect-ratio:1;border:1px solid #29313D;border-radius:11px;
+               background:linear-gradient(180deg,#1B222C,#151A22);cursor:pointer;
+               display:grid;place-items:center;padding:0;box-shadow:var(--lift);
+               transition:transform .16s var(--ease),background .2s,border-color .2s;}
+  .match .tile:hover{border-color:#3B4653;}
+  .match .tile:active{transform:scale(.94);}
+  .match .face{font-size:17px;color:#3A424E;line-height:1;}
+  .match .tile.up{background:linear-gradient(180deg,#232C38,#1C242E);border-color:#3D4956;}
+  .match .tile.up .face{color:#C6D0DB;}
+  .match .tile.kept{cursor:default;border-color:rgba(127,160,135,.45);
+                    background:linear-gradient(180deg,#1F2A26,#19211E);}
+  .match .tile.kept .face{color:var(--good);}
+  .match .tile.odd{border-color:#4A3034;background:linear-gradient(180deg,#241B1D,#1B1517);}
+  .match .note2{text-align:center;font-size:11px;color:var(--faint);
+                padding-top:10px;min-height:16px;}
+  .match.done .note2{color:var(--good);}
+
+  .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2A313B;
+        letter-spacing:.16em;}
 </style>
 
 <div class="phone">
@@ -484,6 +562,34 @@ var BANDS = {
   MISSED:   12*HOUR        /* < 12h : phase closed, no replies */
 };
 
+/* Local calendar day, not UTC: the streak has to agree with the player's own night. */
+function dayStamp(now){
+  var d = new Date(now);
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+function daysBetweenStamps(a, b){
+  function toUTC(stamp){
+    var p = String(stamp).split("-");
+    return Date.UTC(+p[0], +p[1] - 1, +p[2]);
+  }
+  return Math.round((toUTC(b) - toUTC(a)) / 86400000);
+}
+
+/* Consecutive real-world days with the app opened. Pure so the gate can walk a year of
+   it without a clock: hand it a save and a stamp, get the save's new streak back. */
+function rollStreak(save, stamp){
+  var last = save.streakStamp;
+  if(!last){ save.streak = 1; }
+  else {
+    var gap = daysBetweenStamps(last, stamp);
+    if(gap === 0) return save.streak || 1;
+    save.streak = gap === 1 ? (save.streak || 0) + 1 : 1;
+  }
+  save.streakBest = Math.max(save.streakBest || 0, save.streak);
+  save.streakStamp = stamp;
+  return save.streak;
+}
+
 function randomSeed(){
   try {
     var buf = new Uint32Array(2);
@@ -500,10 +606,15 @@ var Save = {
     catch(e){ return null; }
   },
   write: function(state){
+    if(Save.wiped) return;
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch(e){ /* private mode: the run simply does not persist */ }
   },
+  wiped: false,
   clear: function(){
+    /* Latch it. Otherwise touch() on beforeunload writes the in-memory save straight
+       back over the top and the reset does nothing at all. */
+    Save.wiped = true;
     try { window.localStorage.removeItem(STORAGE_KEY); } catch(e){}
   },
   fresh: function(now){
@@ -515,7 +626,12 @@ var Save = {
       lastSeenAt: now,
       flags: {},
       contactState: {},
-      cluesFound: {}
+      cluesFound: {},
+      seen: {},
+      streak: 0,
+      streakBest: 0,
+      streakStamp: null,
+      opens: 0
     };
   }
 };
@@ -596,6 +712,28 @@ function lastOffset(t){
   return m.length ? m[m.length-1].offsetMinutes : -999999;
 }
 function isUnread(t){ return (t.startsUnread || t.forcedUnread) && !S.opened[t.id]; }
+
+/* How many, not whether. A phone that says "some" is a phone nobody built. */
+function seenBank(){
+  if(!S.save) return {};
+  return S.save.seen || (S.save.seen = {});
+}
+/* A thread you have never opened is not 31 unread. You put the phone down after the
+   last thing you sent, so that is where the count starts. */
+function defaultSeen(msgs){
+  for(var i = msgs.length - 1; i >= 0; i--){ if(msgs[i].from === "me") return i + 1; }
+  return 0;
+}
+function unreadCount(t){
+  var msgs = shownOf(t), stored = seenBank()[t.id];
+  var seen = stored === undefined ? defaultSeen(msgs) : stored, n = 0;
+  for(var i = seen; i < msgs.length; i++){ if(msgs[i].from !== "me") n++; }
+  return n;
+}
+function markSeen(t){
+  seenBank()[t.id] = shownOf(t).length;
+  if(S.save) Save.write(S.save);
+}
 function sortedThreads(){
   return Story.threads()
     .filter(function(t){ return !S.hidden[t.id]; })
@@ -681,7 +819,10 @@ function previewToken(t){
   return Text.mint("story.preview", prefix + (last.body || ""));
 }
 
-function renderList(){
+/* force is for the three places that mean it: the back button, closing search, and
+   boot. Everything else is a timer, and a timer does not get to close what you opened. */
+function renderList(force){
+  if(S.current && !force) return;
   S.current=null; choicesEl.innerHTML="";
   appbar.innerHTML='<span class="title"></span>'
     + '<button class="find" id="find" aria-label="Search">' + FIND_GLYPH + '</button>'
@@ -708,7 +849,11 @@ function renderList(){
       b.appendChild(l);
     }
     if(isUnread(t)){
-      var d=document.createElement("span"); d.className="dot"; b.appendChild(d);
+      var d=document.createElement("span"); d.className="dot";
+      var n = unreadCount(t);
+      d.textContent = String(n > 99 ? 99 : (n || 1));   /* not-story: a count */
+      b.appendChild(d);
+      b.classList.add("new");
       if(prefs.alerts) b.classList.add("pulse");
     }
     b.addEventListener("click", function(){ openThread(t); });
@@ -721,7 +866,10 @@ function renderList(){
 
 function bubbleFor(m, prev){
   if(m.kind === "game"){
-    return m.game === "spot" ? spotWidget(m) : gameWidget(m);
+    if(m.game === "spot")   return spotWidget(m);
+    if(m.game === "recall") return recallWidget(m);
+    if(m.game === "match")  return matchWidget(m);
+    return gameWidget(m);
   }
   if(m.kind === "audio"){ return memoWidget(m); }
   if(m.kind === "photo"){
@@ -765,6 +913,7 @@ function appendStamp(wrap, m){
 }
 
 function paint(t){
+  if(S.current && S.current.id === t.id) markSeen(t);
   var wrap=document.createElement("div"); wrap.className="convo";
   var lastDay=null, prev=null;
   shownOf(t).forEach(function(m){
@@ -793,17 +942,21 @@ function paint(t){
 
 function openThread(t){
   S.current=t; S.opened[t.id]=true; t.forcedUnread=false;
+  markSeen(t);
   choicesEl.innerHTML="";
   appbar.innerHTML='<button class="back" aria-label="Back">‹</button><span class="title"></span>';
   Text.paint(appbar.querySelector(".title"), Story.threadName(t));
   appbar.querySelector(".back").addEventListener("click", function(){
-    if(!S.ended) renderList();
+    if(!S.ended) renderList(true);
   });
   if(isLocked(t)) paintLocked(t); else paint(t);
   scroll.scrollTop=0;
   var mine = choicesForThread(t.id);
   if(mine.length && !S.repliesLocked) renderChoices(mine);
-  if(t.id === UNKNOWN) runQueue();
+  if(t.id === UNKNOWN){
+    if((S.save.day || 1) >= FINAL_DAY) revealFinalEnding();
+    runQueue();
+  }
   else maybeAdvance();
 }
 
@@ -1109,7 +1262,9 @@ function loadPhase(day, phase, options){
   }
   Save.write(S.save);
   if(!options.silent) renderList();
-  if(day >= FINAL_DAY && phase === "night") revealFinalEnding();
+  /* the ending belongs to the thread it is about; it must not slam over Mom */
+  if(day >= FINAL_DAY && phase === "night" &&
+     (!S.current || S.current.id === UNKNOWN)) revealFinalEnding();
   return plan;
 }
 
@@ -1256,7 +1411,7 @@ function openSearch(){
   runSearch("");
   input.focus();
 }
-function closeSearch(){ S.searching = false; renderList(); }
+function closeSearch(){ S.searching = false; renderList(true); }
 
 /* ============================================================================
    SPOT THE DIFFERENCE
@@ -1723,6 +1878,235 @@ function gameWidget(m){
   return box;
 }
 
+
+/* ============================================================================
+   RECALL
+   A hundred days is longer than anyone's memory of what they clicked. The number
+   remembers. Getting it wrong is the point of the beat; getting it right is the
+   reason to keep coming back.
+   ========================================================================== */
+/* not-story:begin — chrome */
+var RECALL_HEAD  = "which one did you say";
+var RECALL_RIGHT = "yes. that one";
+var RECALL_WRONG = "no. you said";
+var RECALL_NONE  = "you havent said anything yet";
+/* not-story:end */
+
+/* mulberry32 off the same fnv hash secretFor uses, so a run's quiz is the run's. */
+function seededRand(key){
+  var seed = (S.save && S.save.runSeed) || "default";
+  var h = 2166136261, text = seed + "|" + key;
+  for(var i = 0; i < text.length; i++){
+    h ^= text.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return function(){
+    h = (h + 0x6D2B79F5) >>> 0;
+    var t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Every fragment any choice could have written, minus the slotted ones (a decoy with
+   {CHORE} still in it is not a decoy, it is a bug). */
+function allFragments(){
+  var out = [], seen = {};
+  ((CONTENT.templates && CONTENT.templates.templates) || []).forEach(function(tpl){
+    (tpl.choices || []).forEach(function(c){
+      var f = c.memory && c.memory.fragment;
+      if(!f || /\{[A-Z0-9_]+\}/.test(f) || seen[f]) return;
+      seen[f] = true; out.push(f);
+    });
+  });
+  return out;
+}
+
+/* Stable per message: the same three lines in the same order every time you open the
+   thread, because a quiz that reshuffles itself is a quiz you cannot be wrong about. */
+function recallOptions(id){
+  var bank = (S.save && S.save.contactState && S.save.contactState.memory) || {};
+  var mine = Object.keys(bank).map(function(k){ return bank[k]; })
+    .filter(function(f){ return f && !/\{[A-Z0-9_]+\}/.test(f); });
+  if(!mine.length) return null;
+
+  var r = seededRand(id + "|recall");
+  var truth = mine[Math.floor(r() * mine.length) % mine.length];
+  var pool = allFragments().filter(function(f){ return mine.indexOf(f) < 0; });
+  var opts = [truth];
+  while(opts.length < 3 && pool.length){
+    opts.push(pool.splice(Math.floor(r() * pool.length) % pool.length, 1)[0]);
+  }
+  /* deterministic shuffle */
+  for(var i = opts.length - 1; i > 0; i--){
+    var j = Math.floor(r() * (i + 1)) % (i + 1);
+    var tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
+  }
+  return { truth: truth, options: opts };
+}
+
+function recallWidget(m){
+  var box = document.createElement("div");
+  box.className = "recall";
+  box.setAttribute("data-src", "story.game");
+  box.setAttribute("data-game", "recall");
+
+  var head = document.createElement("div");
+  head.className = "head";
+  var note = document.createElement("div");
+  note.className = "note2";
+  var opts = document.createElement("div");
+  opts.className = "opts";
+  box.appendChild(head); box.appendChild(opts); box.appendChild(note);
+
+  var q = recallOptions(m.id);
+  if(!q){
+    chromeText(head, RECALL_NONE);
+    return box;
+  }
+  chromeText(head, RECALL_HEAD);
+
+  var state = gameState(m.id);
+  function settle(){
+    box.classList.add("done");
+    Array.prototype.forEach.call(opts.children, function(b){
+      b.classList.add(b.getAttribute("data-line") === q.truth ? "right" : "wrong");
+    });
+    chromeText(note, state.won ? RECALL_RIGHT : RECALL_WRONG);
+  }
+
+  q.options.forEach(function(line){
+    var b = document.createElement("button");
+    b.className = "opt";
+    b.setAttribute("data-line", line);
+    /* the fragments are story, and go through the one ingress like everything else */
+    Text.paint(b, Text.mint("story.message", line));
+    b.addEventListener("click", function(){
+      if(state.done) return;
+      state.done = true;
+      state.won = line === q.truth;
+      Save.write(S.save);
+      settle();
+      Sound.play(state.won ? "receive" : "send");
+    });
+    opts.appendChild(b);
+  });
+
+  if(state.done) settle();
+  return box;
+}
+
+
+/* ============================================================================
+   MATCH
+   Three pairs and one tile that has no partner. Nobody counts the tiles.
+   ========================================================================== */
+/* not-story:begin — glyphs and chrome */
+var MATCH_FACES = ["◆", "▲", "●"];
+var MATCH_BACK  = "·";
+var MATCH_HEAD  = "find the pairs";
+var MATCH_DONE  = "all of them";
+var MATCH_ODD   = "";
+/* not-story:end */
+
+var MATCH_FLIP_MS = 620;
+
+function matchWidget(m){
+  var box = document.createElement("div");
+  box.className = "match";
+  box.setAttribute("data-src", "story.game");
+  box.setAttribute("data-game", "match");
+  var state = gameState(m.id);
+  if(!state.found) state.found = [];
+
+  var head = document.createElement("div");
+  head.className = "head";
+  chromeText(head, MATCH_HEAD);
+  var grid = document.createElement("div");
+  grid.className = "grid";
+  var note = document.createElement("div");
+  note.className = "note2";
+  box.appendChild(head); box.appendChild(grid); box.appendChild(note);
+
+  /* three pairs plus the one that has no partner, shuffled by the run's seed */
+  var deck = MATCH_FACES.concat(MATCH_FACES).concat([null]);
+  var r = seededRand(m.id + "|match");
+  for(var i = deck.length - 1; i > 0; i--){
+    var j = Math.floor(r() * (i + 1)) % (i + 1);
+    var tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
+  }
+
+  var busy = false, up = [];
+
+  function isFound(face){ return face !== null && state.found.indexOf(face) >= 0; }
+
+  function tileFor(face, index){
+    var t = document.createElement("button");
+    t.className = "tile";
+    t.setAttribute("data-face", face === null ? "odd" : face);
+    var f = document.createElement("span");
+    f.className = "face";
+    t.appendChild(f);
+
+    function show(on){
+      t.classList.toggle("up", on);
+      f.textContent = on ? (face === null ? MATCH_ODD : face) : MATCH_BACK;
+    }
+    t.__show = show;
+    t.__face = face;
+    t.__index = index;
+    show(isFound(face));
+    if(isFound(face)) t.classList.add("kept");
+
+    t.addEventListener("click", function(){
+      if(busy || t.classList.contains("kept") || up.indexOf(t) >= 0) return;
+      show(true);
+      up.push(t);
+      Sound.play("send");
+      if(up.length < 2) return;
+      busy = true;
+      var a = up[0], b = up[1];
+      if(a.__face !== null && a.__face === b.__face){
+        state.found.push(a.__face);
+        Save.write(S.save);
+        a.classList.add("kept"); b.classList.add("kept");
+        up = []; busy = false;
+        Sound.play("receive");
+        if(state.found.length === MATCH_FACES.length) finish();
+      } else {
+        window.setTimeout(function(){
+          a.__show(false); b.__show(false);
+          up = []; busy = false;
+        }, MATCH_FLIP_MS);
+      }
+    });
+    return t;
+  }
+
+  function finish(){
+    state.won = true;
+    Save.write(S.save);
+    box.classList.add("done");
+    chromeText(note, MATCH_DONE);
+    /* the tile nobody asked about turns over on its own */
+    window.setTimeout(function(){
+      var odd = grid.querySelector('[data-face="odd"]');
+      if(odd){ odd.__show(true); odd.classList.add("kept", "odd"); }
+      Sound.play("pulse"); Haptics.fire("pulse");
+    }, MATCH_FLIP_MS);
+  }
+
+  deck.forEach(function(face, index){ grid.appendChild(tileFor(face, index)); });
+  if(state.won){
+    box.classList.add("done");
+    chromeText(note, MATCH_DONE);
+    var odd = grid.querySelector('[data-face="odd"]');
+    if(odd){ odd.__show(true); odd.classList.add("kept", "odd"); }
+  }
+  return box;
+}
+
 /* ============================================================================
    REACTIONS — the toy, and the trace.
    Hold a message to react to it. It is the most ordinary thing a messenger does,
@@ -2082,11 +2466,18 @@ var CHROME = {
   cancel:        "Cancel",
   erase:         "Erase",
   lastActive:    "last active",
-  now:           "now"
+  now:           "now",
+  activity:      "Activity",
+  streak:        "Days in a row",
+  streakOne:     "1 day",
+  streakMany:    "{N} days",
+  longest:       "Longest",
+  opens:         "Times opened"
 };
 /* not-story:end */
 
 var PREF_KEY = "unread.prefs.v1";
+var prefsWiped = false;
 var Prefs = {
   defaults: { sound: true, alerts: true, vibrate: false, text: "M", motion: false,
               stamps: true, blocked: [] },
@@ -2101,6 +2492,7 @@ var Prefs = {
     return out;
   },
   write: function(p){
+    if(prefsWiped) return;
     try { window.localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e){}
   }
 };
@@ -2158,6 +2550,11 @@ function renLastActive(){
 
 /* ---- builders: every string goes through the one ingress (D19) ------------ */
 function chrome(text){ return Text.mint("ui.chrome", text); }
+
+function streakLabel(n){
+  n = n || 1;
+  return n === 1 ? CHROME.streakOne : CHROME.streakMany.replace("{N}", String(n));
+}
 
 function sGroup(label){
   var el = document.createElement("div");
@@ -2274,6 +2671,11 @@ function buildSettings(){
   card.appendChild(av); card.appendChild(col);
   body.appendChild(card);
 
+  body.appendChild(sGroup(CHROME.activity));
+  body.appendChild(sValue(CHROME.streak, streakLabel(S.save && S.save.streak)));
+  body.appendChild(sValue(CHROME.longest, streakLabel(S.save && S.save.streakBest)));
+  body.appendChild(sValue(CHROME.opens, String((S.save && S.save.opens) || 1)));
+
   body.appendChild(sGroup(CHROME.notifications));
   body.appendChild(sToggle(CHROME.sound, CHROME.soundSub, "sound", function(on){
     if(on) Sound.play("receive");   /* hear what you just turned on */
@@ -2313,6 +2715,7 @@ function buildSettings(){
     if(this.getAttribute("data-armed") === "1"){
       Save.clear();
       try { window.localStorage.removeItem(PREF_KEY); } catch(e){}
+      prefsWiped = true;
       window.location.reload();
       return;
     }
@@ -2365,6 +2768,8 @@ function boot(){
     save.phase = "day";
   }
   save.lastSeenAt = now;
+  rollStreak(save, dayStamp(now));
+  save.opens = (save.opens || 0) + 1;
   Save.write(save);
 
   if(save.day > 1) loadPhase(save.day, save.phase, { silent: true });
@@ -2394,8 +2799,10 @@ window.__unread = {
   bands: BANDS,
   phaseWindowMs: PHASE_WINDOW_MS,
   openThread: openThread,
-  renderList: renderList,
+  renderList: function(){ return renderList(true); },
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
+  toList: function(){ return renderList(true); },
+  renderListSoft: function(){ return renderList(); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
   finalDay: FINAL_DAY,
   openSettings: openSettings,
@@ -2411,9 +2818,16 @@ window.__unread = {
   games: function(){ return (S.save && S.save.games) || {}; },
   memo: Memo,
   drawStatusBar: drawStatusBar,
+  unreadCount: function(id){ return unreadCount(Story.thread(id)); },
+  rollStreak: rollStreak,
+  dayStamp: dayStamp,
+  streak: function(){ return (S.save && S.save.streak) || 0; },
   openSearch: openSearch,
   search: function(q){ openSearch(); return runSearch(q); },
   spotTarget: SPOT_TARGET,
+  recallOptions: recallOptions,
+  matchFaces: function(){ return MATCH_FACES.slice(); },
+  fragments: allFragments,
   haptics: Haptics,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){

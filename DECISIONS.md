@@ -1065,3 +1065,84 @@ of the usual direction:
 3. The test unlocked the archive by writing `localStorage` directly, and the engine's
    `beforeunload` handler wrote its in-memory save straight over the top on reload. That
    is correct engine behaviour. The test now unlocks through the keypad, as a player does.
+
+---
+
+## D39 — two hooks, two games, one rule, and the look
+
+**Status:** decided · **Scope:** `src/engine.html`, `content/templates.json`, `tests/`
+· **Enforced by:** the gate
+
+### The rule: nothing closes a thread you are reading
+
+`beat4()`, the reappearing ending and `loadPhase()` all called `renderList()` on a timer.
+If one landed while you were inside Dave, the app shut Dave and put you back on the list.
+No messenger has ever done that; it reads as a crash, not a scare.
+
+`renderList(force)` now refuses while a thread is open. Only three callers mean it: the
+back button, closing search, and boot. Everything else is a timer, and a timer does not
+get to close what you opened. The thread still takes its badge — you see it when you come
+back, exactly as you would on a real phone.
+
+This is why the glitch hunter now catches a stuck control and photographs it instead of
+dying on it. A reporter that stops at the first finding reports one thing and hides the
+rest.
+
+### Counted unread
+
+A dot says "some". A phone says how many. The badge is a number.
+
+It counts from **the last thing you sent**, not from the top of the thread: you put the
+phone down after you last replied, so that is where unread starts. Counting the whole
+authored history instead made the flat say 31 on a phone you have just picked up, which
+is a number about the file rather than about Ren.
+
+### The streak
+
+The app counts consecutive real days you have opened it, shows it in Settings under
+Activity beside the longest run and the total opens, and keeps it in the save.
+
+It is the retention hook and the horror beat in the same object. A game about not being
+able to put a phone down should be the one counting. `rollStreak(save, stamp)` is pure —
+the gate walks a year of it, including month and year rollovers, without a clock.
+
+### Recall
+
+The number shows you three lines and asks which one you actually said.
+
+The decoys are not invented. They are the memory fragments of choices the player did
+**not** take, harvested out of `templates.json`, so every wrong answer is a road not
+taken and reads exactly as plausible as the right one. Fragments still holding a slot are
+excluded — a decoy with `{CHORE}` in it is not a decoy, it is a bug.
+
+Seeded per message, so the quiz does not reshuffle itself into one you cannot be wrong
+about. On a fresh save it says `you havent said anything yet`, which is not a failure
+state — it is the best line in the game.
+
+### Match
+
+Three pairs and a seventh tile with no partner. An ordinary concentration game, which is
+the whole trick: it is genuinely nice to play and it is over in forty seconds. When the
+last pair goes, the odd tile turns itself over. There is nothing on it.
+
+Two pay-back templates were added with it: a memory nothing ever quotes back is a memory
+nobody needed, and the validator is right to refuse one.
+
+### The look
+
+Colder ground, warmer ink, and the phone lit from inside — a bezel and a real shadow,
+translucent bars, gradient bubbles with a hairline lift, gradient avatars, uppercase
+dividers, filled choice buttons, a press state on everything you can press. Unread rows
+now read as unread before you get to the number.
+
+Bland was always the horror. Bland was never supposed to mean cheap: every real messenger
+is beautifully made and completely ordinary, and that is the target.
+
+### Three test bugs, all of them mine
+
+1. Two D39 tests swept every day to prove their game is delivered, then injected a second
+   copy of it — and asserted there was one. They wipe and reload before injecting now.
+2. `kind: "game"` is four different games as of this phase. D36's test looked for the
+   first of them and got a `match`. It asks for `game === "guess"` by name.
+3. D35 loaded a phase from inside a thread and expected the list. Under the new rule it
+   does not get one; it walks back the way a player would.

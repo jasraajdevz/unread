@@ -2846,6 +2846,186 @@
           "tells": null
         }
       ]
+    },
+    {
+      "id": "tpl_p_recall",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        3
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "lets see if you remember"
+        },
+        {
+          "speaker": "c_unknown",
+          "kind": "game",
+          "game": "recall",
+          "text": ""
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_recall_ok",
+          "label": "i remember",
+          "tells": "said he remembered",
+          "memory": {
+            "tag": "said_remembers",
+            "fragment": "you said you remembered"
+          }
+        },
+        {
+          "id": "ch_p_recall_no",
+          "label": "stop doing this",
+          "tells": "asked it to stop"
+        },
+        {
+          "id": "ch_p_recall_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_match",
+      "threadId": "t_flat",
+      "acts": [
+        1,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_priya",
+          "text": "sam found a thing. pairs. its stupid"
+        },
+        {
+          "speaker": "c_priya",
+          "kind": "game",
+          "game": "match",
+          "text": ""
+        },
+        {
+          "speaker": "c_sam",
+          "text": "its not stupid youre just slow"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_m_play",
+          "label": "one go",
+          "tells": "played the pairs game",
+          "memory": {
+            "tag": "played_pairs",
+            "fragment": "you said one go"
+          }
+        },
+        {
+          "id": "ch_m_slow",
+          "label": "priya is slow",
+          "tells": "took sams side"
+        },
+        {
+          "id": "ch_m_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_recall_back",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": true,
+      "requiresMemory": "said_remembers",
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you didnt"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_p_rb_did",
+          "label": "i did",
+          "tells": "insisted he remembered"
+        },
+        {
+          "id": "ch_p_rb_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_match_back",
+      "threadId": "t_flat",
+      "acts": [
+        2,
+        2
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 4,
+      "once": true,
+      "requiresMemory": "played_pairs",
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "{MEMORY} and then you went quiet for an hour"
+        },
+        {
+          "speaker": "c_priya",
+          "text": "he does that now"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_m_back",
+          "label": "i was doing something",
+          "tells": "said he was busy"
+        },
+        {
+          "id": "ch_m_back_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
     }
   ]
 }

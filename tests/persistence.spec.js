@@ -543,6 +543,9 @@ test('D35 — reactions are a toy, a trace, and eventually not yours', async ({ 
     window.__unread.state.save.day = 21;
     window.__unread.loadPhase(21, 'day');
   });
+  // a phase landing while you are reading no longer closes what you opened, so come out
+  // of the flat the way a player would before picking the next thread
+  await page.locator('#appbar .back').click();
   await page.locator('[data-thread="t_unknown"]').click();
   const answered = await page.evaluate(() => {
     const pending = window.__unread.state.pendingChoices
@@ -643,14 +646,14 @@ test('D36 — the guessing game is playable and seeded', async ({ page }) => {
       if (entry.day === 1) continue;
       for (const phase of ['day', 'night']) {
         const plan = window.__unread.loadPhase(entry.day, phase);
-        if ((plan.phases[phase] || []).some((e) => e.kind === 'game')) {
+        if ((plan.phases[phase] || []).some((e) => e.game === 'guess')) {
           return { day: entry.day, phase };
         }
       }
     }
     return null;
   });
-  expect(found, 'some day offers a game').not.toBeNull();
+  expect(found, 'some day offers the guessing game').not.toBeNull();
 
   await page.locator('[data-thread="t_flat"]').click();
   await expect(page.locator('.game')).toHaveCount(1);
@@ -882,4 +885,235 @@ test('D38 — spot the difference is solvable, and only in one place', async ({ 
 
   const games = await page.evaluate(() => window.__unread.games());
   expect(Object.values(games).some((g) => g.won)).toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// D39 — the two hooks and the two new games.
+// ---------------------------------------------------------------------------
+
+test('D39 — unread is counted, and reading a thread clears the count', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const badges = await page.locator('.dot').allTextContents();
+  expect(badges.length, 'something is unread on a found phone').toBeGreaterThan(0);
+  for (const b of badges) {
+    expect(b, 'a badge is a number, not a blob').toMatch(/^\d+$/);
+    expect(Number(b)).toBeGreaterThan(0);
+    // an unopened thread counts from the last thing you sent, not from the top
+    expect(Number(b), 'the count is believable, not the whole history').toBeLessThan(20);
+  }
+
+  // every badged row also reads as unread without the number
+  expect(await page.locator('.row.new').count()).toBe(badges.length);
+
+  const first = await page.locator('.row.new').first().getAttribute('data-thread');
+  expect(await page.evaluate((id) => window.__unread.unreadCount(id), first))
+    .toBeGreaterThan(0);
+  await page.locator(`[data-thread="${first}"]`).click();
+  await page.locator('#appbar .back').click();
+  expect(await page.evaluate((id) => window.__unread.unreadCount(id), first),
+    'opening it reads it').toBe(0);
+  await expect(page.locator(`.row[data-thread="${first}"] .dot`)).toHaveCount(0);
+
+  // and it survives the reload, because it is in the save
+  await page.reload();
+  expect(await page.evaluate((id) => window.__unread.unreadCount(id), first)).toBe(0);
+});
+
+test('D39 — the streak counts consecutive days and breaks on a gap', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const walk = await page.evaluate(() => {
+    const roll = window.__unread.rollStreak;
+    const save = { streak: 0, streakStamp: null };
+    const stamps = ['2026-8-1', '2026-8-1', '2026-8-2', '2026-8-3', '2026-8-4',
+                    '2026-8-11', '2026-8-12'];
+    return { seen: stamps.map((s) => roll(save, s)), best: save.streakBest };
+  });
+  expect(walk.seen, 'same day does not double count; a week off resets')
+    .toEqual([1, 1, 2, 3, 4, 1, 2]);
+  expect(walk.best, 'the longest run is remembered even after it breaks').toBe(4);
+
+  // months and years roll over the way days do
+  const rollover = await page.evaluate(() => {
+    const roll = window.__unread.rollStreak;
+    const save = { streak: 0, streakStamp: null };
+    return [roll(save, '2026-8-31'), roll(save, '2026-9-1'),
+            roll(save, '2026-12-31'), roll(save, '2027-1-1')];
+  });
+  expect(rollover).toEqual([1, 2, 1, 2]);
+
+  // opening the app once puts it on the board
+  expect(await page.evaluate(() => window.__unread.streak())).toBe(1);
+  await page.locator('#cog').click();
+  await expect(page.locator('#sheetBody')).toContainText('Days in a row');
+  await expect(page.locator('#sheetBody')).toContainText('Longest');
+  await expect(page.locator('#sheetBody')).toContainText('Times opened');
+});
+
+test('D39 — recall quotes you back, and never quotes anyone else', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // the game exists in the content, and some phase of the run delivers it
+  const delivered = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(entry.day, phase);
+        if ((plan.phases[phase] || []).some((e) => e.game === 'recall')) return entry.day;
+      }
+    }
+    return null;
+  });
+  expect(delivered, 'the quiz arrives at some point in the run').not.toBeNull();
+
+  // The sweep above walked the save to some day deep in the run, and that day has a real
+  // quiz on it. Wipe and reload so the only widget on screen is the one we inject.
+  await page.evaluate(() => window.__unread.save.clear());
+  await page.reload();
+
+  // with nothing said, there is nothing to ask about
+  await page.evaluate(() => {
+    const S = window.__unread.state;
+    S.save.contactState = {};
+    S.shown.t_unknown.push({ id: 'x_recall', from: 'them', fromContactId: 'c_unknown',
+                             kind: 'game', game: 'recall', body: '', offsetMinutes: 0 });
+  });
+  await page.locator('[data-thread="t_unknown"]').click();
+  await expect(page.locator('.recall .head')).toHaveText('you havent said anything yet');
+  await expect(page.locator('.recall .opt')).toHaveCount(0);
+
+  // now give it two things the player really said, read out of the content
+  const mine = await page.evaluate(() => {
+    const bank = { told_it_stop: null, asked_how: null };
+    window.CONTENT.templates.templates.forEach((tpl) => {
+      (tpl.choices || []).forEach((c) => {
+        if (c.memory && bank[c.memory.tag] === null) bank[c.memory.tag] = c.memory.fragment;
+      });
+    });
+    window.__unread.state.save.contactState = { memory: bank };
+    window.__unread.renderList();
+    return Object.keys(bank).map((k) => bank[k]);
+  });
+  expect(mine.every(Boolean), 'the fixture reads its lines out of the content').toBe(true);
+
+  await page.locator('[data-thread="t_unknown"]').click();
+  const q = await page.evaluate(() => window.__unread.recallOptions('x_recall'));
+  expect(q.options).toHaveLength(3);
+  expect(mine, 'the true answer is something the player said').toContain(q.truth);
+  expect(new Set(q.options).size, 'no option appears twice').toBe(3);
+  for (const o of q.options) {
+    expect(o, 'no unfilled slot ever reaches a decoy').not.toMatch(/\{[A-Z0-9_]+\}/);
+  }
+  const every = await page.evaluate(() => window.__unread.fragments());
+  const decoys = q.options.filter((o) => o !== q.truth);
+  for (const d of decoys) {
+    expect(mine, 'a decoy is never something the player actually said').not.toContain(d);
+    expect(every, 'a decoy is a real road not taken, not invented by the engine')
+      .toContain(d);
+  }
+
+  // asking twice gives the same quiz
+  expect(await page.evaluate(() => window.__unread.recallOptions('x_recall'))).toEqual(q);
+
+  // pick a wrong one: it settles, shows which was true, and stays settled
+  await page.locator(`.recall .opt[data-line="${decoys[0]}"]`).click();
+  await expect(page.locator('.recall')).toHaveClass(/done/);
+  await expect(page.locator('.recall .note2')).toHaveText('no. you said');
+  await expect(page.locator(`.recall .opt[data-line="${q.truth}"]`)).toHaveClass(/right/);
+  await page.locator(`.recall .opt[data-line="${q.truth}"]`).click();
+  await expect(page.locator('.recall .note2'), 'a second click cannot fix it')
+    .toHaveText('no. you said');
+});
+
+test('D39 — match has three pairs and one tile with no partner', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const delivered = await page.evaluate(() => {
+    for (const entry of window.CONTENT.ladder.days) {
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(entry.day, phase);
+        if ((plan.phases[phase] || []).some((e) => e.game === 'match')) return entry.day;
+      }
+    }
+    return null;
+  });
+  expect(delivered, 'the pairs game arrives at some point in the run').not.toBeNull();
+  await page.evaluate(() => window.__unread.save.clear());
+  await page.reload();
+
+  const inject = () => {
+    window.__unread.state.shown.t_flat.push({
+      id: 'x_match', from: 'them', fromContactId: 'c_priya',
+      kind: 'game', game: 'match', body: '', offsetMinutes: 0 });
+  };
+  await page.evaluate(inject);
+  await page.locator('[data-thread="t_flat"]').click();
+  await expect(page.locator('.match .tile')).toHaveCount(7);
+  await expect(page.locator('.match .tile[data-face="odd"]'), 'one has no partner')
+    .toHaveCount(1);
+  await expect(page.locator('.match .tile.up')).toHaveCount(0);
+
+  // a mismatched pair turns back over on its own
+  const faces = await page.locator('.match .tile').evaluateAll(
+    (ts) => ts.map((t) => t.getAttribute('data-face')));
+  await page.locator('.match .tile').nth(faces.indexOf('odd')).click();
+  await page.locator('.match .tile').nth(faces.findIndex((f) => f !== 'odd')).click();
+  await expect(page.locator('.match .tile.up')).toHaveCount(2);
+  await expect(page.locator('.match .tile.up')).toHaveCount(0, { timeout: 3000 });
+  await expect(page.locator('.match .tile.kept')).toHaveCount(0);
+
+  // clear it
+  const suits = await page.evaluate(() => window.__unread.matchFaces());
+  for (const face of suits) {
+    const pair = page.locator(`.match .tile[data-face="${face}"]`);
+    await pair.nth(0).click();
+    await pair.nth(1).click();
+    await expect(pair.nth(0)).toHaveClass(/kept/);
+  }
+  await expect(page.locator('.match')).toHaveClass(/done/);
+  await expect(page.locator('.match .note2')).toHaveText('all of them');
+
+  // and the tile nobody asked about turns itself over, with nothing on it
+  const odd = page.locator('.match .tile[data-face="odd"]');
+  await expect(odd).toHaveClass(/up/, { timeout: 3000 });
+  await expect(odd.locator('.face')).toHaveText('');
+
+  // it is still done after a reload
+  await page.reload();
+  await page.evaluate(inject);
+  await page.locator('[data-thread="t_flat"]').click();
+  await expect(page.locator('.match')).toHaveClass(/done/);
+  await expect(page.locator('.match .tile.kept')).toHaveCount(7);
+});
+
+test('D39 — nothing closes a thread you are reading', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_flat"]').click();
+  await expect(page.locator('#appbar .back')).toHaveCount(1);
+
+  // a phase landing under you is the commonest way this used to happen
+  const still = await page.evaluate(() => {
+    window.__unread.loadPhase(21, 'day');
+    return window.__unread.state.current && window.__unread.state.current.id;
+  });
+  expect(still, 'the phase arrived and you are still in the flat').toBe('t_flat');
+  await expect(page.locator('#appbar .back'), 'still inside a thread').toHaveCount(1);
+  await expect(page.locator('.row'), 'the list did not take the screen').toHaveCount(0);
+
+  // nor does anything else that renders the list on a timer
+  await page.evaluate(() => {
+    window.__unread.state.hidden.t_unknown = true;
+    window.__unread.renderListSoft();
+  });
+  await expect(page.locator('#appbar .back')).toHaveCount(1);
+
+  // back still works, and now shows what arrived while you were reading
+  await page.locator('#appbar .back').click();
+  await expect(page.locator('.row')).not.toHaveCount(0);
+  expect(await page.evaluate(() => window.__unread.state.current)).toBeNull();
 });
