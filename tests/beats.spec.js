@@ -36,6 +36,19 @@ function expectedOrder() {
     .map((t) => t.id);
 }
 
+// Advance the mocked clock in small steps until `text` is on screen. A fixed large jump
+// overshoots: beat 4's four delays total 16.6s, so one 15s jump delivers nearly the whole
+// beat and the choice bar with it.
+async function advanceUntil(page, text, maxMs = 90000) {
+  const step = 250;
+  for (let elapsed = 0; elapsed <= maxMs; elapsed += step) {
+    const body = await page.locator('.convo').textContent();
+    if (body && body.includes(text)) return;
+    await page.clock.runFor(step);
+  }
+  throw new Error('never appeared within ' + maxMs + 'ms: ' + text);
+}
+
 async function shot(page, name) {
   fs.mkdirSync(SHOTS, { recursive: true });
   await page.locator('.phone').screenshot({ path: path.join(SHOTS, name + '.png') });
@@ -91,8 +104,7 @@ test('every beat fires, and each one is photographed', async ({ page }) => {
   await page.locator('[data-thread="t_unknown"]').click();
   await expect(page.locator('.photo canvas')).toHaveCount(1);
   for (const line of bodies('b_unknown_3')) {
-    await page.clock.runFor(10000);
-    await expect(page.locator('.convo')).toContainText(line);
+    await advanceUntil(page, line);
   }
   await expect(page.locator('.stamp')).toContainText('now');
   await shot(page, '04-beat3-live');
@@ -101,18 +113,21 @@ test('every beat fires, and each one is photographed', async ({ page }) => {
   const beat4 = beat('b_unknown_4').messages
     .filter((m) => !(m.requiresFlags || []).length)   // the gated line needs a flag we did not set
     .map((m) => m.body);
-  for (const line of beat4) {
-    await page.clock.runFor(15000);
-    await expect(page.locator('.convo')).toContainText(line);
+  // showChoices is the completion callback of the last line, so a screenshot taken after
+  // it necessarily contains the choice bar. Stop one line short for a true mid-beat shot.
+  for (const line of beat4.slice(0, -1)) {
+    await advanceUntil(page, line);
   }
-  await shot(page, '05-beat4-who-is-this');
+  await expect(page.locator('.choice')).toHaveCount(0);
+  await shot(page, '05-beat4-accusation');
 
   // the flag-gated line must NOT be present: we never backgrounded the tab
   const gated = beat('b_unknown_4').messages.find((m) => (m.requiresFlags || []).length);
   await expect(page.locator('.convo')).not.toContainText(gated.body);
 
-  // ---- beat 5: the choices -----------------------------------------------------
-  await page.clock.runFor(5000);
+  // ---- beat 5: the last line lands and the choices appear with it ---------------
+  await advanceUntil(page, beat4[beat4.length - 1]);
+  await page.clock.runFor(2000);
   const choices = beat('b_unknown_4').choices;
   await expect(page.locator('.choice')).toHaveCount(choices.length);
   for (const c of choices) {
@@ -144,6 +159,14 @@ test('choosing an ending reaches its screen', async ({ page }) => {
   await expect(page.locator('#end')).toHaveClass(/on/);
   await expect(page.locator('#endTitle')).toHaveText(ending.title);
   await expect(page.locator('#endBody')).toHaveText(ending.body);
+
+  // The ending fades in over 1.6s of REAL time -- a CSS transition is driven by the
+  // compositor, not by the mocked clock, so wait it out or the artifact is a ghost.
+  await page.waitForFunction(() => {
+    const el = document.getElementById('end');
+    return parseFloat(getComputedStyle(el).opacity) > 0.99;
+  }, null, { timeout: 5000 });
+
   fs.mkdirSync(SHOTS, { recursive: true });
   await page.locator('.phone').screenshot({ path: path.join(SHOTS, '07-ending.png') });
 });
