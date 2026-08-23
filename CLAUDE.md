@@ -72,6 +72,7 @@ src/
   director.js                  seeded generation. No DOM, no Date, no Math.random.
 tools/
   gate.sh                      THE gate (D21)
+  publish.sh                   gate, build, push the public mirror, prove it is live (D42)
   validate_story.py            schema + graph + rule 15 + content audit
   beat_duration.py             counts and playback time; reports, never gates
   glitchhunt.js                drives every day and phase and reports what looks wrong

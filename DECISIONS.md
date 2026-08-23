@@ -1220,3 +1220,46 @@ A new build now has to go two places. `dist/unread.html` → `unread-play/index.
 commit, push. Nothing automates this, and nothing checks it: the public site can sit a
 dozen commits behind the private repo and the gate will still say GREEN. If that starts
 to bite, the fix is a script, not a habit.
+
+---
+
+## D42 — the mirror has a script, which supersedes the last paragraph of D41
+
+**Status:** decided · **Scope:** `tools/publish.sh` · **Enforced by:** the script itself
+
+D41 ended: *"Nothing automates this, and nothing checks it."* That is no longer true, and
+this entry replaces that paragraph.
+
+    bash tools/publish.sh
+
+Gate, build, push the mirror, then prove it is live. In order, and it stops at the first
+thing that is wrong:
+
+1. **Refuses a dirty tree.** Publishing from uncommitted work puts a build on a public URL
+   that corresponds to no commit, and then nobody can say what is live. `--allow-dirty`
+   exists and stamps the deploy `<sha>-dirty` so the lie is at least on the record.
+2. **Runs the gate.** A public URL is the last place to find out it is red. `--skip-gate`
+   says out loud that nothing has checked what is about to be public.
+3. **Rebuilds.** Never publishes a `dist/` someone left lying around.
+4. **Resets the mirror to origin/main** before copying, so a stale local checkout cannot
+   quietly revert the site.
+5. **Does nothing if nothing changed.** No empty commits.
+6. **Stamps the deploy** `Deploy <sha> — <subject>`, so the public repo's log says which
+   private commit each deploy came from. That is the only link between the two.
+
+### Pushing is not publishing
+
+Pages builds after the push and a CDN can serve the old file for a while, so the script
+does not believe itself. It fetches the live URL with a cache-buster and compares the
+sha256 to the file it just built, and only says PUBLISHED when the bytes match. Four
+minutes, then it gives up and says so rather than claiming success.
+
+`* -text` goes in the mirror's `.gitattributes` for the same reason: Git on Windows would
+rewrite the file to CRLF on checkout, and the byte comparison would then fail against a
+site that is perfectly fine.
+
+### Where the checkout lives
+
+`$HOME/.cache/unread-play`, not a sibling of this repo. The parent directory is itself a
+git repo that does not ignore that name, and a checkout there would surface as untracked
+work inside an unrelated project. Override with `UNREAD_MIRROR_DIR`.
