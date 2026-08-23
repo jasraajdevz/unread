@@ -1263,3 +1263,50 @@ site that is perfectly fine.
 `$HOME/.cache/unread-play`, not a sibling of this repo. The parent directory is itself a
 git repo that does not ignore that name, and a checkout there would surface as untracked
 work inside an unrelated project. Override with `UNREAD_MIRROR_DIR`.
+
+---
+
+## D43 — the repo is public; D2 is spent
+
+**Status:** decided · **Scope:** everything · **Enforced by:** nothing, and nothing can
+
+`jasraajdevz/unread` is public as of 23 August 2026. D2 said the repo stays shut because
+`story.json` is the product and a public repo publishes the punchline of a game whose
+entire value is the surprise, and that it would be flipped on launch day. This is that
+flip, made deliberately and after the cost was put twice.
+
+**Do not re-litigate this and do not flip it back.** A private repo that was public is not
+private; it is a repo whose contents someone may already hold. Reversing the visibility
+would buy nothing and would only make the history harder to reason about.
+
+### What is now readable by anyone
+
+Every branch and every ending. The archive code (`8830`, with `4417` as the decoy in the
+Notify thread). The ladder, the templates, the director, the clues, the memory fragments,
+and this file — which is the most revealing document in the repository, because it says
+why each scare is built the way it is.
+
+### What that changes about the work
+
+Nothing about how it is built. Everything about how it is *pitched*. Until now the only
+way to learn what happens on day 100 was to reach day 100. From today, the surprise is a
+thing a player chooses not to spoil, not a thing the repository protects. Write for the
+player who has not looked; stop writing as though looking were impossible.
+
+### The mirror
+
+`jasraajdevz/unread-play` still exists and is still how the game is played:
+
+    https://jasraajdevz.github.io/unread-play/
+
+It is no longer load-bearing for secrecy — it is now just a deploy target that serves one
+file over HTTPS, which is a better reason to keep it than the one it was created for.
+`tools/publish.sh` (D42) is unchanged.
+
+### One leak, recorded because it was mine and not the user's
+
+Commit `a21976c` in the public mirror was authored with a personal email address rather
+than the GitHub noreply address, because the script that created that repo passed one
+explicitly. Every commit in `unread` itself uses the noreply address. If it is rewritten,
+note that a rewrite reduces exposure rather than erasing it: the address may already be
+cached by anything that read the API.
