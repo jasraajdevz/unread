@@ -203,7 +203,8 @@
       "replyBudget": 0.04,
       "recallWeight": 1.0,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.25
     },
     {
       "day": 22,
@@ -212,7 +213,8 @@
       "replyBudget": 0.04,
       "recallWeight": 1.35,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.265
     },
     {
       "day": 23,
@@ -221,7 +223,8 @@
       "replyBudget": 0.04,
       "recallWeight": 1.7,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.28
     },
     {
       "day": 24,
@@ -230,7 +233,8 @@
       "replyBudget": 0.04,
       "recallWeight": 2.05,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.295
     },
     {
       "day": 25,
@@ -239,7 +243,8 @@
       "replyBudget": 0.04,
       "recallWeight": 2.4,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.31
     },
     {
       "day": 26,
@@ -248,7 +253,8 @@
       "replyBudget": 0.04,
       "recallWeight": 2.75,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.325
     },
     {
       "day": 27,
@@ -257,7 +263,8 @@
       "replyBudget": 0.04,
       "recallWeight": 3.1,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.34
     },
     {
       "day": 28,
@@ -266,7 +273,8 @@
       "replyBudget": 0.04,
       "recallWeight": 3.45,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.355
     },
     {
       "day": 29,
@@ -275,7 +283,8 @@
       "replyBudget": 0.04,
       "recallWeight": 3.8,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.37
     },
     {
       "day": 30,
@@ -284,7 +293,8 @@
       "replyBudget": 0.04,
       "recallWeight": 4.15,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.385
     },
     {
       "day": 31,
@@ -293,7 +303,8 @@
       "replyBudget": 0.0,
       "recallWeight": 4.5,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.4
     },
     {
       "day": 32,
@@ -302,7 +313,8 @@
       "replyBudget": 0.0,
       "recallWeight": 4.85,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.415
     },
     {
       "day": 33,
@@ -311,7 +323,8 @@
       "replyBudget": 0.0,
       "recallWeight": 5.2,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.43
     },
     {
       "day": 34,
@@ -320,7 +333,8 @@
       "replyBudget": 0.0,
       "recallWeight": 5.55,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.445
     },
     {
       "day": 35,
@@ -329,7 +343,8 @@
       "replyBudget": 0.0,
       "recallWeight": 5.9,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.46
     },
     {
       "day": 36,
@@ -338,7 +353,8 @@
       "replyBudget": 0.0,
       "recallWeight": 6.25,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.475
     },
     {
       "day": 37,
@@ -347,7 +363,8 @@
       "replyBudget": 0.0,
       "recallWeight": 6.6,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.49
     },
     {
       "day": 38,
@@ -356,7 +373,8 @@
       "replyBudget": 0.0,
       "recallWeight": 6.95,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.505
     },
     {
       "day": 39,
@@ -365,7 +383,8 @@
       "replyBudget": 0.0,
       "recallWeight": 7.3,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.52
     },
     {
       "day": 40,
@@ -374,7 +393,208 @@
       "replyBudget": 0.0,
       "recallWeight": 7.65,
       "dayMessages": 4,
-      "nightMessages": 3
+      "nightMessages": 3,
+      "recallChance": 0.535
+    },
+    {
+      "day": 41,
+      "act": 2,
+      "pressure": 0.7,
+      "replyBudget": 0.0,
+      "recallWeight": 8.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.55
+    },
+    {
+      "day": 42,
+      "act": 2,
+      "pressure": 0.715,
+      "replyBudget": 0.0,
+      "recallWeight": 8.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.565
+    },
+    {
+      "day": 43,
+      "act": 2,
+      "pressure": 0.73,
+      "replyBudget": 0.0,
+      "recallWeight": 9.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.58
+    },
+    {
+      "day": 44,
+      "act": 2,
+      "pressure": 0.745,
+      "replyBudget": 0.0,
+      "recallWeight": 9.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.595
+    },
+    {
+      "day": 45,
+      "act": 2,
+      "pressure": 0.76,
+      "replyBudget": 0.0,
+      "recallWeight": 10.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.61
+    },
+    {
+      "day": 46,
+      "act": 2,
+      "pressure": 0.775,
+      "replyBudget": 0.0,
+      "recallWeight": 10.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.625
+    },
+    {
+      "day": 47,
+      "act": 2,
+      "pressure": 0.79,
+      "replyBudget": 0.0,
+      "recallWeight": 11.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.64
+    },
+    {
+      "day": 48,
+      "act": 2,
+      "pressure": 0.805,
+      "replyBudget": 0.0,
+      "recallWeight": 11.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.655
+    },
+    {
+      "day": 49,
+      "act": 2,
+      "pressure": 0.82,
+      "replyBudget": 0.0,
+      "recallWeight": 12.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.67
+    },
+    {
+      "day": 50,
+      "act": 2,
+      "pressure": 0.835,
+      "replyBudget": 0.0,
+      "recallWeight": 12.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.685
+    },
+    {
+      "day": 51,
+      "act": 2,
+      "pressure": 0.85,
+      "replyBudget": 0.0,
+      "recallWeight": 13.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.7
+    },
+    {
+      "day": 52,
+      "act": 2,
+      "pressure": 0.865,
+      "replyBudget": 0.0,
+      "recallWeight": 13.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.715
+    },
+    {
+      "day": 53,
+      "act": 2,
+      "pressure": 0.88,
+      "replyBudget": 0.0,
+      "recallWeight": 14.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.73
+    },
+    {
+      "day": 54,
+      "act": 2,
+      "pressure": 0.895,
+      "replyBudget": 0.0,
+      "recallWeight": 14.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.745
+    },
+    {
+      "day": 55,
+      "act": 2,
+      "pressure": 0.91,
+      "replyBudget": 0.0,
+      "recallWeight": 15.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.76
+    },
+    {
+      "day": 56,
+      "act": 2,
+      "pressure": 0.925,
+      "replyBudget": 0.0,
+      "recallWeight": 15.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.775
+    },
+    {
+      "day": 57,
+      "act": 2,
+      "pressure": 0.94,
+      "replyBudget": 0.0,
+      "recallWeight": 16.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.79
+    },
+    {
+      "day": 58,
+      "act": 2,
+      "pressure": 0.955,
+      "replyBudget": 0.0,
+      "recallWeight": 16.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.805
+    },
+    {
+      "day": 59,
+      "act": 2,
+      "pressure": 0.97,
+      "replyBudget": 0.0,
+      "recallWeight": 17.15,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.82
+    },
+    {
+      "day": 60,
+      "act": 2,
+      "pressure": 0.985,
+      "replyBudget": 0.0,
+      "recallWeight": 17.65,
+      "dayMessages": 3,
+      "nightMessages": 3,
+      "recallChance": 0.835
     }
   ]
 }

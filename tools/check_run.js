@@ -13,7 +13,7 @@ const { ROOT, load } = require('./content.js');
 
 const content = load();
 const FROM = 1;
-const TO = 40;
+const TO = 60;
 
 let failures = 0;
 function check(label, fn) {
@@ -210,22 +210,48 @@ check('Act II quotes the player back, and Act I does not', () => {
   assert.ok(actII > 10, 'Act II only quotes the player ' + actII + ' times');
 });
 
-check('a memory is quoted back once, not repeatedly', () => {
+check('a memory is never quoted twice inside the cooldown', () => {
+  const COOLDOWN = 14;
   const run = Director.planRun(content, 'alpha', FROM, TO);
-  const seen = {};
+  const when = {};
   run.forEach((d) => ['day', 'night'].forEach((p) => {
-    // one firing of a recall template is one quoting, however many lines it then says
-    const fired = new Set(d.phases[p]
-      .filter((e) => gatedIds.has(e.templateId)).map((e) => e.templateId));
-    fired.forEach((id) => {
-      const tag = content.templates.templates.find((x) => x.id === id).requiresMemory;
-      seen[tag] = (seen[tag] || 0) + 1;
-    });
+    new Set(d.phases[p].filter((e) => gatedIds.has(e.templateId)).map((e) => e.templateId))
+      .forEach((id) => {
+        const t = content.templates.templates.find((x) => x.id === id);
+        const tags = Array.isArray(t.requiresMemory) ? t.requiresMemory : [t.requiresMemory];
+        if (tags.length > 1) return;   /* the contradiction combines; it does not re-quote */
+        const tag = tags[0];
+        if (when[tag] !== undefined) {
+          assert.ok(d.day - when[tag] >= COOLDOWN,
+            'memory ' + tag + ' re-quoted after only ' + (d.day - when[tag]) + ' days');
+        }
+        when[tag] = d.day;
+      });
   }));
-  Object.keys(seen).forEach((tag) => {
-    assert.strictEqual(seen[tag], 1, 'memory ' + tag + ' quoted ' + seen[tag] + ' times');
+  console.log('        ' + Object.keys(when).length +
+              ' memories quoted, none twice inside ' + COOLDOWN + ' days');
+});
+check('no line reaches the player with an unfilled slot in it', () => {
+  const leaks = [];
+  ['alpha', 'bravo', 'charlie'].forEach((seed) => {
+    Director.planRun(content, seed, FROM, TO).forEach((d) => {
+      ['day', 'night'].forEach((p) => d.phases[p].forEach((e) => {
+        const text = (e.body || '') + ' ' + (e.label || '') + ' ' + (e.tells || '');
+        const m = text.match(/\{[A-Z0-9_]+\}/);
+        if (m) leaks.push(seed + ' day ' + d.day + ' ' + e.templateId + ': ' + m[0]);
+      }));
+    });
   });
-  console.log('        ' + Object.keys(seen).length + ' distinct memories quoted, each once');
+  assert.strictEqual(leaks.length, 0, 'unfilled slots: ' + leaks.slice(0, 4).join(' | '));
+});
+check('the contradiction fires: two answers that cannot both be true', () => {
+  const run = Director.planRun(content, 'alpha', FROM, TO);
+  let fired = null;
+  run.forEach((d) => ['day', 'night'].forEach((p) => d.phases[p].forEach((e) => {
+    if (e.templateId === 'tpl_unknown_late_contradiction' && !fired) fired = d.day;
+  })));
+  assert.ok(fired, 'nothing ever points out the contradiction');
+  console.log('        it lands on day ' + fired);
 });
 
 check('the unknown number speaks again in Act II', () => {

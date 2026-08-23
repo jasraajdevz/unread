@@ -75,7 +75,7 @@
   }
 
   function fillSlots(text, chosen) {
-    return text.replace(/\{([A-Z_]+)\}/g, function (whole, key) {
+    return text.replace(/\{([A-Z0-9_]+)\}/g, function (whole, key) {
       return Object.prototype.hasOwnProperty.call(chosen, key) ? chosen[key] : whole;
     });
   }
@@ -91,9 +91,24 @@
 
   /* ---- eligibility ------------------------------------------------------- */
 
+  /* requiresMemory is one tag or several. Several means the template needs all of them,
+     which is what lets something point out that two of your answers cannot both be
+     true. */
+  var RECALL_COOLDOWN_DAYS = 14;
+
+  function memoryTags(template) {
+    var need = template.requiresMemory;
+    if (!need) return [];
+    return Object.prototype.toString.call(need) === '[object Array]' ? need : [need];
+  }
+
   function eligible(template, context) {
     var act = context.act;
     if (template.acts && (act < template.acts[0] || act > template.acts[1])) return false;
+    /* a template may belong to part of an act rather than all of it */
+    if (template.days && (context.day < template.days[0] || context.day > template.days[1])) {
+      return false;
+    }
     if (template.phases && template.phases.indexOf(context.phase) < 0) return false;
     if (template.once && context.fired[template.id]) return false;
     var need = template.requiresFlags || [];
@@ -103,12 +118,20 @@
     /* Act II: a template that quotes the player back can only fire if the player
        actually said it. This is why Act I wrote memory from day one -- it cannot be
        retrofitted onto history someone has already lived through. */
-    if (template.requiresMemory) {
-      if (!context.memory[template.requiresMemory]) return false;
-      /* quoted once. Saying it back twice is nagging; saying it back once, weeks later,
-         is the mechanic. */
-      if (context.spent[template.requiresMemory]) return false;
+    var tags = memoryTags(template);
+    for (var j = 0; j < tags.length; j++) {
+      if (!context.memory[tags[j]]) return false;
+      /* Quoted once, then left alone for a fortnight. Saying it back twice in a week is
+         nagging; coming back to it after two weeks is the thing having only that to say. */
+      /* Combining two memories is not quoting one freshly: it is pointing out that both
+         cannot be true. That works precisely because you already heard each of them, so
+         the cooldown does not apply. */
+      if (tags.length === 1) {
+        var when = context.spent[tags[j]];
+        if (when && (context.day - when) < RECALL_COOLDOWN_DAYS) return false;
+      }
     }
+    if (template.requiresMemory && context.recallUsed) return false;
     return true;
   }
 
@@ -134,11 +157,14 @@
     var replies = 0;
     var dropped = 0;
 
+    /* Rolled before the draw so it is part of the seed, not a side effect of it. */
+    var recallAllowed = rand() < (options.recallChance === undefined ? 1 : options.recallChance);
+
     var pool = (content.templates.templates || []).filter(function (t) {
       return eligible(t, {
         act: options.act, phase: options.phase,
-        fired: options.fired, flags: options.flags,
-        memory: options.memory || {}, spent: options.spent || {}
+        fired: options.fired, flags: options.flags, day: options.day,
+        memory: options.memory || {}, spent: options.spent || {}, recallUsed: false
       });
     });
 
@@ -168,7 +194,9 @@
           return castById[l.speaker] && (castById[l.speaker].baseReplies || 0) > 0;
         });
       });
-      var recall = available.filter(function (t) { return t.requiresMemory; });
+      var recall = recallAllowed
+        ? available.filter(function (t) { return t.requiresMemory; })
+        : [];
       var candidates = withBudget.length
         ? withBudget
         : (recall.length || human.length ? recall.concat(human) : available);
@@ -177,13 +205,15 @@
 
       used[template.id] = true;
       if (template.once) options.fired[template.id] = true;
-      if (template.requiresMemory) options.spent[template.requiresMemory] = true;
+      if (template.requiresMemory) recallAllowed = false;   /* one per phase */
+      memoryTags(template).forEach(function (tag) { options.spent[tag] = options.day; });
       (template.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
 
       var slots = chooseSlots(rand, template);
-      if (template.requiresMemory) {
-        slots.MEMORY = (options.memory || {})[template.requiresMemory] || '';
-      }
+      memoryTags(template).forEach(function (tag, index) {
+        slots[index === 0 ? 'MEMORY' : 'MEMORY' + (index + 1)] =
+          (options.memory || {})[tag] || '';
+      });
       var openedBy = {};
 
       template.lines.forEach(function (line) {
@@ -192,7 +222,11 @@
         /* The first line a contact says in a template opens; everything after it is a
            reply, and replies are what the ladder takes away. */
         var isReply = !!openedBy[line.speaker];
-        if (isReply) {
+        /* A recall is not conversation, so it does not pay conversation's price. Decay
+           is the cast losing the will to answer each other; the thing quoting you back
+           has no such problem, and cutting it off mid-sentence loses the whole point of
+           "ren stopped answering on the tuesday / you started on the sunday". */
+        if (isReply && !template.requiresMemory) {
           if ((options.budget[line.speaker] || 0) <= 0) { dropped++; return; }
           options.budget[line.speaker] -= 1;
           replies += 1;
@@ -240,9 +274,10 @@
         if (rescue.once) options.fired[rescue.id] = true;
         (rescue.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
         var rescueSlots = chooseSlots(rand, rescue);
-        if (rescue.requiresMemory) {
-          rescueSlots.MEMORY = (options.memory || {})[rescue.requiresMemory] || '';
-        }
+        memoryTags(rescue).forEach(function (tag, index) {
+          rescueSlots[index === 0 ? 'MEMORY' : 'MEMORY' + (index + 1)] =
+            (options.memory || {})[tag] || '';
+        });
         var rescueOpened = {};
         rescue.lines.forEach(function (line) {
           if (!castById[line.speaker]) return;
@@ -376,7 +411,8 @@
         fired: state.fired,
         memory: state.memory,
         spent: state.spent,
-        recallWeight: entry.recallWeight || 1
+        recallWeight: entry.recallWeight || 1,
+        recallChance: entry.recallChance === undefined ? 1 : entry.recallChance
       });
       out.phases[pair[0]] = result.events;
       out.replies += result.replies;

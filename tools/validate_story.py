@@ -255,13 +255,13 @@ def audit_content(content_dir):
         slots = template.get("slots") or {}
         used = set()
         for line in template.get("lines", []):
-            used.update(re.findall(r"\{([A-Z_]+)\}", line.get("text", "")))
+            used.update(re.findall(r"\{([A-Z0-9_]+)\}", line.get("text", "")))
         for choice in template.get("choices") or []:
-            used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("tells") or ""))
-            used.update(re.findall(r"\{([A-Z_]+)\}", choice.get("label") or ""))
+            used.update(re.findall(r"\{([A-Z0-9_]+)\}", choice.get("tells") or ""))
+            used.update(re.findall(r"\{([A-Z0-9_]+)\}", choice.get("label") or ""))
         # {MEMORY} is filled by the director from what the player said, so a template
         # quotes it without declaring it.
-        for name in sorted(used - set(slots) - {"MEMORY"}):
+        for name in sorted(used - set(slots) - {"MEMORY", "MEMORY2"}):
             problems.append("template '%s' uses slot {%s}, which it does not declare" % (tid, name))
         for name in sorted(set(slots) - used):
             problems.append("template '%s' declares slot {%s}, which nothing uses" % (tid, name))
@@ -349,16 +349,26 @@ def audit_content(content_dir):
 
     quoted = set()
     for template in templates.get("templates", []):
-        tag = template.get("requiresMemory")
-        if tag is None:
+        need = template.get("requiresMemory")
+        if need is None:
             continue
-        quoted.add(tag)
-        if tag not in produced_memory:
-            problems.append("template '%s' quotes memory '%s', which no choice records"
-                            % (template.get("id"), tag))
-        if "{MEMORY}" not in " ".join(l.get("text", "") for l in template.get("lines", [])):
-            problems.append("template '%s' requires memory '%s' but never says it"
-                            % (template.get("id"), tag))
+        tags = need if isinstance(need, list) else [need]
+        said = " ".join(l.get("text", "") for l in template.get("lines", []))
+        for index, tag in enumerate(tags):
+            quoted.add(tag)
+            if tag not in produced_memory:
+                problems.append("template '%s' quotes memory '%s', which no choice records"
+                                % (template.get("id"), tag))
+            slot = "{MEMORY}" if index == 0 else "{MEMORY%d}" % (index + 1)
+            if slot not in said:
+                problems.append("template '%s' requires memory '%s' but never says %s"
+                                % (template.get("id"), tag, slot))
+
+        span = template.get("days")
+        if span is not None:
+            if not (isinstance(span, list) and len(span) == 2 and span[0] <= span[1]):
+                problems.append("template '%s' has days %r, which is not [low, high]"
+                                % (template.get("id"), span))
 
     for tag in sorted(set(produced_memory) - quoted):
         problems.append("memory '%s' is recorded but nothing ever quotes it back. Act I "

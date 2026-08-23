@@ -1005,7 +1005,11 @@
         {
           "id": "ch_r_sorry",
           "label": "i know",
-          "tells": "acknowledged missing it"
+          "tells": "acknowledged missing it",
+          "memory": {
+            "tag": "said_i_know",
+            "fragment": "you said you knew"
+          }
         },
         {
           "id": "ch_r_deny",
@@ -1220,7 +1224,11 @@
         {
           "id": "ch_r_u_who",
           "label": "how do you know that",
-          "tells": "asked how it knew"
+          "tells": "asked how it knew",
+          "memory": {
+            "tag": "asked_how",
+            "fragment": "you asked how i knew"
+          }
         },
         {
           "id": "ch_r_u_none",
@@ -1303,12 +1311,20 @@
         {
           "id": "ch_r_u_stop",
           "label": "stop",
-          "tells": "told it to stop"
+          "tells": "told it to stop",
+          "memory": {
+            "tag": "told_it_stop",
+            "fragment": "you told me to stop"
+          }
         },
         {
           "id": "ch_r_u_watch",
           "label": "are you reading these",
-          "tells": "asked if it was reading"
+          "tells": "asked if it was reading",
+          "memory": {
+            "tag": "asked_reading",
+            "fragment": "you asked if i was reading these"
+          }
         }
       ]
     },
@@ -1342,7 +1358,11 @@
         {
           "id": "ch_r_noise_again",
           "label": "i hear it most nights",
-          "tells": "said he hears it most nights"
+          "tells": "said he hears it most nights",
+          "memory": {
+            "tag": "hears_it",
+            "fragment": "you said you hear it most nights"
+          }
         },
         {
           "id": "ch_r_noise_drop",
@@ -1421,7 +1441,11 @@
         {
           "id": "ch_r_s_stop",
           "label": "get off his account",
-          "tells": "told it to get off the account"
+          "tells": "told it to get off the account",
+          "memory": {
+            "tag": "told_it_stop",
+            "fragment": "you told me to stop"
+          }
         },
         {
           "id": "ch_r_s_none",
@@ -1464,10 +1488,388 @@
         {
           "id": "ch_r_ren_how",
           "label": "how would you know that",
-          "tells": "asked how it knew the dates"
+          "tells": "asked how it knew the dates",
+          "memory": {
+            "tag": "asked_how",
+            "fragment": "you asked how i knew"
+          }
         },
         {
           "id": "ch_r_ren_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_how",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "asked_how",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "the same way you do"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "im reading them"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_from_where",
+          "label": "from where",
+          "tells": "asked where it was reading from",
+          "memory": {
+            "tag": "asked_where",
+            "fragment": "you asked where"
+          }
+        },
+        {
+          "id": "ch_l_none1",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_stop",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "day",
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "told_it_stop",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you didnt put it down though"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_put_down",
+          "label": "im putting it down now",
+          "tells": "said he was putting it down",
+          "memory": {
+            "tag": "said_put_down",
+            "fragment": "you said you were putting it down"
+          }
+        },
+        {
+          "id": "ch_l_none2",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_reading",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "asked_reading",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you read them first"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "all of them, in one night, six days late"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_so",
+          "label": "so did you",
+          "tells": "said it had read them too"
+        },
+        {
+          "id": "ch_l_none3",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_putdown",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 6,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "said_put_down",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "that was four minutes ago"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_still_here",
+          "label": "im still here",
+          "tells": "admitted he was still there"
+        },
+        {
+          "id": "ch_l_none4",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_where",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 6,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "asked_where",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "the front light is on a sensor"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_outside",
+          "label": "are you outside",
+          "tells": "asked if it was outside"
+        },
+        {
+          "id": "ch_l_none5",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_flat_late_hears",
+      "threadId": "t_flat",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "hears_it",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_sam",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "priya moved out on the weekend"
+        },
+        {
+          "speaker": "c_sam",
+          "text": "im asking because im on my own now"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_sam_ok",
+          "label": "are you alright",
+          "tells": "asked if sam was alright"
+        },
+        {
+          "id": "ch_l_sam_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_mom_late_knew",
+      "threadId": "t_mom",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        41,
+        60
+      ],
+      "phases": [
+        "day"
+      ],
+      "weight": 3,
+      "once": false,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "requiresMemory": "said_i_know",
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_mom",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_mom",
+          "text": "you dont sound like you"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_tired",
+          "label": "im just tired",
+          "tells": "said he was tired"
+        },
+        {
+          "id": "ch_l_mom_none",
+          "label": "[say nothing]",
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_unknown_late_contradiction",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        2
+      ],
+      "days": [
+        45,
+        60
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 8,
+      "once": true,
+      "requiresFlags": [],
+      "setsFlags": [
+        "contradicted"
+      ],
+      "requiresMemory": [
+        "claimed_to_be_ren",
+        "denied_memory"
+      ],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY2}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "both of those cant be true"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_l_which",
+          "label": "which one do you think it is",
+          "tells": "asked which it believed"
+        },
+        {
+          "id": "ch_l_none6",
           "label": "[say nothing]",
           "tells": null
         }

@@ -703,3 +703,46 @@ differently with and without memory — which is the mechanic existing at all.
 
 **Act I is unchanged and must stay so.** The gate asserts Act I quotes the player back
 exactly zero times. Twenty days of nothing being wrong is still the wall.
+
+---
+
+## D31 — the back half of Act II quotes you to yourself
+
+**Status:** decided · **Amends:** D30's "quoted once" · **Scope:** `content/`,
+`src/director.js` · **Enforced by:** the gate
+
+By day 40 every memory Act I wrote has been quoted and spent. What is left to quote is
+what you said in Act II — your denials, your questions, the moment you claimed to be Ren.
+So days 41-60 quote you back to yourself, and one template puts two of your answers side
+by side.
+
+    you said you were ren
+    you said you never said it
+    both of those cant be true
+
+**Four mechanics this needed:**
+
+1. **`template.days = [lo, hi]`** — a template can belong to part of an act rather than
+   all of it, so the late shape does not leak into the early one.
+2. **`requiresMemory` may name several tags**, filling `{MEMORY}` and `{MEMORY2}`. Nothing
+   can point out that two answers conflict unless it can require both. A template that
+   combines two memories ignores the cooldown: it is not quoting one freshly, it is
+   pointing out that both cannot be true, which works *because* you already heard each.
+3. **One recall per phase, and the ladder decides whether a phase gets one at all**
+   (`recallChance`, 0.25 at day 21 rising to 0.85 at day 60). Without this all seventeen
+   memories fired in the first five days of the back half and days 46-60 had nothing.
+4. **A memory can be raised again after fourteen days.** This amends D30's "quoted once",
+   which was right for one act and starves two. A fortnight later reads as coming back to
+   something, not as nagging.
+
+**A recall does not pay the reply budget.** Decay is the cast losing the will to answer
+each other; the thing quoting you back has no such problem. Without the exemption its
+follow-up lines were dropped as "replies" and
+`ren stopped answering on the tuesday / you started on the sunday` never arrived — the
+whole point of the beat, silently eaten.
+
+**One gate failure worth recording.** The slot pattern was `[A-Z_]+`, which excludes
+digits, so `{MEMORY2}` was neither substituted by the director nor seen by the validator's
+declared-versus-used check. The gate was green over output that printed `{MEMORY2}` on
+screen. There is now an assertion that no line reaches the player with an unfilled slot in
+it, checked across three seeds.
