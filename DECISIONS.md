@@ -35,6 +35,9 @@ beat 1 only works if the app reads as ordinary.
 
 ## D2 — CLAUDE.md rule 16 is the `Models/` computed-accessor carve-out
 
+**VOID — superseded by D14.** This describes a Swift file that no longer exists.
+Retained as history; do not act on it.
+
 **Status:** active · **Scope:** `Models/`, `CLAUDE.md` · **Enforced by:** convention
 
 `Models/StoryModels.swift` says "Codable structs only, no logic". Synthesised `Codable`
@@ -280,6 +283,9 @@ Do not ask first, and do not leave the correction in chat.
 
 ## D13 — the local Mac build is the primary route, and a local green lifts D9
 
+**VOID — superseded by D14 and D16.** This describes a platform that is no longer
+targeted. Retained as history; do not act on it.
+
 **Status:** active · **Amends:** D9 · **Scope:** everything · **Enforced by:** convention
 
 D9 assumed run-1 meant CI. Four phases then waited on an OAuth scope grant, which made the
@@ -313,3 +319,125 @@ Neither horn: the window shortened to 9 hours and anchored to end at the last me
 which keeps every property D7 protects and buys the evening. Recorded here rather than
 deleted — this section was briefly removed while appending D11, which was itself a
 violation of the append-only rule at the top of this file. Restored.
+
+---
+
+## D14 — the Swift is deleted, not ported
+
+**Status:** decided · **Scope:** repo · **Enforced by:** absence of the files
+
+A Mac is expected later (see D18). That does not make the existing Swift worth keeping. It
+has never compiled. It is four phases of unverified reading, and when a Mac does arrive,
+regenerating it from `story.json` and a working reference implementation will be faster and
+more correct than debugging code no compiler has ever seen. Keeping it preserves the
+illusion of progress, not the progress.
+
+Deleted outright — not ported, not archived in a branch, not commented out:
+
+    Unread/Models/StoryModels.swift
+    Unread/Engine/StoryLoader.swift
+    Unread/UnreadApp.swift
+    Tests/StoryValidationTests.swift
+    project.yml
+    .github/workflows/gate.yml          (rewritten under D16, not kept)
+    tools/doctor.sh
+
+**Void as a consequence:** D2 (the `Models/` carve-out) and D13 (the local Mac build).
+Marked, not deleted. D9's freeze is also spent — the compiler it waited on will never run.
+
+**Survives untouched:** `Resources/story.json`, `tools/validate_story.py`,
+`tools/beat_duration.py`, and D1, D5, D7, D8, D11.
+
+**The `VOID` banners on D2 and D13 are edits to existing entries**, which the append-only
+rule forbids. They are made because this entry instructs "mark them so; do not delete the
+entries", and a reader who acts on a void entry does more damage than the banner does. No
+existing wording was altered — only a line added above it.
+
+---
+
+## D15 — story.json stays the source; the HTML is generated
+
+**Status:** decided · **Scope:** architecture · **Enforced by:** validator rule 15
+
+The published implementation has its content inlined, which breaks the story/code
+separation that is the reason this project survived nine phases of context loss. It is not
+accepted as-is.
+
+    Resources/story.json      the only place any line of dialogue exists
+    src/engine.html           template: markup, CSS, engine. Zero story text.
+    tools/build.py            story.json + src/engine.html -> dist/unread.html
+    dist/unread.html          generated, gitignored, self-contained, publishable
+
+`tools/build.py` injects the story as a single `<script>window.STORY = {...}</script>` at a
+marked insertion point. One artifact file, no external fetch, and authors still never open
+the engine.
+
+**Rule 15:** no string literal longer than three words may appear in `src/engine.html`
+outside CSS, comments, or the fixed UI-chrome allowlist (`Loop`, `Today`, `Yesterday`,
+`now`, `Photo`, `Start again`, `A WORK OF FICTION`, weekday and month names). Story text in
+the engine is a build failure. This is the web equivalent of the old string audit, and it
+is what stops the inlining creeping back.
+
+---
+
+## D16 — CI moves to Linux, and gate 3 finally becomes cheap
+
+**Status:** decided · **Scope:** `.github/workflows/gate.yml` · **Enforced by:** the workflow
+
+Dropping Xcode removes the entire CI cost problem. `ubuntu-latest` bills at 1x, not the
+macOS 10x. The 200-minutes-a-month constraint that shaped D9, D13 and half of Phase 1.5 is
+gone.
+
+The gate, all on `ubuntu-latest`: validate the story; report its shape; build
+`dist/unread.html`; audit rule 15; drive the built file headless with Playwright through
+every beat, screenshotting each boundary and asserting the expected text is on screen;
+upload the screenshots.
+
+`concurrency` with `cancel-in-progress` is kept. `paths-ignore` is dropped — at 1x it is
+not worth an unverified glob.
+
+**Step 5 is the gate this project never had.** On iOS it needed a Mac, a simulator and a
+signed build. In a browser it is twenty lines of Playwright, and it verifies that the beats
+fire, not merely that the code compiles.
+
+---
+
+## D17 — log the cost
+
+**Status:** record · **Scope:** none · Written so a fresh session understands why the repo
+has a hole in it.
+
+Phases 1.5 through 2b built infrastructure for a platform that was never reachable, because
+the blocking question — can this machine actually run Xcode — was asked repeatedly and
+never answered, and neither agent treated the silence itself as the answer. Roughly four
+phases of work were discarded.
+
+**Rule for the rest of this project: if a gate has been blocked on the same external action
+for two consecutive phases, that path is dead. Route around it or stop. Do not open new
+scope behind an unanswered dependency.**
+
+---
+
+## D18 — iOS is deferred, not cancelled; the portability contract is three things
+
+**Status:** decided · **Scope:** architecture constraint on all web work
+
+A Mac is expected at some later point. Nothing in this phase forecloses a native build, and
+nothing in this phase is done for it either — the way to arrive at iOS with the least work
+is to arrive with a game that already works.
+
+What carries across, and must therefore stay platform-neutral:
+
+1. `Resources/story.json` — no web-specific fields. No CSS, no DOM, no millisecond values
+   tied to browser behaviour. Timings stay in the abstract units v3 established.
+2. `DECISIONS.md` — D1, D5, D7, D8, D11 are render and content rulings a SwiftUI renderer
+   obeys identically.
+3. The working web build — a reference implementation to port *from*. Porting from
+   something that runs is a different activity from writing something that might.
+
+**Constraint this places on W1:** keep the story-consuming layer of the engine thin and
+separate from the DOM layer. A future native renderer should read the same `story.json` and
+honour the same rulings without reverse-engineering anything.
+
+**That is the entire cost of keeping iOS open. Do not pay more than that today** — no
+abstraction layers, no shared-format ceremony, no "we might need this later" schema fields.
