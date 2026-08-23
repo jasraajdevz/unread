@@ -359,3 +359,74 @@ test('D32 — day 1 no longer ends the run, and day 100 does', async ({ page }) 
   await expect(page.locator('#end')).toHaveClass(/on/);
   await expect(page.locator('#endTitle')).toHaveText('Ending — found');
 });
+
+test('D33 — the settings screen works and remembers', async ({ page }) => {
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // it is reached from inside the app, never before it (the no-title-screen rule)
+  await expect(page.locator('#sheet')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('.row')).not.toHaveCount(0);
+
+  await page.locator('#cog').click();
+  await expect(page.locator('#sheet')).toHaveClass(/on/);
+  await expect(page.locator('#sheetTitle')).toHaveText('Settings');
+
+  // it has no cog of its own: a conversation is not where settings live
+  await page.locator('#sheetBack').click();
+  await page.locator('.row').first().click();
+  await expect(page.locator('#cog')).toHaveCount(0);
+  await page.locator('.back').click();
+  await page.locator('#cog').click();
+
+  // live values, not placeholders
+  const shown = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.srow')];
+    const find = (label) => {
+      const r = rows.find((x) => x.textContent.startsWith(label));
+      return r ? r.querySelector('.val').textContent : null;
+    };
+    return { messages: find('Messages'), device: find('On this device') };
+  });
+  expect(Number(shown.messages), 'the message count is real').toBeGreaterThan(50);
+  expect(shown.device).toMatch(/KB|MB/);
+
+  // toggles change the app and survive a reload
+  await page.locator('[data-size="L"]').click();
+  await page.locator('[data-pref="motion"]').click();
+  await page.locator('[data-pref="stamps"]').click();
+  const applied = await page.evaluate(() => ({
+    text: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+    reduce: document.body.classList.contains('reduce'),
+    noStamps: document.body.classList.contains('notimestamps'),
+  }));
+  expect(applied).toEqual({ text: '17px', reduce: true, noStamps: true });
+
+  await page.reload();
+  const kept = await page.evaluate(() => ({
+    prefs: window.__unread.prefs(),
+    text: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+  }));
+  expect(kept.prefs.text).toBe('L');
+  expect(kept.prefs.motion).toBe(true);
+  expect(kept.text).toBe('17px');
+
+  // blocking the number never works, and says so
+  await page.locator('#cog').click();
+  await expect(page.locator('.fail')).toBeHidden();
+  await page.locator('button.srow', { hasText: 'Block this number' }).click();
+  await expect(page.locator('.fail')).toBeVisible();
+
+  // D19 still holds with two dozen chrome strings on screen
+  expect(await page.evaluate(() => window.__unread.auditIngress())).toEqual([]);
+
+  // reset arms once, then erases
+  await page.locator('button.srow', { hasText: 'Reset this device' }).click();
+  await expect(page.locator('button.srow', { hasText: 'Erase everything?' })).toHaveCount(1);
+});

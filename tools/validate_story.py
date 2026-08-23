@@ -157,11 +157,29 @@ def audit_engine(path):
     source = _strip_blocks(source, "<style", "</style>")
 
     lines = source.splitlines()
+    problems_unclosed = []
+
+    # A begin/end pair exempts a whole block, for things like a settings screen where
+    # every string is chrome and per-line markers would bury the real exemptions.
+    regions = []
+    open_at = None
+    for index, line in enumerate(lines):
+        if OPT_OUT + ":begin" in line:
+            open_at = index
+        elif OPT_OUT + ":end" in line and open_at is not None:
+            regions.append((open_at, index))
+            open_at = None
+    if open_at is not None:
+        problems_unclosed.append(open_at + 1)
 
     def opted_out(line_number):
-        """A literal is exempt if its own line, or the line above, carries the marker."""
+        """A literal is exempt if its own line or the one above carries the marker, or if
+        it falls inside a begin/end region."""
         for index in (line_number - 1, line_number - 2):
             if 0 <= index < len(lines) and OPT_OUT in lines[index]:
+                return True
+        for start, end in regions:
+            if start < line_number - 1 < end:
                 return True
         return False
 
@@ -186,6 +204,9 @@ def audit_engine(path):
         candidates.append((text, None))
 
     violations = []
+    for line_number in problems_unclosed:
+        violations.append("unclosed %s:begin region at line %d in the engine (rule 15)"
+                          % (OPT_OUT, line_number))
     for raw, line_number in candidates:
         normalised = " ".join(raw.split())
         if not normalised or normalised.lower() in RULE_15_ALLOWLIST:

@@ -33,14 +33,17 @@ portable, and for the instruction not to pay more than that.
 9. Never mimic another company's app name, icon, colours or logo. The messenger is
    called Loop and it is fictional. (App Store Guideline 4.1, which still applies the
    day this is wrapped for a store.)
+   No title screen, no New Game, no menu before the app. Loop's own settings screen,
+   reached from the thread list, is not a menu — it is the app being an app (D33).
 10. Story text is inserted with `textContent`, never `innerHTML`. `innerHTML` is for
     fixed markup with no story in it.
 11. **One ingress (D19).** Exactly one function puts story text on screen, and it takes
     only tokens minted by the Story or Director modules. Nothing else may assign
     `.textContent` on a bubble, a choice or a preview. `__unread.auditIngress()` returns
     anything that got there another way, and the suite asserts it is empty.
-    Rule 15's word-count grep is kept as a second-line smoke test with a per-line
-    `not-story` opt-out; `grep not-story src/engine.html` lists every exemption.
+    Rule 15's word-count grep is kept as a second-line smoke test with a `not-story`
+    opt-out, per line or as a `not-story:begin`/`:end` region for a block of UI chrome.
+    `grep not-story src/engine.html` lists every exemption; an unclosed region fails.
 12. **`bash tools/gate.sh` is the gate** (D21). It must exit 0, and for any phase that
     changes what is on screen the screenshots must show the intended screen. CI lives at
     `ci/gate.yml`, is a copy of the same steps, and has never run.

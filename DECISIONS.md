@@ -793,3 +793,44 @@ Two rules written for Act I have now broken each later act, in the same way both
 
 **The general lesson: a rule that implements one act's mechanic must be scoped to that
 act.** Both of these read as general machinery and were not.
+
+---
+
+## D33 — the menu is Loop's settings screen, not a front door
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the gate
+
+The founding design says: no title screen, no New Game, no menu. That rule protects the
+opening — the app must look like a phone someone handed you, not a game asking to be
+started.
+
+A settings screen does not break it. **A messenger having settings is the app being an
+app.** So the menu is reached from a cog on the thread list, never before it, and it looks
+like something Loop shipped rather than something the game added. The gate asserts the
+thread list is on screen before the sheet can be opened, and that a conversation has no
+cog of its own.
+
+**Everything in it does something.** No control is decorative:
+
+- **Text size** sets `--text`; **Reduce motion** kills every animation including the
+  typing indicator; **Timestamps** hides the stamps. All three survive a reload.
+- **Vibrate** calls `navigator.vibrate` when a live message lands. Real API, real device.
+- **Message alerts** gates the pulse on a thread that has just changed.
+- **Storage** counts the actual messages in the run and the actual bytes in
+  `localStorage`. It is live, read when the sheet opens.
+- **Reset** arms once and erases on the second press.
+
+**Two of them are the horror, not the furniture:**
+
+1. **`last active`** shows the last time *Ren* sent anything, which on day 1 reads six days
+   and on day 100 reads a hundred and five — while you are holding the phone.
+2. **Blocking the number never works.** `Couldn't block this number. Try again later.`
+   There is nothing for the block to attach to, and a real app could only express that as
+   a failure. It is one of the few places the game says something plainly and is still
+   lying.
+
+**Rule 15 gained a region opt-out** (`not-story:begin` / `not-story:end`). Two dozen chrome
+strings marked line by line would have buried the three real exemptions. An unclosed region
+is itself a failure, so the block cannot be left open to smuggle dialogue through. Every
+one of those strings still passes through D19's single ingress and the audit is clean with
+the sheet open.

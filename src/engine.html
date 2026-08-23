@@ -34,6 +34,10 @@
   .back{background:none;border:none;padding:4px 8px;margin-left:-8px;color:var(--dim);
         font-size:22px;line-height:1;cursor:pointer;}
   .back:hover{color:var(--ink);}
+  .sback{background:none;border:none;padding:4px 8px;margin-left:-8px;
+         color:var(--dim);font-size:22px;line-height:1;cursor:pointer;}
+  .sback:hover{color:var(--ink);}
+  .sback:focus-visible{outline:2px solid var(--instr);outline-offset:-2px;}
   .scroll{flex:1;overflow-y:auto;}
 
   .row{display:flex;gap:12px;align-items:center;padding:12px 14px;
@@ -90,6 +94,69 @@
               border-radius:6px;padding:8px 14px;cursor:pointer;}
   .end button:hover{color:var(--ink);}
 
+
+  /* ---- refinements ------------------------------------------------------- */
+  :root{ --text:15px; --radius:16px; }
+  .msg{font-size:var(--text);}
+  .rp,.rn{transition:color .15s;}
+  .row:focus-visible,.choice:focus-visible,.back:focus-visible,.cog:focus-visible{
+    outline:2px solid var(--instr); outline-offset:-2px;}
+  .row.pulse{animation:pulse .9s ease-out;}
+  @keyframes pulse{0%{background:#20262F;}100%{background:none;}}
+  .scroll::-webkit-scrollbar{width:6px;}
+  .scroll::-webkit-scrollbar-thumb{background:#242B35;border-radius:3px;}
+  .scroll::-webkit-scrollbar-track{background:transparent;}
+  body.reduce .msg.live,body.reduce .photo,body.reduce .row.pulse{animation:none;}
+  body.reduce .typing i{animation:none;opacity:.55;}
+  body.notimestamps .stamp{display:none;}
+
+  .cog{background:none;border:none;color:var(--dim);font-size:19px;line-height:1;
+       padding:4px 6px;margin-right:-4px;cursor:pointer;}
+  .cog:hover{color:var(--ink);}
+
+  /* ---- the settings sheet ------------------------------------------------- */
+  .sheet{position:absolute;inset:0;background:var(--phone);display:flex;
+         flex-direction:column;transform:translateY(100%);transition:transform .28s
+         cubic-bezier(.4,0,.2,1);z-index:5;}
+  .sheet.on{transform:none;}
+  body.reduce .sheet{transition:none;}
+  .sheet .scroll{padding-bottom:24px;}
+  .sgroup{padding:18px 16px 6px;font-size:11px;letter-spacing:.09em;color:var(--faint);
+          text-transform:uppercase;}
+  .srow{display:flex;align-items:center;gap:12px;padding:12px 16px;
+        border-bottom:1px solid var(--line);font-size:14px;min-height:48px;}
+  .srow .lbl{flex:1;min-width:0;}
+  .srow .sub{display:block;font-size:11px;color:var(--faint);margin-top:2px;}
+  .srow .val{color:var(--dim);font-variant-numeric:tabular-nums;font-size:13px;}
+  button.srow{width:100%;background:none;border:none;border-bottom:1px solid var(--line);
+              color:var(--ink);font-family:inherit;text-align:left;cursor:pointer;}
+  button.srow:hover{background:#171C23;}
+  .srow.danger .lbl{color:var(--alert);}
+
+  .me-card{display:flex;gap:14px;align-items:center;padding:20px 16px;
+           border-bottom:1px solid var(--line);}
+  .me-card .avatar{width:52px;height:52px;font-size:19px;}
+  .me-card .col{display:flex;flex-direction:column;min-width:0;flex:1;}
+  .me-card .who2{font-size:17px;font-weight:600;}
+  .me-card .sub{font-size:12px;color:var(--faint);margin-top:3px;}
+
+  .toggle{width:42px;height:25px;border-radius:13px;background:#2A323D;border:none;
+          position:relative;cursor:pointer;flex:none;transition:background .18s;}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;
+                 border-radius:50%;background:#6D7784;transition:transform .18s,background .18s;}
+  .toggle[aria-checked="true"]{background:#3E5B45;}
+  .toggle[aria-checked="true"]::after{transform:translateX(17px);background:#CFE0D3;}
+  body.reduce .toggle,body.reduce .toggle::after{transition:none;}
+
+  .seg{display:flex;gap:4px;flex:none;}
+  .seg button{background:#1B2029;border:1px solid #262E39;color:var(--dim);
+              font-family:inherit;font-size:12px;padding:5px 11px;border-radius:7px;
+              cursor:pointer;}
+  .seg button[aria-pressed="true"]{background:#2E3A45;color:var(--ink);border-color:#3A4551;}
+
+  .note{padding:14px 16px 4px;font-size:11px;line-height:1.55;color:var(--faint);}
+  .fail{padding:10px 16px;font-size:12px;color:var(--alert);}
+
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2E353F;letter-spacing:.1em;}
 </style>
 
@@ -98,6 +165,13 @@
   <div class="appbar" id="appbar"></div>
   <div class="scroll" id="scroll"></div>
   <div id="choices"></div>
+  <div class="sheet" id="sheet" aria-hidden="true">
+    <div class="appbar">
+      <button class="sback" id="sheetBack" aria-label="Back">‹</button>
+      <span class="title" id="sheetTitle"></span>
+    </div>
+    <div class="scroll" id="sheetBody"></div>
+  </div>
   <div class="end" id="end">
     <p class="t" id="endTitle"></p>
     <p id="endBody"></p>
@@ -423,8 +497,9 @@ function previewToken(t){
 
 function renderList(){
   S.current=null; choicesEl.innerHTML="";
-  appbar.innerHTML='<span class="title"></span>';
+  appbar.innerHTML='<span class="title"></span><button class="cog" id="cog" aria-label="Settings">⚙</button>';
   Text.paint(appbar.querySelector(".title"), Text.mint("ui.chrome", APP_NAME));
+  appbar.querySelector("#cog").addEventListener("click", openSettings);
   scroll.innerHTML="";
   sortedThreads().forEach(function(t){
     var b=document.createElement("button");
@@ -438,7 +513,10 @@ function renderList(){
     Text.paint(b.querySelector(".rn"), Story.threadName(t));
     b.querySelector(".rtime").textContent = listStamp(lastOffset(t));
     Text.paint(b.querySelector(".rp"), previewToken(t));
-    if(isUnread(t)){ var d=document.createElement("span"); d.className="dot"; b.appendChild(d); }
+    if(isUnread(t)){
+      var d=document.createElement("span"); d.className="dot"; b.appendChild(d);
+      if(prefs.alerts) b.classList.add("pulse");
+    }
     b.addEventListener("click", function(){ openThread(t); });
     scroll.appendChild(b);
   });
@@ -540,6 +618,7 @@ function deliver(threadId, list, done){
         var prev = shownOf(t)[shownOf(t).length-1];
         S.shown[t.id].push(m);
         var el=bubbleFor(m, prev); el.classList.add("live");
+        if(prefs.vibrate && navigator.vibrate) navigator.vibrate(14);
         wrap.appendChild(el);
         appendStamp(wrap, m);
         scroll.scrollTop=scroll.scrollHeight;
@@ -855,6 +934,306 @@ function recordMemory(memory){
   Save.write(S.save);
 }
 
+
+/* ============================================================================
+   SETTINGS — Loop's own settings screen.
+   Diegetic on purpose. The founding rule is no title screen and no menu; a
+   messenger having a settings page is not a menu, it is the app being an app.
+   ========================================================================== */
+
+/* not-story:begin — every string below is UI chrome, none of it is dialogue */
+var CHROME = {
+  settings:      "Settings",
+  account:       "Account",
+  notifications: "Notifications",
+  display:       "Display",
+  privacy:       "Privacy",
+  storage:       "Storage",
+  about:         "About",
+  alerts:        "Message alerts",
+  alertsSub:     "Highlight a thread when something arrives",
+  vibrate:       "Vibrate",
+  vibrateSub:    "On this device only",
+  textSize:      "Text size",
+  small:         "S",
+  medium:        "M",
+  large:         "L",
+  reduceMotion:  "Reduce motion",
+  timestamps:    "Timestamps",
+  blocked:       "Blocked",
+  blockedNone:   "No blocked numbers",
+  blockThis:     "Block this number",
+  blockFailed:   "Couldn't block this number. Try again later.",
+  messages:      "Messages",
+  onDevice:      "On this device",
+  version:       "Loop",
+  versionNo:     "4.2.1",
+  fiction:       "A WORK OF FICTION",
+  reset:         "Reset this device",
+  resetSub:      "Erases everything and starts again",
+  resetConfirm:  "Erase everything?",
+  cancel:        "Cancel",
+  erase:         "Erase",
+  lastActive:    "last active",
+  now:           "now"
+};
+/* not-story:end */
+
+var PREF_KEY = "unread.prefs.v1";
+var Prefs = {
+  defaults: { alerts: true, vibrate: false, text: "M", motion: false, stamps: true,
+              blocked: [] },
+  read: function(){
+    var stored = {};
+    try { stored = JSON.parse(window.localStorage.getItem(PREF_KEY) || "{}") || {}; }
+    catch(e){ stored = {}; }
+    var out = {};
+    Object.keys(this.defaults).forEach(function(k){
+      out[k] = stored[k] === undefined ? Prefs.defaults[k] : stored[k];
+    });
+    return out;
+  },
+  write: function(p){
+    try { window.localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e){}
+  }
+};
+
+var TEXT_PX = { S: "13px", M: "15px", L: "17px" };
+var prefs = Prefs.read();
+
+function applyPrefs(){
+  document.documentElement.style.setProperty("--text", TEXT_PX[prefs.text] || TEXT_PX.M);
+  document.body.classList.toggle("reduce", !!prefs.motion);
+  document.body.classList.toggle("notimestamps", !prefs.stamps);
+}
+
+function savePrefs(){ Prefs.write(prefs); applyPrefs(); }
+
+/* live values, read at the moment the sheet opens rather than cached */
+function messageCount(){
+  var n = 0;
+  Object.keys(S.shown).forEach(function(id){ n += S.shown[id].length; });
+  return n;
+}
+function storageBytes(){
+  var total = 0;
+  try {
+    for(var i=0;i<window.localStorage.length;i++){
+      var key = window.localStorage.key(i);
+      total += key.length + (window.localStorage.getItem(key) || "").length;
+    }
+  } catch(e){}
+  /* the fiction is a phone that has been carrying these threads for months */
+  return total * 2 + messageCount() * 1400;
+}
+function humanBytes(n){
+  if(n < 1024) return n + " B";
+  if(n < 1048576) return (n/1024).toFixed(0) + " KB";
+  return (n/1048576).toFixed(1) + " MB";
+}
+
+/* Ren's account, and the last time Ren used it. On day one that reads six days. On day
+   one hundred it reads a hundred and five, while you are holding the phone. */
+function renLastActive(){
+  var newest = null;
+  Story.threads().forEach(function(t){
+    (S.shown[t.id] || []).forEach(function(m){
+      if(m.from !== "me") return;
+      if(newest === null || m.offsetMinutes > newest) newest = m.offsetMinutes;
+    });
+  });
+  if(newest === null) return CHROME.now;
+  var elapsed = Math.max(0, -newest) + ((S.save && S.save.day ? S.save.day - 1 : 0) * 1440);
+  var days = Math.floor(elapsed / 1440);
+  if(days < 1) return CHROME.now;
+  return days + (days === 1 ? " day ago" : " days ago");   /* not-story */
+}
+
+/* ---- builders: every string goes through the one ingress (D19) ------------ */
+function chrome(text){ return Text.mint("ui.chrome", text); }
+
+function sGroup(label){
+  var el = document.createElement("div");
+  el.className = "sgroup";
+  Text.paint(el, chrome(label));
+  return el;
+}
+
+function sRow(label, sub){
+  var row = document.createElement("div");
+  row.className = "srow";
+  var wrap = document.createElement("span");
+  wrap.className = "lbl";
+  var main = document.createElement("span");
+  Text.paint(main, chrome(label));
+  wrap.appendChild(main);
+  if(sub){
+    var s2 = document.createElement("span");
+    s2.className = "sub";
+    Text.paint(s2, chrome(sub));
+    wrap.appendChild(s2);
+  }
+  row.appendChild(wrap);
+  return row;
+}
+
+function sToggle(label, sub, key, onChange){
+  var row = sRow(label, sub);
+  var b = document.createElement("button");
+  b.className = "toggle";
+  b.setAttribute("role", "switch");
+  b.setAttribute("data-pref", key);
+  b.setAttribute("aria-checked", prefs[key] ? "true" : "false");
+  b.setAttribute("aria-label", label);
+  b.addEventListener("click", function(){
+    prefs[key] = !prefs[key];
+    b.setAttribute("aria-checked", prefs[key] ? "true" : "false");
+    savePrefs();
+    if(onChange) onChange(prefs[key]);
+  });
+  row.appendChild(b);
+  return row;
+}
+
+function sValue(label, value){
+  var row = sRow(label);
+  var v = document.createElement("span");
+  v.className = "val";
+  Text.paint(v, chrome(value));
+  row.appendChild(v);
+  return row;
+}
+
+function sSegment(label, key, options){
+  var row = sRow(label);
+  var seg = document.createElement("div");
+  seg.className = "seg";
+  options.forEach(function(option){
+    var b = document.createElement("button");
+    b.setAttribute("data-size", option);
+    b.setAttribute("aria-pressed", prefs[key] === option ? "true" : "false");
+    Text.paint(b, chrome(CHROME[option === "S" ? "small" : option === "M" ? "medium" : "large"]));
+    b.addEventListener("click", function(){
+      prefs[key] = option;
+      savePrefs();
+      Array.prototype.forEach.call(seg.children, function(c){
+        c.setAttribute("aria-pressed", c.getAttribute("data-size") === option ? "true" : "false");
+      });
+    });
+    seg.appendChild(b);
+  });
+  row.appendChild(seg);
+  return row;
+}
+
+function sButton(label, sub, onClick, danger){
+  var row = document.createElement("button");
+  row.className = "srow" + (danger ? " danger" : "");
+  var wrap = document.createElement("span");
+  wrap.className = "lbl";
+  var main = document.createElement("span");
+  Text.paint(main, chrome(label));
+  wrap.appendChild(main);
+  if(sub){
+    var s2 = document.createElement("span");
+    s2.className = "sub";
+    Text.paint(s2, chrome(sub));
+    wrap.appendChild(s2);
+  }
+  row.appendChild(wrap);
+  row.addEventListener("click", onClick);
+  return row;
+}
+
+function buildSettings(){
+  var body = document.getElementById("sheetBody");
+  body.innerHTML = "";
+
+  var card = document.createElement("div");
+  card.className = "me-card";
+  var av = document.createElement("span");
+  av.className = "avatar";
+  av.style.background = "#7E8A93";
+  av.textContent = "R";              /* not-story: the account initial */
+  var col = document.createElement("span");
+  col.className = "col";
+  var name = document.createElement("span");
+  name.className = "who2";
+  Text.paint(name, chrome(CHROME.account));
+  var sub = document.createElement("span");
+  sub.className = "sub";
+  Text.paint(sub, chrome(CHROME.lastActive + " " + renLastActive()));
+  col.appendChild(name); col.appendChild(sub);
+  card.appendChild(av); card.appendChild(col);
+  body.appendChild(card);
+
+  body.appendChild(sGroup(CHROME.notifications));
+  body.appendChild(sToggle(CHROME.alerts, CHROME.alertsSub, "alerts"));
+  body.appendChild(sToggle(CHROME.vibrate, CHROME.vibrateSub, "vibrate", function(on){
+    if(on && navigator.vibrate) navigator.vibrate(18);
+  }));
+
+  body.appendChild(sGroup(CHROME.display));
+  body.appendChild(sSegment(CHROME.textSize, "text", ["S", "M", "L"]));
+  body.appendChild(sToggle(CHROME.reduceMotion, null, "motion"));
+  body.appendChild(sToggle(CHROME.timestamps, null, "stamps"));
+
+  body.appendChild(sGroup(CHROME.privacy));
+  var blockedRow = sValue(CHROME.blocked,
+    prefs.blocked.length ? String(prefs.blocked.length) : CHROME.blockedNone);
+  body.appendChild(blockedRow);
+  var fail = document.createElement("div");
+  fail.className = "fail";
+  fail.style.display = "none";
+  body.appendChild(sButton(CHROME.blockThis, null, function(){
+    /* It never works. The number is not in the phone's contact list, so there is nothing
+       for the block to attach to -- which the app can only express as a failure. */
+    Text.paint(fail, chrome(CHROME.blockFailed));
+    fail.style.display = "";
+  }));
+  body.appendChild(fail);
+
+  body.appendChild(sGroup(CHROME.storage));
+  body.appendChild(sValue(CHROME.messages, String(messageCount())));
+  body.appendChild(sValue(CHROME.onDevice, humanBytes(storageBytes())));
+
+  body.appendChild(sGroup(CHROME.about));
+  body.appendChild(sValue(CHROME.version, CHROME.versionNo));
+  body.appendChild(sButton(CHROME.reset, CHROME.resetSub, function(){
+    if(this.getAttribute("data-armed") === "1"){
+      Save.clear();
+      try { window.localStorage.removeItem(PREF_KEY); } catch(e){}
+      window.location.reload();
+      return;
+    }
+    this.setAttribute("data-armed", "1");
+    Text.paint(this.querySelector(".lbl > span"), chrome(CHROME.resetConfirm));
+  }, true));
+
+  var note = document.createElement("div");
+  note.className = "note";
+  Text.paint(note, chrome(CHROME.fiction));
+  body.appendChild(note);
+}
+
+function openSettings(){
+  buildSettings();
+  Text.paint(document.getElementById("sheetTitle"), chrome(CHROME.settings));
+  var sheet = document.getElementById("sheet");
+  sheet.classList.add("on");
+  sheet.setAttribute("aria-hidden", "false");
+}
+function closeSettings(){
+  var sheet = document.getElementById("sheet");
+  sheet.classList.remove("on");
+  sheet.setAttribute("aria-hidden", "true");
+}
+document.getElementById("sheetBack").addEventListener("click", closeSettings);
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") closeSettings();
+});
+applyPrefs();
+
 /* ============================================================================
    BOOT
    ========================================================================== */
@@ -908,6 +1287,9 @@ window.__unread = {
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
   finalDay: FINAL_DAY,
+  openSettings: openSettings,
+  closeSettings: closeSettings,
+  prefs: function(){ return prefs; },
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){
     return pendingInThread(id).map(function(c){ return { id: c.id, templateId: c.templateId }; });
