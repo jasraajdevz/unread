@@ -913,7 +913,8 @@
           "live": true,
           "delayMs": 5200,
           "typingMs": 900,
-          "showTimestamp": true
+          "showTimestamp": true,
+          "emphasis": "pulse"
         }
       ],
       "choices": [

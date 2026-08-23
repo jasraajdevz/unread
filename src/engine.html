@@ -618,7 +618,7 @@ function deliver(threadId, list, done){
         var prev = shownOf(t)[shownOf(t).length-1];
         S.shown[t.id].push(m);
         var el=bubbleFor(m, prev); el.classList.add("live");
-        if(prefs.vibrate && navigator.vibrate) navigator.vibrate(14);
+        announce(m);
         wrap.appendChild(el);
         appendStamp(wrap, m);
         scroll.scrollTop=scroll.scrollHeight;
@@ -702,6 +702,7 @@ function answerInThread(item){
       __threadId: item.threadId,
       __token: item.token
     });
+    announce({ from: "me" });
   }
   /* only this question's replies are spent; anything else the thread asked survives */
   S.pendingChoices = S.pendingChoices.filter(function(c){
@@ -841,6 +842,7 @@ function eventsToMessages(events, baseOffsetMin){
       kind: "text",
       fromContactId: e.speaker,
       __threadId: e.threadId,
+      emphasis: e.emphasis || null,
       body: e.body,
       offsetMinutes: baseOffsetMin + n,
       live: false,
@@ -935,6 +937,112 @@ function recordMemory(memory){
 }
 
 
+
+/* ============================================================================
+   SOUND — synthesised, never loaded.
+   Rule 1: the artifact loads nothing but a font. An audio file would either break
+   that or bloat the build as base64, and a notification chime is four oscillators.
+   ========================================================================== */
+var Sound = (function(){
+  var ctx = null, unlocked = false;
+  var log = [];              /* what was played, so the gate can hear it */
+
+  function context(){
+    if(ctx) return ctx;
+    var Ctor = window.AudioContext || window.webkitAudioContext;
+    if(!Ctor) return null;
+    try { ctx = new Ctor(); } catch(e){ ctx = null; }
+    return ctx;
+  }
+
+  /* Browsers refuse audio until the player has touched something, which is correct
+     and also means the first chime must not be swallowed. */
+  function unlock(){
+    var c = context();
+    if(!c) return;
+    if(c.state === "suspended") c.resume();
+    unlocked = true;
+  }
+
+  function tone(opts){
+    var c = context();
+    if(!c || c.state === "suspended") return;
+    var now = c.currentTime + (opts.at || 0);
+    var osc = c.createOscillator();
+    var gain = c.createGain();
+    osc.type = opts.type || "sine";
+    osc.frequency.setValueAtTime(opts.from, now);
+    if(opts.to) osc.frequency.exponentialRampToValueAtTime(opts.to, now + opts.length);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(opts.gain, now + (opts.attack || 0.008));
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + opts.length);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(now); osc.stop(now + opts.length + 0.02);
+  }
+
+  function play(name){
+    log.push(name);
+    if(!prefs.sound) return;
+    unlock();
+    if(name === "receive"){
+      /* almost, but not quite, the one you know */
+      tone({ from: 987.77, to: 1318.5, length: 0.16, gain: 0.05, attack: 0.004 });
+      tone({ from: 1318.5, length: 0.22, gain: 0.028, at: 0.075 });
+    } else if(name === "send"){
+      tone({ from: 1244.5, length: 0.10, gain: 0.022, attack: 0.003 });
+    } else if(name === "pulse"){
+      /* the two-beat. Low enough that a phone speaker mostly gives you the cabinet. */
+      tone({ from: 72, to: 52, length: 0.55, gain: 0.10, attack: 0.05, type: "sine" });
+      tone({ from: 68, to: 48, length: 0.70, gain: 0.09, attack: 0.06, at: 0.42 });
+    }
+  }
+
+  return {
+    play: play,
+    unlock: unlock,
+    log: function(){ return log.slice(); },
+    clear: function(){ log = []; }
+  };
+})();
+
+/* ============================================================================
+   HAPTICS — restraint is the point (Phase 5, kept).
+   A light tick for a message landing; the slow two-beat reserved for the two
+   moments the content marks, and rule 17 refuses a third.
+   ========================================================================== */
+var Haptics = {
+  log: [],
+  fire: function(kind){
+    this.log.push(kind);
+    if(!prefs.vibrate || !navigator.vibrate) return;
+    if(kind === "tick") navigator.vibrate(12);
+    else if(kind === "pulse") navigator.vibrate([90, 130, 110]);
+  },
+  clear: function(){ this.log = []; }
+};
+
+/* Anything a live message should be felt or heard as, in one place. */
+function announce(m){
+  if(m.emphasis === "pulse"){
+    Sound.play("pulse");
+    Haptics.fire("pulse");
+    return;
+  }
+  if(m.from === "me"){
+    Sound.play("send");
+    return;
+  }
+  Sound.play("receive");
+  Haptics.fire("tick");
+}
+
+["pointerdown", "keydown"].forEach(function(type){
+  window.addEventListener(type, function once(){
+    Sound.unlock();
+    window.removeEventListener(type, once);
+  });
+});
+
 /* ============================================================================
    SETTINGS — Loop's own settings screen.
    Diegetic on purpose. The founding rule is no title screen and no menu; a
@@ -950,6 +1058,8 @@ var CHROME = {
   privacy:       "Privacy",
   storage:       "Storage",
   about:         "About",
+  sound:         "Sound",
+  soundSub:      "Message tones",
   alerts:        "Message alerts",
   alertsSub:     "Highlight a thread when something arrives",
   vibrate:       "Vibrate",
@@ -981,8 +1091,8 @@ var CHROME = {
 
 var PREF_KEY = "unread.prefs.v1";
 var Prefs = {
-  defaults: { alerts: true, vibrate: false, text: "M", motion: false, stamps: true,
-              blocked: [] },
+  defaults: { sound: true, alerts: true, vibrate: false, text: "M", motion: false,
+              stamps: true, blocked: [] },
   read: function(){
     var stored = {};
     try { stored = JSON.parse(window.localStorage.getItem(PREF_KEY) || "{}") || {}; }
@@ -1168,6 +1278,9 @@ function buildSettings(){
   body.appendChild(card);
 
   body.appendChild(sGroup(CHROME.notifications));
+  body.appendChild(sToggle(CHROME.sound, CHROME.soundSub, "sound", function(on){
+    if(on) Sound.play("receive");   /* hear what you just turned on */
+  }));
   body.appendChild(sToggle(CHROME.alerts, CHROME.alertsSub, "alerts"));
   body.appendChild(sToggle(CHROME.vibrate, CHROME.vibrateSub, "vibrate", function(on){
     if(on && navigator.vibrate) navigator.vibrate(18);
@@ -1290,6 +1403,8 @@ window.__unread = {
   openSettings: openSettings,
   closeSettings: closeSettings,
   prefs: function(){ return prefs; },
+  sound: Sound,
+  haptics: Haptics,
   memory: function(){ return (S.save.contactState && S.save.contactState.memory) || {}; },
   pendingInThread: function(id){
     return pendingInThread(id).map(function(c){ return { id: c.id, templateId: c.templateId }; });

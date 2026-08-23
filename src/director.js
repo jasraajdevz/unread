@@ -251,6 +251,7 @@
           from: 'them',
           kind: 'text',
           body: fillSlots(line.text, slots),
+          emphasis: line.emphasis || null,
           isReply: isReply
         });
       });

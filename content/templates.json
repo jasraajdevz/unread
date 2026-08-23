@@ -2241,7 +2241,8 @@
       "lines": [
         {
           "speaker": "c_unknown",
-          "text": "the one youre in"
+          "text": "the one youre in",
+          "emphasis": "pulse"
         }
       ],
       "choices": [

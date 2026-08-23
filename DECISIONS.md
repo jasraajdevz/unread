@@ -834,3 +834,46 @@ strings marked line by line would have buried the three real exemptions. An uncl
 is itself a failure, so the block cannot be left open to smuggle dialogue through. Every
 one of those strings still passes through D19's single ingress and the audit is clean with
 the sheet open.
+
+---
+
+## D34 — sound is synthesised, and the pulse is used exactly twice
+
+**Status:** decided · **Scope:** `src/engine.html`, schema v6 · **Enforced by:** validator
+rule 17
+
+**Sound is generated, never loaded.** Rule 1 says the artifact loads nothing but a font,
+and an audio file would either break that or bloat the build as base64. A notification
+chime is four oscillators, so the Web Audio API makes the whole sound design free and
+keeps `dist/unread.html` a single file.
+
+- **receive** — two partials, 988 Hz sliding to 1319 Hz with a tail. Deliberately close to
+  a chime you know and not quite it, which is the note the original design asked for.
+- **send** — one shorter, quieter tone. You should barely notice your own messages.
+- **pulse** — 72 Hz falling to 52, twice, slowly. Low enough that a phone mostly gives you
+  the cabinet rather than the note.
+
+Browsers refuse audio before a gesture, which is correct; the context is unlocked on the
+first pointer or key event so the first chime is not swallowed.
+
+### Restraint is enforced, not documented
+
+Phase 5 asked for "a slow two-beat pulse used exactly twice in the whole game — restraint
+is the point." A note in a document decays. **`Message.emphasis` is now a schema field and
+validator rule 17 fails the build if more than two messages in the entire game carry it.**
+Marking a third is not a judgment call anyone has to remember; it is red.
+
+The two are:
+
+1. **`who is this`** — day 1 night, the last thing said before the first choice, the moment
+   it stops calling you Ren.
+2. **`the one youre in`** — Act III, ninety-nine days later, the answer to *which room*.
+
+Nothing else in a hundred days is allowed to buzz like that.
+
+### Haptics
+
+`navigator.vibrate`, gated on the Vibrate preference. A 12 ms tick when a message lands,
+and `[90, 130, 110]` for the two moments above. Both are logged so the gate can assert what
+was felt without a device: the suite plays night one and checks the pulse fires exactly
+once, last, immediately before the choices.

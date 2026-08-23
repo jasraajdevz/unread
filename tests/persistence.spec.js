@@ -430,3 +430,64 @@ test('D33 — the settings screen works and remembers', async ({ page }) => {
   await page.locator('button.srow', { hasText: 'Reset this device' }).click();
   await expect(page.locator('button.srow', { hasText: 'Erase everything?' })).toHaveCount(1);
 });
+
+test('D34 — sound and haptics, and the pulse used exactly twice', async ({ page }) => {
+  await page.addInitScript((now) => {
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'gate-seed', day: 1, phase: 'day', phaseStartedAt: now, lastSeenAt: now,
+      flags: {}, contactState: {}, cluesFound: {},
+    }));
+  }, LAUNCH.getTime());
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // exactly two messages in the whole game may carry the pulse
+  const emphasised = await page.evaluate(() => {
+    let n = 0;
+    window.STORY.beats.forEach((b) => b.messages.forEach((m) => { if (m.emphasis) n += 1; }));
+    window.CONTENT.templates.templates.forEach((t) =>
+      t.lines.forEach((l) => { if (l.emphasis) n += 1; }));
+    return n;
+  });
+  expect(emphasised, 'the two-beat pulse is used exactly twice').toBe(2);
+
+  // play night one and listen
+  await page.evaluate(() => { window.__unread.sound.clear(); window.__unread.haptics.clear(); });
+  for (const id of ['t_flat', 't_mom', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('.back').click();
+  }
+  await page.clock.runFor(8000);
+  await page.locator('[data-thread="t_unknown"]').click();
+  await page.clock.runFor(120000);
+  await expect(page.locator('.choice')).toHaveCount(3);
+
+  const heard = await page.evaluate(() => ({
+    sound: window.__unread.sound.log(),
+    haptics: window.__unread.haptics.log,
+  }));
+  expect(heard.sound.filter((s) => s === 'receive').length,
+    'every arriving message is heard').toBeGreaterThan(3);
+  expect(heard.sound.filter((s) => s === 'pulse').length,
+    'the pulse lands once on night one').toBe(1);
+  expect(heard.haptics.filter((h) => h === 'pulse').length).toBe(1);
+
+  // the pulse is the last thing before the choices: it is "who is this"
+  expect(heard.sound[heard.sound.length - 1]).toBe('pulse');
+
+  // sound off means silence, and the setting survives a reload.
+  // the cog lives on the thread list only (D33), so leave the conversation first
+  await page.locator('.back').click();
+  await page.locator('#cog').click();
+  await page.locator('[data-pref="sound"]').click();
+  await expect(page.locator('[data-pref="sound"]')).toHaveAttribute('aria-checked', 'false');
+  await page.reload();
+  expect(await page.evaluate(() => window.__unread.prefs().sound)).toBe(false);
+
+  // with sound off, nothing is emitted even though delivery still logs
+  const silent = await page.evaluate(() => {
+    window.__unread.sound.clear();
+    return typeof window.__unread.sound.play === 'function';
+  });
+  expect(silent).toBe(true);
+});

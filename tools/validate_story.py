@@ -26,6 +26,11 @@ MESSAGE_SENDERS = ("them", "me", "system")
 # deliberate statement that new engine work is needed.
 ENDING_MECHANICS = ("linear", "hold", "reappear")
 
+# The two-beat pulse is used exactly twice in the whole game. Restraint is the
+# point, so it is a build failure rather than a note in a document.
+EMPHASIS_KINDS = ("pulse",)
+MAX_EMPHASIS = 2
+
 # Phase 2b. Older versions are rejected outright; there is no migration path and none
 # should ever be added.
 
@@ -50,7 +55,8 @@ SCHEMA = {
                              "delayMs": int, "typingMs": int},
                 "optional": {"body": str, "asset": str, "durationMs": int,
                              "live": bool, "fromContactId": str,
-                             "showTimestamp": bool, "requiresFlags": list}},
+                             "showTimestamp": bool, "requiresFlags": list,
+                             "emphasis": str}},
     "choice": {"required": {"id": str, "label": str, "next": str},
                "optional": {"setsFlags": list}},
     "notification": {"required": {"afterSeconds": int, "title": str, "body": str, "resumeBeat": str},
@@ -225,7 +231,7 @@ def audit_engine(path):
 # Gate 8: every template validates. Known cast, valid act range, resolvable flags,
 # no orphan slot.
 
-def audit_content(content_dir):
+def audit_content(content_dir, story_emphasis=0):
     problems = []
 
     def read(name):
@@ -408,6 +414,23 @@ def audit_content(content_dir):
     for tag in sorted(set(produced_memory) - quoted):
         problems.append("memory '%s' is recorded but nothing ever quotes it back. Act I "
                         "writes memory only so Act II can read it." % tag)
+
+    # Rule 17, continued: the templates' share of the two.
+    emphasis = 0
+    for template in templates.get("templates", []):
+        for line in template.get("lines", []):
+            kind = line.get("emphasis")
+            if kind is None:
+                continue
+            emphasis += 1
+            if kind not in EMPHASIS_KINDS:
+                problems.append("template '%s' has emphasis %r, which is not one of %s"
+                                % (template.get("id"), kind, ", ".join(EMPHASIS_KINDS)))
+    total = emphasis + story_emphasis
+    if total > MAX_EMPHASIS:
+        problems.append("%d messages carry emphasis, and at most %d may. The two-beat "
+                        "pulse is used exactly twice in the whole game; restraint is the "
+                        "point and this is where it is enforced." % (total, MAX_EMPHASIS))
 
     return problems
 
@@ -727,6 +750,19 @@ class Validator:
                               "starts at %d, going backwards in time"
                               % (beat.get("id"), here[-1], target_id, there[0]))
 
+        # RULE 17 -- at most MAX_EMPHASIS messages in the entire game may carry emphasis.
+        # Counted across story.json here; the content audit adds the templates.
+        self.emphasis_in_story = 0
+        for beat in story["beats"]:
+            for message in beat.get("messages", []):
+                kind = message.get("emphasis")
+                if kind is None:
+                    continue
+                self.emphasis_in_story += 1
+                if kind not in EMPHASIS_KINDS:
+                    self.fail("message '%s' has emphasis %r, which is not one of %s"
+                              % (message.get("id"), kind, ", ".join(EMPHASIS_KINDS)))
+
         # RULE 16 -- every ending declares a mechanic the engine implements (D20).
         for ending in story["endings"]:
             mechanic = ending.get("mechanic")
@@ -796,7 +832,8 @@ def main(argv):
         if os.path.isdir(candidate):
             content_dir = candidate
     if content_dir:
-        errors = errors + audit_content(content_dir)
+        errors = errors + audit_content(
+            content_dir, getattr(validator, "emphasis_in_story", 0))
 
     if errors:
         print("story validation FAILED (%d problem%s)"
