@@ -1234,7 +1234,7 @@ function buildComposer(t){
    player typed is what appears in their bubble -- not the label of whatever it
    matched, because a message that comes back reworded is a message you did not send.
    ========================================================================== */
-var MAX_TYPED = 240;
+var MAX_TYPED = 8000;   /* a phone lets you rant; 240 read as a form field */
 
 /* Only t_flat declares participantIds, and c_unknown is not in story.json at all, so who
    is in a thread comes from the cast -- each member names the thread they live in. */
@@ -3130,6 +3130,7 @@ window.__unread = {
   toList: function(){ return renderList(true); },
   carried: carriedState,
   say: function(text){ return sendTyped(text); },
+  maxTyped: MAX_TYPED,
   typed: function(){ return typedBank().slice(); },
   matchIn: function(threadId, text){
     var mine = (S.liveChoices || []).filter(function(c){ return !c.silent; });

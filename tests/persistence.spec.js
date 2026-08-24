@@ -1535,3 +1535,53 @@ test('D46 — what you said stays in the thread', async ({ page }) => {
     expect(kept, 'a tapped reply is a thing you said, and it keeps too').toBe(true);
   }
 });
+
+test('D47 — the composer takes a rant, and the number will not read one back', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_mom"]').click();
+
+  // the cap is 8000, enforced by the field itself and by the engine behind it
+  const cap = await page.evaluate(() => window.__unread.maxTyped);
+  expect(cap).toBe(8000);
+  await expect(page.locator('#say')).toHaveAttribute('maxlength', '8000');
+
+  const rant = 'this is a very long message that keeps going '.repeat(170).trim();
+  await page.locator('#say').fill(rant);
+  await page.locator('#send').click();
+  const kept = await page.evaluate(() => window.__unread.typed().slice(-1)[0].text);
+  expect(kept.length, 'a long message lands whole').toBe(rant.length);
+
+  // an unbroken 3000-char token must wrap, not push the phone sideways
+  await page.locator('#say').fill('x'.repeat(3000));
+  await page.locator('#send').click();
+  const inPhone = await page.evaluate(() => {
+    const phone = document.querySelector('.phone').getBoundingClientRect();
+    const m = document.querySelector('.msg.me:last-of-type').getBoundingClientRect();
+    return m.left >= phone.left - 1 && m.right <= phone.right + 1;
+  });
+  expect(inPhone, 'the bubble wraps inside the phone').toBe(true);
+
+  // the quotable rule: essays are typed history but never quoted history. One shared
+  // predicate gates the template AND picks the line, so a bare {TYPED} is impossible.
+  const essays = await page.evaluate(() => {
+    const essays = Array.from({ length: 10 }, (_, i) =>
+      ({ day: i + 1, threadId: 't_mom', text: 'w'.repeat(4000 + i) }));
+    const content = { cast: window.CONTENT.cast, templates: window.CONTENT.templates,
+                      ladder: window.CONTENT.ladder, clues: window.CONTENT.clues };
+    const st = { flags: {}, fired: {}, memory: {}, spent: {}, clues: {},
+                 typed: essays, quoted: {} };
+    let bare = 0, quotes = 0;
+    for (let d = 1; d <= 100; d++) {
+      const p = window.Director.planDay(content, 'essay-seed', d, st);
+      if (!p) continue;
+      for (const ph of ['day', 'night']) for (const e of p.phases[ph] || []) {
+        if (/\{TYPED/.test(e.body)) bare++;
+        if (e.quotesPlayer) quotes++;
+      }
+    }
+    return { bare, quotes };
+  });
+  expect(essays.bare, 'no bare slot, ever').toBe(0);
+  expect(essays.quotes, 'an essay-only history is never quoted').toBe(0);
+});

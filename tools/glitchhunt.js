@@ -158,6 +158,7 @@ async function invariants(p, where) {
     ['quotes',              `he said "it's mine" & left`],
     ['newlines',            'one\ntwo\nthree'],
     ['very long',           'x'.repeat(4000)],
+    ['past the cap',        'y'.repeat(12000)],
     ['only spaces',         '        '],
     ['emoji',               '👻👻👻 who is this 👻'],
     ['right to left',       'مرحبا بالعالم'],
@@ -176,7 +177,7 @@ async function invariants(p, where) {
         pwned: !!window.__pwned,
         elements: document.querySelectorAll('.msg.me img, .msg.me script, .msg.me div').length,
         shown: shown,
-        tooLong: shown !== null && shown.length > 260,
+        tooLong: shown !== null && shown.length > window.__unread.maxTyped + 20,
         stored: (window.__unread.typed().slice(-1)[0] || {}).text,
         overflows: (() => {
           const phone = document.querySelector('.phone').getBoundingClientRect();

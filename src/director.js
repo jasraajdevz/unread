@@ -80,15 +80,24 @@
     });
   }
 
+  /* Quotable: something a person would say out loud. The composer allows 8000
+     characters; the number reading an essay back is a wall, not a scare. One shared
+     predicate -- if the eligibility gate and the picker disagree on what counts, a
+     template fires with nothing to fill its slot and the player is shown {TYPED}. */
+  var QUOTABLE_MAX = 160;
+  function quotable(t) {
+    if (!t || typeof t.text !== 'string') return false;
+    var len = t.text.trim().length;
+    return len > 1 && len <= QUOTABLE_MAX;
+  }
+
   /* Which of the player's own lines to read back.
      It prefers one typed somewhere else. Being quoted a thing you said to this number is
      unnerving; being quoted a thing you said to your mother is the whole idea, and the
      cast note for the number has said so from the start.
      Old before recent, too: something from three weeks ago has had time to be forgotten. */
   function chooseTyped(rand, typed, threadId, already) {
-    var usable = (typed || []).filter(function (t) {
-      return t && typeof t.text === 'string' && t.text.trim().length > 1;
-    });
+    var usable = (typed || []).filter(quotable);
     if (!usable.length) return null;
     var elsewhere = usable.filter(function (t) { return t.threadId !== threadId; });
     var pool = elsewhere.length ? elsewhere : usable;
@@ -171,9 +180,7 @@
        retrofitted onto a run somebody has already played. */
     if (template.requiresTyped) {
       var need = template.requiresTyped === true ? 1 : template.requiresTyped;
-      var have = (context.typed || []).filter(function (t) {
-        return t && typeof t.text === 'string' && t.text.trim().length > 1;
-      });
+      var have = (context.typed || []).filter(quotable);
       if (have.length < need) return false;
       var last = context.quotedOn;
       if (last !== undefined && context.day - last < QUOTE_COOLDOWN_DAYS) return false;
