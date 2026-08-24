@@ -763,10 +763,36 @@ var scroll  = document.getElementById("scroll"),
 
 document.getElementById("clock").textContent = hhmm(LAUNCH);
 
+/* Anything the player sent, rebuilt from the save so it survives a phase, a reload and
+   a day. Offsets run backwards from now by whole days, so yesterday's line sits under
+   yesterday's divider instead of in the middle of tonight. */
+function myMessagesIn(threadId){
+  if(!S.save) return [];
+  var bank = (S.save.contactState && S.save.contactState.typed) || [];
+  var today = S.save.day || 1;
+  var out = [];
+  bank.forEach(function(entry, index){
+    if(!entry || entry.threadId !== threadId || !entry.text) return;
+    var daysAgo = Math.max(0, today - (entry.day || today));
+    out.push({
+      id: "said_" + threadId + "_" + index,
+      from: "me",
+      kind: "text",
+      body: entry.text,
+      offsetMinutes: -(daysAgo * 1440) - (entry.phase === "day" ? 480 : 90),
+      live: false, delayMs: 0, typingMs: 0,
+      __threadId: threadId,
+      __token: Player.said(entry.text)
+    });
+  });
+  return out;
+}
+
 function resetThreads(){
   S.shown = {};
   Story.threads().forEach(function(t){
-    S.shown[t.id] = Story.messagesOf(t.startBeat, S.flags).slice();
+    S.shown[t.id] = Story.messagesOf(t.startBeat, S.flags).slice()
+      .concat(myMessagesIn(t.id));
   });
 }
 resetThreads();
@@ -1138,6 +1164,7 @@ function answerInThread(item){
     });
     announce({ from: "me" });
   }
+  recordTyped(item.threadId, item.label);   /* tapping is saying it too */
   /* only this question's replies are spent; anything else the thread asked survives */
   S.pendingChoices = S.pendingChoices.filter(function(c){
     return !(c.threadId === item.threadId && c.templateId === item.templateId);

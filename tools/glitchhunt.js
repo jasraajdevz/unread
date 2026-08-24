@@ -34,8 +34,11 @@ async function invariants(p, where) {
       }
     });
 
-    // no unfilled slot ever reaches a bubble
+    // No unfilled slot ever reaches a bubble -- but a player who types "{MEMORY}" and is
+    // quoted it back is being shown their own words, which is the feature working.
     document.querySelectorAll('.msg, .choice').forEach((el) => {
+      const src = el.getAttribute('data-src');
+      if (src === 'player.typed' || src === 'director.quote') return;
       if (/\{[A-Z0-9_]+\}/.test(el.textContent)) out.push('slot leak: ' + el.textContent.slice(0, 30));
     });
 
@@ -140,6 +143,123 @@ async function invariants(p, where) {
       await page.locator('.phone').click({ position: { x: 5, y: 300 } });
     }
   }
+
+
+  console.log('typing things nobody should type...');
+  await page.evaluate(() => window.__unread.save.clear());
+  await page.reload();
+  await page.locator('[data-thread="t_mom"]').click();
+
+  const NASTY = [
+    ['a script tag',        '<img src=x onerror="window.__pwned=1">'],
+    ['a slot name',         'i said {MEMORY} to {TYPEDWHO}'],
+    ['unbalanced markup',   '</div><script>alert(1)</script>'],
+    ['an entity',           '&lt;&amp;&gt;&#x27;'],
+    ['quotes',              `he said "it's mine" & left`],
+    ['newlines',            'one\ntwo\nthree'],
+    ['very long',           'x'.repeat(4000)],
+    ['only spaces',         '        '],
+    ['emoji',               '👻👻👻 who is this 👻'],
+    ['right to left',       'مرحبا بالعالم'],
+    ['zero width',          'i​am​fine'],
+    ['a lone brace',        '{'],
+  ];
+
+  for (const [what, text] of NASTY) {
+    await page.locator('#say').fill(text);
+    await page.locator('#send').click();
+    await page.waitForTimeout(60);
+    const state = await page.evaluate((sent) => {
+      const mine = document.querySelector('.msg.me:last-of-type');
+      const shown = mine ? (mine.childNodes[0] || {}).textContent || '' : null;
+      return {
+        pwned: !!window.__pwned,
+        elements: document.querySelectorAll('.msg.me img, .msg.me script, .msg.me div').length,
+        shown: shown,
+        tooLong: shown !== null && shown.length > 260,
+        stored: (window.__unread.typed().slice(-1)[0] || {}).text,
+        overflows: (() => {
+          const phone = document.querySelector('.phone').getBoundingClientRect();
+          return Array.from(document.querySelectorAll('.msg')).some((m) => {
+            const b = m.getBoundingClientRect();
+            return b.width && (b.left < phone.left - 1 || b.right > phone.right + 1);
+          });
+        })(),
+      };
+    }, text);
+    if (state.pwned) note(`typing ${what} executed script`);
+    if (state.elements) note(`typing ${what} built ${state.elements} element(s) in the bubble`);
+    if (state.tooLong) note(`typing ${what} produced a ${state.shown.length}-char bubble`);
+    if (state.overflows) note(`typing ${what} pushed a bubble out of the phone`);
+    if (text.trim() && state.stored === undefined) note(`typing ${what} was not recorded`);
+    if (!text.trim() && state.stored !== undefined && state.stored.trim() === '') {
+      note('sending whitespace recorded a message');
+    }
+  }
+  await invariants(page, 'after typing nonsense');
+
+  await page.locator('#say').fill('who is this');
+  await page.locator('#say').press('Enter');
+  await page.waitForTimeout(200);
+  if (await page.locator('#say').inputValue()) note('the enter key does not send');
+
+  console.log('sending faster than it can answer...');
+  await page.locator('#say').fill('who is this');
+  for (let i = 0; i < 5; i++) await page.locator('#send').click({ force: true });
+  await page.waitForTimeout(1500);
+  const spam = await page.evaluate(() => ({
+    fields: document.querySelectorAll('.composer').length,
+    empty: (document.querySelector('#say') || {}).value,
+  }));
+  if (spam.fields !== 1) note(`${spam.fields} composers after rapid sending`);
+  if (spam.empty) note('the field did not clear after sending');
+
+  console.log('typing where you should not be able to...');
+  await page.locator('#appbar .back').click();
+  await page.locator('[data-thread="t_archive"]').click();
+  const locked = await page.locator('#say').count();
+  if (locked) note('a locked thread offers a field to type into');
+  await page.locator('#appbar .back').click();
+
+  console.log('checking a draft does not follow you between threads...');
+  await page.locator('[data-thread="t_mom"]').click();
+  await page.locator('#say').fill('a draft nobody sent');
+  await page.locator('#appbar .back').click();
+  await page.locator('[data-thread="t_flat"]').click();
+  const carried = await page.locator('#say').inputValue();
+  if (carried) note(`a draft followed you into another thread: ${JSON.stringify(carried)}`);
+  await page.locator('#appbar .back').click();
+
+  console.log('quoting back something shaped like a slot...');
+  const slotty = await page.evaluate(() => {
+    const S = window.__unread.state;
+    S.save.contactState = S.save.contactState || {};
+    S.save.contactState.typed = [
+      { day: 2, threadId: 't_mom',  text: '{MEMORY} and {TYPED}' },
+      { day: 3, threadId: 't_flat', text: 'nothing happened' },
+      { day: 4, threadId: 't_dave', text: '{TYPEDWHO}' },
+      { day: 5, threadId: 't_mom',  text: 'it wasnt me' },
+      { day: 6, threadId: 't_flat', text: 'i heard it' },
+      { day: 7, threadId: 't_mom',  text: 'stop' },
+    ];
+    const bad = [];
+    for (let day = 21; day <= 100; day++) {
+      for (const phase of ['day', 'night']) {
+        const plan = window.__unread.loadPhase(day, phase);
+        (plan.phases[phase] || []).forEach((e) => {
+          if (e.quotesPlayer && /\{[A-Z0-9_]+\}/.test(e.body)) bad.push(day + ': ' + e.body);
+        });
+      }
+    }
+    return bad;
+  });
+  /* A player typing "{MEMORY}" and being quoted it back is not a bug -- it is their own
+     words coming back. It is only a bug if anything downstream treats it as a slot. */
+  if (slotty.length) {
+    console.log(`    (the number quoted ${slotty.length} brace-shaped line(s) back, as typed)`);
+  }
+  await page.evaluate(() => window.__unread.save.clear());
+  await page.reload();
 
   console.log('checking the away bands do not run off the end...');
   const overshoot = await page.evaluate(() => {

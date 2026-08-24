@@ -1470,3 +1470,68 @@ test('D45 — a bubble made of your own words says so', async ({ page }) => {
   const orphans = await page.evaluate(() => window.__unread.auditIngress());
   expect(orphans).toEqual([]);
 });
+
+test('D46 — what you said stays in the thread', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.evaluate(() => window.__unread.loadPhase(4, 'day'));
+
+  const MINE = 'im fine mom stop asking';
+  await page.locator('[data-thread="t_mom"]').click();
+  await page.locator('#say').fill(MINE);
+  await page.locator('#send').click();
+
+  const showsIt = async () => (await page.locator('.msg.me').allInnerTexts())
+    .some((t) => t.includes(MINE));
+  const reopen = async () => {
+    const back = page.locator('#appbar .back');
+    if (await back.count()) await back.click();
+    await page.locator('[data-thread="t_mom"]').click();
+  };
+
+  await expect.poll(showsIt, { message: 'it lands when you send it' }).toBe(true);
+
+  // the next phase rebuilds the thread from the authored history; yours must survive it
+  await page.locator('#appbar .back').click();
+  await page.evaluate(() => window.__unread.loadPhase(4, 'night'));
+  await page.locator('[data-thread="t_mom"]').click();
+  expect(await showsIt(), 'a phase change must not eat what you sent').toBe(true);
+
+  // and so must a week of them
+  await page.locator('#appbar .back').click();
+  await page.evaluate(() => window.__unread.loadPhase(11, 'night'));
+  await page.locator('[data-thread="t_mom"]').click();
+  expect(await showsIt(), 'still there a week later').toBe(true);
+
+  // it is in the save, not just on screen
+  await page.reload();
+  await page.locator('[data-thread="t_mom"]').click();
+  expect(await showsIt(), 'still there after a reload').toBe(true);
+  const mine = page.locator('.msg.me').filter({ hasText: MINE }).first();
+  await expect(mine, 'and still stamped as the player\'s own words')
+    .toHaveAttribute('data-src', 'player.typed');
+
+  // and it can be found
+  await page.locator('#appbar .back').click();
+  await page.locator('#find').click();
+  await page.locator('#q').fill('im fine mom');
+  await expect(page.locator('.hit'), 'search reaches your own messages').not.toHaveCount(0);
+  await page.locator('#appbar .back').click();
+
+  // tapping a reply is saying it too, and it keeps the same way
+  await page.evaluate(() => window.__unread.loadPhase(6, 'day'));
+  const thread = await page.evaluate(() => {
+    const c = window.__unread.state.pendingChoices.filter((x) => !x.silent)[0];
+    return c ? { id: c.threadId, label: c.label } : null;
+  });
+  if (thread) {
+    await page.locator(`[data-thread="${thread.id}"]`).click();
+    await page.locator('.choice').first().click();
+    await page.locator('#appbar .back').click();
+    await page.evaluate(() => window.__unread.loadPhase(7, 'day'));
+    await page.locator(`[data-thread="${thread.id}"]`).click();
+    const kept = (await page.locator('.msg.me').allInnerTexts())
+      .some((t) => t.includes(thread.label));
+    expect(kept, 'a tapped reply is a thing you said, and it keeps too').toBe(true);
+  }
+});

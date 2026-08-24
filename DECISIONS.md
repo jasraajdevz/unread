@@ -1448,3 +1448,41 @@ correctly — and was left out of the one object handed to `eligible()`. So the 
 `requiresTyped` read `undefined`, found zero lines, and refused every template. Nothing
 quoted, no error, no failing test: the feature simply was not there. Found by running it
 and looking, which is the only thing that finds that class of bug.
+
+---
+
+## D46 — a messenger that eats what you send is broken, not atmospheric
+
+**Status:** decided · **Scope:** `src/engine.html`, `tools/glitchhunt.js`
+· **Enforced by:** the gate
+
+`resetThreads()` rebuilds every thread from its authored history at the start of each
+generated phase. That is what stops a hundred days from turning a conversation into two
+thousand bubbles, and it stays. It also threw away everything the player had ever said,
+so you could type a sentence to your mother, come back an hour later, and find the thread
+had no record of it. Search could not find it either. The save had it the whole time.
+
+That was survivable while replies were taps — a button you pressed quietly vanishing is
+odd but subtle. It stopped being survivable the moment the player wrote the words
+themselves (D44). **Their side scrolls away. Yours does not.**
+
+The player's messages are now rebuilt from the save on every reset, which also makes them
+survive a reload and a day boundary, and puts them in the search index. Offsets run
+backwards by whole days so yesterday's line sits under yesterday's divider.
+
+A tapped reply is a thing you said too, and it now records and keeps identically. That
+also means the quote-back can read back something you chose as well as something you
+typed, which is correct: choosing those words is saying them.
+
+### The hunter cried wolf twice, and both were the hunter
+
+Worth writing down because the fix was to the tool, not the game:
+
+1. It reported that sending whitespace sent a message. It did not — it was comparing
+   bubble counts across a window in which the *previous* line's deflection landed. It
+   compares what was recorded now, which is the thing that actually matters.
+2. It reported a slot leak when the player typed `{MEMORY}` and was quoted it back. That
+   is the feature working. The invariant now skips anything stamped `player.typed` or
+   `director.quote`, because those words are not ours to police.
+
+A reporter that cannot tell its own noise from a finding stops being read.
