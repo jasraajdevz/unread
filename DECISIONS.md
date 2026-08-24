@@ -1608,3 +1608,33 @@ speaker. The rebuild replays both. Three guards keep the meanings straight:
 Entries also carry `at` — the wall-clock moment they were sent — so a rebuilt message
 stamps 21:30 because it happened at 21:30, not 13:30 because a heuristic guessed the
 middle of the phase. Older entries without `at` keep the guess.
+
+---
+
+## D51 — holding the ending is only half the contract
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the D51 test
+
+The second hunt's finder fleet was cut down by an account spend limit — five of six died
+mid-sweep, and the workflow scaffold reported their surfaces as "0 findings", which
+meant *unswept*, not clean. Worth recording: **a dead finder and a clean finder look
+identical in a summary count.** The five surfaces were re-swept inline; the clock
+surface's finder survived and was genuinely clean.
+
+One real finding came out of it. The ending correctly holds while the player is reading
+a thread (the D39 family: nothing closes what you are reading). But nothing re-checked
+when they came back out. A player who happened to be inside Mom's thread at the moment
+day 100's night loaded got the hold and never the reveal — stuck one screen from the
+ending of a hundred-day game, forever.
+
+`renderList` now fires a held final-night reveal when the list actually paints.
+`revealFinalEnding` was already idempotent, so a second paint cannot double it.
+
+Also in this pass, verified clean inline: all four endings render without slots or
+stacked overlays and reset properly; typing at the reveal neither crashes nor
+double-ends; search reaches typed, deflected and quoted messages; recall stays truthful
+after bank eviction; badges equal `unreadCount` across days 2–8; dividers do not
+duplicate or trail; reactions on typed messages persist; the composer, swipe, keypad,
+and match tiles all work by touch, portrait and landscape. One hardening: `openSettings`
+now closes the photo viewer first — the stacking was unreachable in play, and now it is
+impossible instead of unreachable.

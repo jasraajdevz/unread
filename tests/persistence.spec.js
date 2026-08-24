@@ -1840,3 +1840,32 @@ test('D50 — what they said back survives the reload too', async ({ page }) => 
   expect(q.theirsRecorded).toBeGreaterThan(0);
   expect(q.typedHookMine, 'typed() still means: what the PLAYER said').toBe(true);
 });
+
+test('D51 — a held ending fires when you come back to the list', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.evaluate(() => {
+    const S = window.__unread.state;
+    S.flags.chose_found = true; S.save.flags = S.flags;
+    S.save.day = 99; S.save.phase = 'night'; S.save.beat = 5;
+    window.__unread.loadPhase(99, 'night');
+  });
+
+  // day 100 arrives while the player is reading Mom: the ending must hold...
+  await page.locator('[data-thread="t_mom"]').click();
+  await page.evaluate(() => window.__unread.loadPhase(100, 'night'));
+  await page.clock.runFor(20000);
+  await expect(page.locator('#end.on'), 'held while reading').toHaveCount(0);
+  expect(await page.evaluate(() => window.__unread.state.current.id)).toBe('t_mom');
+
+  // ...and holding is only half the contract: leaving must fire what was held
+  await page.locator('#appbar .back').click();
+  await page.clock.runFor(20000);
+  await expect(page.locator('#end.on'), 'fired after leaving').toHaveCount(1);
+
+  // once, not twice: another list paint cannot double it
+  await page.evaluate(() => window.__unread.renderList());
+  await expect(page.locator('#end.on')).toHaveCount(1);
+  const ended = await page.evaluate(() => window.__unread.state.ended);
+  expect(ended).toBe(true);
+});

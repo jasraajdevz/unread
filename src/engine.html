@@ -964,6 +964,12 @@ function renderList(force){
   scroll.scrollTop=0;
   drawStatusBar();
   maybeAdvance();
+  /* The ending holds while you are reading a thread (D39 family). Holding is only half
+     the contract: coming back OUT to the list has to fire what was held, or a player
+     mid-thread when day 100 arrives is stuck one screen from the ending forever. */
+  if(((S.save && S.save.day) || 1) >= FINAL_DAY && (S.save && S.save.phase) === "night"){
+    revealFinalEnding();
+  }
 }
 
 function bubbleFor(m, prev){
@@ -3105,6 +3111,8 @@ function buildSettings(){
 }
 
 function openSettings(){
+  /* one overlay at a time -- unreachable in play today, guaranteed rather than assumed */
+  if(viewer && viewer.close) viewer.close();
   document.querySelector(".phone").scrollTop = 0;
   buildSettings();
   Text.paint(document.getElementById("sheetTitle"), chrome(CHROME.settings));
