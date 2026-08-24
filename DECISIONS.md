@@ -1577,3 +1577,34 @@ wall heals itself.
 
 With this, all seven findings from the six-finder hunt are fixed and pinned: six in D48,
 this one here.
+
+---
+
+## D50 — a reload cannot unsay a reply you watched arrive
+
+**Status:** decided · **Scope:** `src/engine.html`, `src/director.js` · **Enforced by:**
+the D50 test
+
+D46 kept the player's messages across a reload. Their **deflections** — the one class of
+reply generated at runtime rather than replayed deterministically by the director — were
+not kept. You could type at Dave, watch him answer "Sorry mate, not with you.", reload,
+and find he never had: the thread reverted to its authored preview and the exchange had
+one side. Everything the director plans replays identically from the seed, so authored
+and generated messages never needed saving; the deflections are the exception, and they
+are the *reply to the player's own words*, which makes losing them the worst possible
+choice of message to lose.
+
+The bank (`contactState.typed`) now records both sides of the runtime exchange in
+order — the player's line, then what came back for it, marked `from: "them"` with the
+speaker. The rebuild replays both. Three guards keep the meanings straight:
+
+- `quotable()` in the director refuses `from: "them"` — the number must never read a
+  character's own deflection back as something *you* said.
+- The `typed()` hook filters to the player's side, so every D44/D45 invariant keeps
+  meaning what it meant.
+- The 400KB budget (D49) covers both sides; deflections are short lines and cost
+  nothing against it.
+
+Entries also carry `at` — the wall-clock moment they were sent — so a rebuilt message
+stamps 21:30 because it happened at 21:30, not 13:30 because a heuristic guessed the
+middle of the phase. Older entries without `at` keep the guess.

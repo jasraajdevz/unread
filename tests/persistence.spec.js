@@ -1796,3 +1796,47 @@ test('D49 — a flood of essays cannot reach the quota wall', async ({ page }) =
     window.__unread.typed().some((t) => t.text === 'the last thing i said'));
   expect(kept, 'nothing sent before the reload is missing after it').toBe(true);
 });
+
+test('D50 — what they said back survives the reload too', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.evaluate(() => window.__unread.loadPhase(3, 'day'));
+  await page.locator('[data-thread="t_dave"]').click();
+  await page.locator('#say').fill('sorry dave not this week');
+  await page.locator('#send').click();
+
+  // the deflection lands, in character, stamped as content
+  const answer = page.locator('.msg.them[data-src="content.unmatched"]').last();
+  await expect(answer).toHaveCount(1, { timeout: 4000 });
+  const said = (await answer.innerText()).split('\n')[0];
+
+  await page.locator('#appbar .back').click();
+  await page.reload();
+  await page.locator('[data-thread="t_dave"]').click();
+
+  const texts = await page.locator('.msg').allInnerTexts();
+  expect(texts.some((t) => t.includes('sorry dave not this week')),
+    'your side survives (D46)').toBe(true);
+  expect(texts.some((t) => t.includes(said)),
+    'their answer survives too — a reload must not unsay a reply you watched arrive')
+    .toBe(true);
+
+  // the rebuilt exchange keeps its real moment, not a phase guess
+  const offset = await page.evaluate(() => {
+    const mine = window.__unread.state.shown.t_dave.filter((m) => m.from === 'me');
+    return mine[mine.length - 1].offsetMinutes;
+  });
+  expect(Math.abs(offset), 'stamped when it happened').toBeLessThanOrEqual(2);
+
+  // their recorded side is bank data but never quotable material
+  const q = await page.evaluate(() => {
+    const bank = (window.__unread.state.save.contactState || {}).typed || [];
+    const theirs = bank.filter((t) => t.from === 'them');
+    return {
+      theirsRecorded: theirs.length,
+      typedHookMine: window.__unread.typed().every((t) => !t.from || t.from === 'me'),
+    };
+  });
+  expect(q.theirsRecorded).toBeGreaterThan(0);
+  expect(q.typedHookMine, 'typed() still means: what the PLAYER said').toBe(true);
+});

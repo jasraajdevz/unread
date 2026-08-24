@@ -764,26 +764,35 @@ var scroll  = document.getElementById("scroll"),
 
 document.getElementById("clock").textContent = hhmm(LAUNCH);
 
-/* Anything the player sent, rebuilt from the save so it survives a phase, a reload and
-   a day. Offsets run backwards from now by whole days, so yesterday's line sits under
-   yesterday's divider instead of in the middle of tonight. */
+/* The runtime exchange -- what the player sent AND what came back for it -- rebuilt
+   from the save so it survives a phase, a reload and a day. Entries recorded since the
+   `at` field carry the real wall-clock moment; older ones fall back to a phase guess. */
 function myMessagesIn(threadId){
   if(!S.save) return [];
   var bank = (S.save.contactState && S.save.contactState.typed) || [];
   var today = S.save.day || 1;
+  var nowMs = new Date().getTime();
   var out = [];
   bank.forEach(function(entry, index){
     if(!entry || entry.threadId !== threadId || !entry.text) return;
-    var daysAgo = Math.max(0, today - (entry.day || today));
+    var offset;
+    if(entry.at){
+      offset = Math.min(0, Math.round((entry.at - nowMs) / 60000));
+    } else {
+      var daysAgo = Math.max(0, today - (entry.day || today));
+      offset = -(daysAgo * 1440) - (entry.phase === "day" ? 480 : 90);
+    }
+    var theirs = entry.from === "them";
     out.push({
       id: "said_" + threadId + "_" + index,
-      from: "me",
+      from: theirs ? "them" : "me",
+      fromContactId: theirs ? entry.contactId : undefined,
       kind: "text",
       body: entry.text,
-      offsetMinutes: -(daysAgo * 1440) - (entry.phase === "day" ? 480 : 90),
+      offsetMinutes: offset,
       live: false, delayMs: 0, typingMs: 0,
       __threadId: threadId,
-      __token: Player.said(entry.text)
+      __token: theirs ? Generated.unmatched(entry.text) : Player.said(entry.text)
     });
   });
   return out;
@@ -1309,17 +1318,22 @@ function trimTypedBank(){
   }
 }
 
-/* Verbatim, with the day it was said on. Act III is going to read this back. */
-function recordTyped(threadId, text){
-  typedBank().push({
+/* Verbatim, with the day it was said on and the wall-clock moment it happened.
+   Act III reads the player's side back; the rebuild after a reload reads both. */
+function recordLine(threadId, text, from, contactId){
+  var entry = {
     day: (S.save && S.save.day) || 1,
     phase: (S.save && S.save.phase) || "day",
     threadId: threadId,
-    text: text
-  });
+    text: text,
+    at: new Date().getTime()
+  };
+  if(from === "them"){ entry.from = "them"; entry.contactId = contactId; }
+  typedBank().push(entry);
   trimTypedBank();
   Save.write(S.save);
 }
+function recordTyped(threadId, text){ recordLine(threadId, text, "me"); }
 
 function pushMine(threadId, text){
   var t = Story.thread(threadId);
@@ -1401,6 +1415,7 @@ function deflect(threadId){
       __threadId: t.id,
       __token: Generated.unmatched(line.body)
     });
+    recordLine(t.id, line.body, "them", line.contactId);
     if(S.current && S.current.id === t.id){
       paint(t);
       scroll.scrollTop = scroll.scrollHeight;
@@ -3185,7 +3200,9 @@ window.__unread = {
   say: function(text){ return sendTyped(text); },
   maxTyped: MAX_TYPED,
   bankBudget: TYPED_BANK_MAX_CHARS,
-  typed: function(){ return typedBank().slice(); },
+  typed: function(){
+    return typedBank().filter(function(t){ return !t.from || t.from === "me"; });
+  },
   matchIn: function(threadId, text){
     var mine = (S.liveChoices || []).filter(function(c){ return !c.silent; });
     var hit = Director.matchReply(text, mine.map(function(c){

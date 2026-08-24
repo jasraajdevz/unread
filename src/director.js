@@ -87,6 +87,7 @@
   var QUOTABLE_MAX = 160;
   function quotable(t) {
     if (!t || typeof t.text !== 'string') return false;
+    if (t.from === 'them') return false;   /* the bank holds both sides; quote only yours */
     var len = t.text.trim().length;
     return len > 1 && len <= QUOTABLE_MAX;
   }
