@@ -1287,6 +1287,28 @@ function typedBank(){
 }
 function typedCount(){ return typedBank().length; }
 
+/* The bank's byte budget: 400KB, a thirteenth of the 5MB localStorage quota. Past
+   the quota Save.write swallows the error (that catch is the private-mode path) and
+   everything after it -- messages, flags, the day itself -- vanishes on reload. */
+var TYPED_BANK_MAX_CHARS = 400 * 1024;
+
+function trimTypedBank(){
+  var bank = typedBank();
+  var total = 0, i;
+  for(i = 0; i < bank.length; i++) total += (bank[i].text || "").length;
+  while(total > TYPED_BANK_MAX_CHARS && bank.length){
+    /* essays first: never quotable (D47), so the number cannot miss them. The thread
+       stops re-displaying an old rant, which is a smaller lie than losing a new line. */
+    var victim = -1;
+    for(i = 0; i < bank.length; i++){
+      if((bank[i].text || "").length > 160){ victim = i; break; }
+    }
+    if(victim < 0) victim = 0;               /* no essays left: the oldest goes */
+    total -= (bank[victim].text || "").length;
+    bank.splice(victim, 1);
+  }
+}
+
 /* Verbatim, with the day it was said on. Act III is going to read this back. */
 function recordTyped(threadId, text){
   typedBank().push({
@@ -1295,6 +1317,7 @@ function recordTyped(threadId, text){
     threadId: threadId,
     text: text
   });
+  trimTypedBank();
   Save.write(S.save);
 }
 
@@ -3120,6 +3143,7 @@ function boot(){
     save.phase = "day";
   }
   save.lastSeenAt = now;
+  trimTypedBank();
   rollStreak(save, dayStamp(now));
   save.opens = (save.opens || 0) + 1;
   Save.write(save);
@@ -3160,6 +3184,7 @@ window.__unread = {
   carried: carriedState,
   say: function(text){ return sendTyped(text); },
   maxTyped: MAX_TYPED,
+  bankBudget: TYPED_BANK_MAX_CHARS,
   typed: function(){ return typedBank().slice(); },
   matchIn: function(threadId, text){
     var mine = (S.liveChoices || []).filter(function(c){ return !c.silent; });

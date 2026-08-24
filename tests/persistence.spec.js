@@ -1753,3 +1753,46 @@ test('D48 — lines typed at the number are never what it quotes', async ({ page
   expect(out.quotes, '"you said that to +44..." is a receipt, not a scare').toBe(0);
   expect(out.bare, 'and refusing to quote never leaks a slot').toBe(0);
 });
+
+test('D49 — a flood of essays cannot reach the quota wall', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_mom"]').click();
+
+  const out = await page.evaluate(() => {
+    // three quotable lines, then a flood of never-quotable essays
+    for (const line of ['im fine mom', 'it wasnt me', 'stop worrying']) {
+      window.__unread.say(line);
+    }
+    // 60 x 8000 = 480KB of essays, comfortably past the 400KB budget: eviction
+    // must engage. (Each say() repaints the thread, so the count stays testable.)
+    const essay = 'e'.repeat(8000);
+    for (let i = 0; i < 60; i++) window.__unread.say(essay + i);
+    window.__unread.say('the last thing i said');
+
+    const bank = window.__unread.typed();
+    let writable = true;
+    try {
+      window.localStorage.setItem('__probe', 'x'.repeat(8000));
+      window.localStorage.removeItem('__probe');
+    } catch (e) { writable = false; }
+    return {
+      chars: bank.reduce((n, t) => n + t.text.length, 0),
+      budget: window.__unread.bankBudget,
+      writable,
+      shorts: ['im fine mom', 'it wasnt me', 'stop worrying']
+        .every((x) => bank.some((t) => t.text === x)),
+      newest: bank.some((t) => t.text === 'the last thing i said'),
+    };
+  });
+  expect(out.chars, 'the bank respects its budget').toBeLessThanOrEqual(out.budget);
+  expect(out.writable, 'localStorage never hits the wall').toBe(true);
+  expect(out.shorts, 'quotable lines outlive any flood of essays').toBe(true);
+  expect(out.newest, 'and the newest message is never the one evicted').toBe(true);
+
+  // the save that reloads is the save that was written
+  await page.reload();
+  const kept = await page.evaluate(() =>
+    window.__unread.typed().some((t) => t.text === 'the last thing i said'));
+  expect(kept, 'nothing sent before the reload is missing after it').toBe(true);
+});

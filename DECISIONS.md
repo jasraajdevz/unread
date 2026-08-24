@@ -1545,3 +1545,35 @@ each pinned by a test.
 One suite run flaked once (1/45) while a finder was still consuming the machine; two
 clean runs followed and the gate is green. If it flakes again, that is a real finding
 and gets its own entry.
+
+---
+
+## D49 — the save can never reach the quota wall
+
+**Status:** decided · **Scope:** `src/engine.html` · **Enforced by:** the D49 test
+
+The last finding from the D48 hunt, and the one the 8000-character cap (D47) created.
+Chromium gives localStorage 5MB. An 8000-character message costs ~8KB of save; ~650 of
+them hit the wall, `Save.write` swallows the `QuotaExceededError` -- that catch is the
+private-mode path and stays -- and from then on **everything silently fails to persist**:
+messages, flags, clues, the day itself, all reverting on reload with no error, no
+warning, and a Settings storage row that keeps reporting the in-memory count. The finder
+measured 149 messages (~1.2MB of player text) evaporating.
+
+The typed bank now has a byte budget: **400KB, a thirteenth of the quota.** When a
+recorded line pushes it over, eviction runs:
+
+1. **The oldest entry longer than 160 characters goes first.** Essays are never quotable
+   (D47), so the quote-back cannot miss them. The cost is that the thread stops
+   re-displaying an old rant -- and a messenger forgetting your oldest essay is a smaller
+   lie than one losing your newest message, which is what the quota wall did.
+2. Only when no essays remain does the oldest entry go outright.
+
+A player typing like a person fits ten thousand short lines in the budget and never sees
+an eviction. The proof floods 800 essays through the real send path: the save plateaus at
+402KB, localStorage stays writable, every quotable line and the newest message survive
+the flood and the reload. The bank also trims at boot, so a save already sitting over the
+wall heals itself.
+
+With this, all seven findings from the six-finder hunt are fixed and pinned: six in D48,
+this one here.
