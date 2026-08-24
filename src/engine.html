@@ -1156,7 +1156,10 @@ function answerInThread(item){
 function buildComposer(t){
   var wrap = document.createElement("form");
   wrap.className = "composer";
-  wrap.setAttribute("data-thread", t.id);
+  /* not data-thread: that selector means "a row in the thread list" everywhere else,
+     and a composer answering to it makes every list click ambiguous once you are
+     already inside a thread. */
+  wrap.setAttribute("data-composer", t.id);
 
   var input = document.createElement("input");
   input.type = "text";
@@ -1441,22 +1444,41 @@ document.getElementById("again").addEventListener("click", function(){
 /* ============================================================================
    THE DAY RUNNER — generated days 2..N
    ========================================================================== */
-function planFor(day){
-  if(!window.Director || !CONTENT.templates) return null;
-  var carried = {
+/* planDay writes back into the state it is handed -- that is how `once` stays once, how
+   recall waits a fortnight and how the quote-back waits three weeks. So the state has to
+   be the save's own objects, and it has to be in the save to begin with. Rebuilding it
+   per call, which is what this did, quietly turned every one of those rules off. */
+function carriedState(){
+  var save = S.save || (S.save = Save.fresh(new Date().getTime()));
+  var contact = save.contactState || (save.contactState = {});
+  save.fired = save.fired || {};
+  save.cluesFound = save.cluesFound || {};
+  contact.memory = contact.memory || {};
+  contact.typed = contact.typed || [];
+  contact.spent = contact.spent || {};     /* recall cooldown, per memory tag */
+  contact.quoted = contact.quoted || {};   /* quote-back cooldown, one for the run */
+  return {
     flags: S.flags,
-    fired: (S.save && S.save.fired) || {},
-    memory: (S.save && S.save.contactState && S.save.contactState.memory) || {},
-    clues: (S.save && S.save.cluesFound) || {},
+    fired: save.fired,
+    memory: contact.memory,
+    clues: save.cluesFound,
+    spent: contact.spent,
     /* D45: what the player actually typed. The director is still pure -- this is data
        handed in, the same way memory is, so the same seed and the same history still
        produce the same run. */
-    typed: (S.save && S.save.contactState && S.save.contactState.typed) || []
+    typed: contact.typed,
+    quoted: contact.quoted
   };
-  return window.Director.planDay(
+}
+
+function planFor(day){
+  if(!window.Director || !CONTENT.templates) return null;
+  var plan = window.Director.planDay(
     { cast: CONTENT.cast, templates: CONTENT.templates, ladder: CONTENT.ladder,
       story: Story.raw },
-    (S.save && S.save.runSeed) || "default", day, carried);
+    (S.save && S.save.runSeed) || "default", day, carriedState());
+  Save.write(S.save);
+  return plan;
 }
 
 /* Turn generated events into messages the renderer already understands. Offsets are
@@ -3079,6 +3101,7 @@ window.__unread = {
   renderList: function(){ return renderList(true); },
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   toList: function(){ return renderList(true); },
+  carried: carriedState,
   say: function(text){ return sendTyped(text); },
   typed: function(){ return typedBank().slice(); },
   matchIn: function(threadId, text){

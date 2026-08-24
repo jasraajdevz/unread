@@ -85,13 +85,17 @@
      unnerving; being quoted a thing you said to your mother is the whole idea, and the
      cast note for the number has said so from the start.
      Old before recent, too: something from three weeks ago has had time to be forgotten. */
-  function chooseTyped(rand, typed, threadId) {
+  function chooseTyped(rand, typed, threadId, already) {
     var usable = (typed || []).filter(function (t) {
       return t && typeof t.text === 'string' && t.text.trim().length > 1;
     });
     if (!usable.length) return null;
     var elsewhere = usable.filter(function (t) { return t.threadId !== threadId; });
     var pool = elsewhere.length ? elsewhere : usable;
+    /* Being read the same sentence twice is a coincidence; being read two different
+       ones is a filing system. Only fall back to a repeat if there is nothing else. */
+    var unheard = pool.filter(function (t) { return t.text !== already; });
+    if (unheard.length) pool = unheard;
     /* the older half, so it has had time to stop being on your mind -- but never fewer
        than three to draw from, or every quote-back in the run is the same sentence */
     var window = pool.slice(0, Math.max(Math.min(3, pool.length),
@@ -147,6 +151,8 @@
       return false;
     }
     if (template.phases && template.phases.indexOf(context.phase) < 0) return false;
+    /* `fired` records the day, not a flag, so replanning the day something fired on
+       gives that day back. Anything after it is spent. */
     if (template.once && context.fired[template.id]) return false;
     var need = template.requiresFlags || [];
     for (var i = 0; i < need.length; i++) {
@@ -182,8 +188,8 @@
          cannot be true. That works precisely because you already heard each of them, so
          the cooldown does not apply. */
       if (tags.length === 1) {
-        var when = context.spent[tags[j]];
-        if (when && (context.day - when) < RECALL_COOLDOWN_DAYS) return false;
+        var spentOn = context.spent[tags[j]];
+        if (spentOn && (context.day - spentOn) < RECALL_COOLDOWN_DAYS) return false;
       }
     }
     if (template.requiresMemory && context.recallUsed) return false;
@@ -266,7 +272,7 @@
       if (!template) break;
 
       used[template.id] = true;
-      if (template.once) options.fired[template.id] = true;
+      if (template.once) options.fired[template.id] = options.day;   /* the day, so it can be rewound */
       if (template.requiresMemory) recallAllowed = false;   /* one per phase */
       if (template.requiresTyped && options.quoted) options.quoted.on = options.day;
       memoryTags(template).forEach(function (tag) { options.spent[tag] = options.day; });
@@ -279,11 +285,13 @@
       });
       var quoted = null;
       if (template.requiresTyped) {
-        quoted = chooseTyped(rand, options.typed, template.threadId);
+        quoted = chooseTyped(rand, options.typed, template.threadId,
+                             options.quoted && options.quoted.text);
         if (quoted) {
           slots.TYPED = quoted.text;
           slots.TYPEDWHO = threadNameOf(content, quoted.threadId);
           slots.TYPEDDAY = String(quoted.day || 1);
+          if (options.quoted) options.quoted.text = quoted.text;
         }
       }
       var openedBy = {};
@@ -459,6 +467,19 @@
     state.clues = state.clues || {};
     state.typed = state.typed || [];
     state.quoted = state.quoted || {};
+
+    /* A day is planned whole, and both phases of it ask for the same plan -- so planFor
+       is called twice for one day, and a reload calls it again. Drop the marks this day
+       itself made before replanning it, or the second call sees the first call's leavings
+       and produces a different day. Everything from earlier days stays exactly where it
+       is, which is the whole point of carrying it. */
+    Object.keys(state.fired).forEach(function (id) {
+      if (state.fired[id] === day) delete state.fired[id];
+    });
+    Object.keys(state.spent).forEach(function (tag) {
+      if (state.spent[tag] === day) delete state.spent[tag];
+    });
+    if (state.quoted.on === day) { delete state.quoted.on; delete state.quoted.text; }
 
     /* Split the day's budget between the phases so night is never left mute by a
        talkative morning. */
