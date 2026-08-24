@@ -63,12 +63,22 @@
           "memory": {
             "tag": "chore_promised",
             "fragment": "you said youd do {CHORE}"
-          }
+          },
+          "match": [
+            "ill do it",
+            "do"
+          ]
         },
         {
           "id": "ch_not_mine",
           "label": "not mine either",
-          "tells": "denied doing {CHORE}"
+          "tells": "denied doing {CHORE}",
+          "match": [
+            "not mine either",
+            "not",
+            "mine",
+            "either"
+          ]
         }
       ]
     },
@@ -127,7 +137,11 @@
         {
           "id": "ch_leave_it",
           "label": "leave it",
-          "tells": "said to leave {THING}"
+          "tells": "said to leave {THING}",
+          "match": [
+            "leave it",
+            "leave"
+          ]
         },
         {
           "id": "ch_open_it",
@@ -137,7 +151,11 @@
           "memory": {
             "tag": "parcel_opened",
             "fragment": "you told us to open {THING}"
-          }
+          },
+          "match": [
+            "open it",
+            "open"
+          ]
         }
       ]
     },
@@ -194,12 +212,21 @@
           "memory": {
             "tag": "timer_denied",
             "fragment": "you said you didnt set it"
-          }
+          },
+          "match": [
+            "i didnt set it",
+            "didnt",
+            "set"
+          ]
         },
         {
           "id": "ch_shrug",
           "label": "leave it",
-          "tells": "said to leave the heating"
+          "tells": "said to leave the heating",
+          "match": [
+            "leave it",
+            "leave"
+          ]
         }
       ]
     },
@@ -252,12 +279,17 @@
           "memory": {
             "tag": "noise_heard",
             "fragment": "you said you heard {SOUND} too"
-          }
+          },
+          "match": [
+            "i heard it",
+            "heard"
+          ]
         },
         {
           "id": "ch_nothing",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -305,12 +337,22 @@
           "id": "ch_rota_seen",
           "label": "it was there yesterday",
           "tells": "said the rota was there yesterday",
-          "revealsClue": "clue_rota"
+          "revealsClue": "clue_rota",
+          "match": [
+            "it was there yesterday",
+            "yesterday"
+          ]
         },
         {
           "id": "ch_rota_shrug",
           "label": "make another one",
-          "tells": "told sam to make another rota"
+          "tells": "told sam to make another rota",
+          "match": [
+            "make another one",
+            "make",
+            "another",
+            "one"
+          ]
         }
       ]
     },
@@ -363,12 +405,21 @@
           "memory": {
             "tag": "car_claimed",
             "fragment": "you told me youd checked {PART}"
-          }
+          },
+          "match": [
+            "yeah did it",
+            "yeah",
+            "did"
+          ]
         },
         {
           "id": "ch_will_do",
           "label": "ill sort it",
-          "tells": "said he would sort {PART}"
+          "tells": "said he would sort {PART}",
+          "match": [
+            "ill sort it",
+            "sort"
+          ]
         }
       ]
     },
@@ -422,12 +473,21 @@
           "memory": {
             "tag": "visit_promised",
             "fragment": "you said you were coming {WHEN}"
-          }
+          },
+          "match": [
+            "yeah ill come",
+            "yeah",
+            "come"
+          ]
         },
         {
           "id": "ch_working",
           "label": "im working",
-          "tells": "said he was working {WHEN}"
+          "tells": "said he was working {WHEN}",
+          "match": [
+            "im working",
+            "working"
+          ]
         }
       ]
     },
@@ -471,7 +531,12 @@
         {
           "id": "ch_tell_him",
           "label": "ill ring him",
-          "tells": "said he would ring dad"
+          "tells": "said he would ring dad",
+          "match": [
+            "ill ring him",
+            "ring",
+            "him"
+          ]
         }
       ]
     },
@@ -508,7 +573,10 @@
         {
           "id": "ch_ate",
           "label": "yeah",
-          "tells": "said he ate"
+          "tells": "said he ate",
+          "match": [
+            "yeah"
+          ]
         }
       ]
     },
@@ -559,12 +627,20 @@
           "memory": {
             "tag": "dave_agreed",
             "fragment": "You said {DAY} was alright."
-          }
+          },
+          "match": [
+            "that works",
+            "works"
+          ]
         },
         {
           "id": "ch_dave_no",
           "label": "im at work",
-          "tells": "said he was working {DAY}"
+          "tells": "said he was working {DAY}",
+          "match": [
+            "im at work",
+            "work"
+          ]
         }
       ]
     },
@@ -599,7 +675,12 @@
         {
           "id": "ch_rent_thanks",
           "label": "cheers dave",
-          "tells": "thanked dave about the rent"
+          "tells": "thanked dave about the rent",
+          "match": [
+            "cheers dave",
+            "cheers",
+            "dave"
+          ]
         }
       ]
     },
@@ -635,7 +716,12 @@
         {
           "id": "ch_dave_ok",
           "label": "yeah fine",
-          "tells": "confirmed {DAY} to dave"
+          "tells": "confirmed {DAY} to dave",
+          "match": [
+            "yeah fine",
+            "yeah",
+            "fine"
+          ]
         }
       ]
     },
@@ -704,7 +790,10 @@
         {
           "id": "ch_login_me",
           "label": "that was me",
-          "tells": "said the sign-in was him"
+          "tells": "said the sign-in was him",
+          "match": [
+            "that was me"
+          ]
         },
         {
           "id": "ch_login_not_me",
@@ -714,7 +803,11 @@
           "memory": {
             "tag": "signin_denied",
             "fragment": "you said it wasnt you"
-          }
+          },
+          "match": [
+            "that wasnt me",
+            "wasnt"
+          ]
         }
       ]
     },
@@ -763,12 +856,21 @@
           "id": "ch_light_look",
           "label": "did anyone look",
           "tells": "asked if anyone looked at the light",
-          "revealsClue": "clue_light"
+          "revealsClue": "clue_light",
+          "match": [
+            "did anyone look",
+            "did",
+            "anyone",
+            "look"
+          ]
         },
         {
           "id": "ch_light_foxes",
           "label": "foxes",
-          "tells": "blamed foxes"
+          "tells": "blamed foxes",
+          "match": [
+            "foxes"
+          ]
         }
       ]
     },
@@ -821,12 +923,22 @@
         {
           "id": "ch_shop_get",
           "label": "ill get it",
-          "tells": "said he would get {ITEM}"
+          "tells": "said he would get {ITEM}",
+          "match": [
+            "ill get it",
+            "get"
+          ]
         },
         {
           "id": "ch_shop_not",
           "label": "not out today",
-          "tells": "said he was not going out"
+          "tells": "said he was not going out",
+          "match": [
+            "not out today",
+            "not",
+            "out",
+            "today"
+          ]
         }
       ]
     },
@@ -873,12 +985,19 @@
         {
           "id": "ch_tv_me",
           "label": "that was me",
-          "tells": "admitted watching {THING}"
+          "tells": "admitted watching {THING}",
+          "match": [
+            "that was me"
+          ]
         },
         {
           "id": "ch_tv_not",
           "label": "wasnt me",
-          "tells": "denied watching {THING}"
+          "tells": "denied watching {THING}",
+          "match": [
+            "wasnt me",
+            "wasnt"
+          ]
         }
       ]
     },
@@ -919,12 +1038,22 @@
         {
           "id": "ch_coat_yes",
           "label": "yeah ive got one",
-          "tells": "said he had a coat"
+          "tells": "said he had a coat",
+          "match": [
+            "yeah ive got one",
+            "yeah",
+            "got",
+            "one"
+          ]
         },
         {
           "id": "ch_coat_no",
           "label": "ill sort it",
-          "tells": "said he would sort a coat"
+          "tells": "said he would sort a coat",
+          "match": [
+            "ill sort it",
+            "sort"
+          ]
         }
       ]
     },
@@ -965,12 +1094,22 @@
         {
           "id": "ch_insp_ok",
           "label": "thats fine",
-          "tells": "agreed to the inspection {WHEN}"
+          "tells": "agreed to the inspection {WHEN}",
+          "match": [
+            "thats fine",
+            "thats",
+            "fine"
+          ]
         },
         {
           "id": "ch_insp_later",
           "label": "can it wait",
-          "tells": "asked dave to delay the inspection"
+          "tells": "asked dave to delay the inspection",
+          "match": [
+            "can it wait",
+            "can",
+            "wait"
+          ]
         }
       ]
     },
@@ -1009,7 +1148,11 @@
           "memory": {
             "tag": "said_i_know",
             "fragment": "you said you knew"
-          }
+          },
+          "match": [
+            "i know",
+            "know"
+          ]
         },
         {
           "id": "ch_r_deny",
@@ -1018,7 +1161,12 @@
           "memory": {
             "tag": "denied_memory",
             "fragment": "you said you never said it"
-          }
+          },
+          "match": [
+            "i never said that",
+            "never",
+            "said"
+          ]
         }
       ]
     },
@@ -1052,7 +1200,11 @@
         {
           "id": "ch_r_car_ok",
           "label": "i forgot",
-          "tells": "admitted forgetting"
+          "tells": "admitted forgetting",
+          "match": [
+            "i forgot",
+            "forgot"
+          ]
         },
         {
           "id": "ch_r_car_deny",
@@ -1061,7 +1213,12 @@
           "memory": {
             "tag": "denied_memory",
             "fragment": "you said you never said it"
-          }
+          },
+          "match": [
+            "i did check it",
+            "did",
+            "check"
+          ]
         }
       ]
     },
@@ -1099,7 +1256,12 @@
         {
           "id": "ch_r_chore_soon",
           "label": "ill do it tonight",
-          "tells": "promised again"
+          "tells": "promised again",
+          "match": [
+            "ill do it tonight",
+            "do",
+            "tonight"
+          ]
         },
         {
           "id": "ch_r_chore_no",
@@ -1108,7 +1270,12 @@
           "memory": {
             "tag": "denied_memory",
             "fragment": "you said you never said it"
-          }
+          },
+          "match": [
+            "i never said that",
+            "never",
+            "said"
+          ]
         }
       ]
     },
@@ -1146,12 +1313,22 @@
         {
           "id": "ch_r_parcel_who",
           "label": "who looked first",
-          "tells": "asked who looked first"
+          "tells": "asked who looked first",
+          "match": [
+            "who looked first",
+            "who",
+            "looked",
+            "first"
+          ]
         },
         {
           "id": "ch_r_parcel_drop",
           "label": "forget it",
-          "tells": "dropped it"
+          "tells": "dropped it",
+          "match": [
+            "forget it",
+            "forget"
+          ]
         }
       ]
     },
@@ -1185,12 +1362,20 @@
         {
           "id": "ch_r_dave_sorry",
           "label": "sorry dave",
-          "tells": "apologised to dave"
+          "tells": "apologised to dave",
+          "match": [
+            "sorry dave",
+            "sorry",
+            "dave"
+          ]
         },
         {
           "id": "ch_r_dave_home",
           "label": "i was in",
-          "tells": "insisted he was home"
+          "tells": "insisted he was home",
+          "match": [
+            "i was in"
+          ]
         }
       ]
     },
@@ -1228,12 +1413,20 @@
           "memory": {
             "tag": "asked_how",
             "fragment": "you asked how i knew"
-          }
+          },
+          "match": [
+            "how do you know that",
+            "how",
+            "do",
+            "you",
+            "know"
+          ]
         },
         {
           "id": "ch_r_u_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1272,12 +1465,17 @@
           "memory": {
             "tag": "claimed_to_be_ren",
             "fragment": "you said you were ren"
-          }
+          },
+          "match": [
+            "im ren",
+            "ren"
+          ]
         },
         {
           "id": "ch_r_u_quiet",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1315,7 +1513,10 @@
           "memory": {
             "tag": "told_it_stop",
             "fragment": "you told me to stop"
-          }
+          },
+          "match": [
+            "stop"
+          ]
         },
         {
           "id": "ch_r_u_watch",
@@ -1324,7 +1525,13 @@
           "memory": {
             "tag": "asked_reading",
             "fragment": "you asked if i was reading these"
-          }
+          },
+          "match": [
+            "are you reading these",
+            "you",
+            "reading",
+            "these"
+          ]
         }
       ]
     },
@@ -1362,12 +1569,23 @@
           "memory": {
             "tag": "hears_it",
             "fragment": "you said you hear it most nights"
-          }
+          },
+          "match": [
+            "i hear it most nights",
+            "hear",
+            "most",
+            "nights"
+          ]
         },
         {
           "id": "ch_r_noise_drop",
           "label": "i was probably wrong",
-          "tells": "walked it back"
+          "tells": "walked it back",
+          "match": [
+            "i was probably wrong",
+            "probably",
+            "wrong"
+          ]
         }
       ]
     },
@@ -1401,12 +1619,18 @@
         {
           "id": "ch_r_t_who",
           "label": "who are you",
-          "tells": "asked who it was"
+          "tells": "asked who it was",
+          "match": [
+            "who are you",
+            "who",
+            "you"
+          ]
         },
         {
           "id": "ch_r_t_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1445,12 +1669,20 @@
           "memory": {
             "tag": "told_it_stop",
             "fragment": "you told me to stop"
-          }
+          },
+          "match": [
+            "get off his account",
+            "get",
+            "off",
+            "his",
+            "account"
+          ]
         },
         {
           "id": "ch_r_s_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1492,12 +1724,20 @@
           "memory": {
             "tag": "asked_how",
             "fragment": "you asked how i knew"
-          }
+          },
+          "match": [
+            "how would you know that",
+            "how",
+            "would",
+            "you",
+            "know"
+          ]
         },
         {
           "id": "ch_r_ren_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1543,12 +1783,18 @@
           "memory": {
             "tag": "asked_where",
             "fragment": "you asked where"
-          }
+          },
+          "match": [
+            "from where",
+            "from",
+            "where"
+          ]
         },
         {
           "id": "ch_l_none1",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1591,12 +1837,19 @@
           "memory": {
             "tag": "said_put_down",
             "fragment": "you said you were putting it down"
-          }
+          },
+          "match": [
+            "im putting it down now",
+            "putting",
+            "down",
+            "now"
+          ]
         },
         {
           "id": "ch_l_none2",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1638,12 +1891,18 @@
         {
           "id": "ch_l_so",
           "label": "so did you",
-          "tells": "said it had read them too"
+          "tells": "said it had read them too",
+          "match": [
+            "so did you",
+            "did",
+            "you"
+          ]
         },
         {
           "id": "ch_l_none3",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1681,12 +1940,17 @@
         {
           "id": "ch_l_still_here",
           "label": "im still here",
-          "tells": "admitted he was still there"
+          "tells": "admitted he was still there",
+          "match": [
+            "im still here",
+            "still"
+          ]
         },
         {
           "id": "ch_l_none4",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1724,12 +1988,18 @@
         {
           "id": "ch_l_outside",
           "label": "are you outside",
-          "tells": "asked if it was outside"
+          "tells": "asked if it was outside",
+          "match": [
+            "are you outside",
+            "you",
+            "outside"
+          ]
         },
         {
           "id": "ch_l_none5",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1771,12 +2041,18 @@
         {
           "id": "ch_l_sam_ok",
           "label": "are you alright",
-          "tells": "asked if sam was alright"
+          "tells": "asked if sam was alright",
+          "match": [
+            "are you alright",
+            "you",
+            "alright"
+          ]
         },
         {
           "id": "ch_l_sam_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1814,12 +2090,17 @@
         {
           "id": "ch_l_tired",
           "label": "im just tired",
-          "tells": "said he was tired"
+          "tells": "said he was tired",
+          "match": [
+            "im just tired",
+            "tired"
+          ]
         },
         {
           "id": "ch_l_mom_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1866,12 +2147,21 @@
         {
           "id": "ch_l_which",
           "label": "which one do you think it is",
-          "tells": "asked which it believed"
+          "tells": "asked which it believed",
+          "match": [
+            "which one do you think it is",
+            "which",
+            "one",
+            "do",
+            "you",
+            "think"
+          ]
         },
         {
           "id": "ch_l_none6",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -1908,12 +2198,19 @@
         {
           "id": "ch_p_light",
           "label": "what were you doing there",
-          "tells": "asked what it was doing there"
+          "tells": "asked what it was doing there",
+          "match": [
+            "what were you doing there",
+            "what",
+            "you",
+            "doing"
+          ]
         },
         {
           "id": "ch_p_none1",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_light"
@@ -1952,12 +2249,16 @@
         {
           "id": "ch_p_parcel",
           "label": "why",
-          "tells": "asked why"
+          "tells": "asked why",
+          "match": [
+            "why"
+          ]
         },
         {
           "id": "ch_p_none2",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_parcel"
@@ -1995,12 +2296,20 @@
         {
           "id": "ch_p_heat",
           "label": "when do you get there",
-          "tells": "asked when it gets there"
+          "tells": "asked when it gets there",
+          "match": [
+            "when do you get there",
+            "when",
+            "do",
+            "you",
+            "get"
+          ]
         },
         {
           "id": "ch_p_none3",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_heating"
@@ -2038,12 +2347,19 @@
         {
           "id": "ch_p_rota",
           "label": "thats not mine",
-          "tells": "denied the handwriting"
+          "tells": "denied the handwriting",
+          "match": [
+            "thats not mine",
+            "thats",
+            "not",
+            "mine"
+          ]
         },
         {
           "id": "ch_p_none4",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_rota"
@@ -2081,12 +2397,19 @@
         {
           "id": "ch_p_noise",
           "label": "is that why she left",
-          "tells": "asked if that was why priya left"
+          "tells": "asked if that was why priya left",
+          "match": [
+            "is that why she left",
+            "why",
+            "she",
+            "left"
+          ]
         },
         {
           "id": "ch_p_none5",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_noise"
@@ -2125,12 +2448,18 @@
         {
           "id": "ch_p_signin",
           "label": "youre in the flat",
-          "tells": "said it was in the flat"
+          "tells": "said it was in the flat",
+          "match": [
+            "youre in the flat",
+            "youre",
+            "flat"
+          ]
         },
         {
           "id": "ch_p_none6",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresClue": "clue_signin"
@@ -2168,12 +2497,20 @@
         {
           "id": "ch_p_c1",
           "label": "how would you know",
-          "tells": "asked how it knew"
+          "tells": "asked how it knew",
+          "match": [
+            "how would you know",
+            "how",
+            "would",
+            "you",
+            "know"
+          ]
         },
         {
           "id": "ch_p_none7",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2210,12 +2547,18 @@
           "memory": {
             "tag": "asked_room",
             "fragment": "you asked which room"
-          }
+          },
+          "match": [
+            "which room",
+            "which",
+            "room"
+          ]
         },
         {
           "id": "ch_p_none8",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2249,12 +2592,18 @@
         {
           "id": "ch_p_r1",
           "label": "im putting it down",
-          "tells": "said he was putting it down"
+          "tells": "said he was putting it down",
+          "match": [
+            "im putting it down",
+            "putting",
+            "down"
+          ]
         },
         {
           "id": "ch_p_none9",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresMemory": "asked_room",
@@ -2297,12 +2646,18 @@
           "memory": {
             "tag": "admitted_not_ren",
             "fragment": "you said you werent ren"
-          }
+          },
+          "match": [
+            "im not ren",
+            "not",
+            "ren"
+          ]
         },
         {
           "id": "ch_p_none10",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2340,12 +2695,19 @@
         {
           "id": "ch_p_n1",
           "label": "what happened to ren",
-          "tells": "asked what happened to ren"
+          "tells": "asked what happened to ren",
+          "match": [
+            "what happened to ren",
+            "what",
+            "happened",
+            "ren"
+          ]
         },
         {
           "id": "ch_p_none11",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ],
       "requiresMemory": "admitted_not_ren",
@@ -2384,12 +2746,17 @@
         {
           "id": "ch_p_f1",
           "label": "i couldnt",
-          "tells": "said he could not put it down"
+          "tells": "said he could not put it down",
+          "match": [
+            "i couldnt",
+            "couldnt"
+          ]
         },
         {
           "id": "ch_p_none12",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2426,12 +2793,20 @@
         {
           "id": "ch_p_sam",
           "label": "where will you go",
-          "tells": "asked where sam would go"
+          "tells": "asked where sam would go",
+          "match": [
+            "where will you go",
+            "where",
+            "will",
+            "you",
+            "go"
+          ]
         },
         {
           "id": "ch_p_sam_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2468,12 +2843,16 @@
         {
           "id": "ch_p_mom",
           "label": "im here",
-          "tells": "told mom he was there"
+          "tells": "told mom he was there",
+          "match": [
+            "im here"
+          ]
         },
         {
           "id": "ch_p_mom_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2513,12 +2892,18 @@
         {
           "id": "ch_p_d1",
           "label": "i turned it off",
-          "tells": "said he turned it off"
+          "tells": "said he turned it off",
+          "match": [
+            "i turned it off",
+            "turned",
+            "off"
+          ]
         },
         {
           "id": "ch_p_d1_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2558,12 +2943,18 @@
         {
           "id": "ch_p_d2",
           "label": "stop counting",
-          "tells": "told it to stop counting"
+          "tells": "told it to stop counting",
+          "match": [
+            "stop counting",
+            "stop",
+            "counting"
+          ]
         },
         {
           "id": "ch_p_d2_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2604,12 +2995,19 @@
         {
           "id": "ch_p_d3",
           "label": "i didnt see you",
-          "tells": "said he did not see it"
+          "tells": "said he did not see it",
+          "match": [
+            "i didnt see you",
+            "didnt",
+            "see",
+            "you"
+          ]
         },
         {
           "id": "ch_p_d3_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2649,12 +3047,18 @@
         {
           "id": "ch_p_d4",
           "label": "what about it",
-          "tells": "asked what about it"
+          "tells": "asked what about it",
+          "match": [
+            "what about it",
+            "what",
+            "about"
+          ]
         },
         {
           "id": "ch_p_d4_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2693,12 +3097,21 @@
         {
           "id": "ch_g_play",
           "label": "go on then",
-          "tells": "played sams game"
+          "tells": "played sams game",
+          "match": [
+            "go on then",
+            "go"
+          ]
         },
         {
           "id": "ch_g_no",
           "label": "im not playing",
-          "tells": "refused to play"
+          "tells": "refused to play",
+          "match": [
+            "im not playing",
+            "not",
+            "playing"
+          ]
         }
       ]
     },
@@ -2741,12 +3154,16 @@
         {
           "id": "ch_p_g1",
           "label": "how",
-          "tells": "asked how it knew the number"
+          "tells": "asked how it knew the number",
+          "match": [
+            "how"
+          ]
         },
         {
           "id": "ch_p_g_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2790,12 +3207,19 @@
         {
           "id": "ch_p_memo",
           "label": "thats you breathing",
-          "tells": "said it was breathing"
+          "tells": "said it was breathing",
+          "match": [
+            "thats you breathing",
+            "thats",
+            "you",
+            "breathing"
+          ]
         },
         {
           "id": "ch_p_memo_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2838,12 +3262,19 @@
         {
           "id": "ch_p_spot",
           "label": "thats not mine",
-          "tells": "denied the bag was his"
+          "tells": "denied the bag was his",
+          "match": [
+            "thats not mine",
+            "thats",
+            "not",
+            "mine"
+          ]
         },
         {
           "id": "ch_p_spot_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2882,17 +3313,27 @@
           "memory": {
             "tag": "said_remembers",
             "fragment": "you said you remembered"
-          }
+          },
+          "match": [
+            "i remember",
+            "remember"
+          ]
         },
         {
           "id": "ch_p_recall_no",
           "label": "stop doing this",
-          "tells": "asked it to stop"
+          "tells": "asked it to stop",
+          "match": [
+            "stop doing this",
+            "stop",
+            "doing"
+          ]
         },
         {
           "id": "ch_p_recall_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2935,17 +3376,28 @@
           "memory": {
             "tag": "played_pairs",
             "fragment": "you said one go"
-          }
+          },
+          "match": [
+            "one go",
+            "one",
+            "go"
+          ]
         },
         {
           "id": "ch_m_slow",
           "label": "priya is slow",
-          "tells": "took sams side"
+          "tells": "took sams side",
+          "match": [
+            "priya is slow",
+            "priya",
+            "slow"
+          ]
         },
         {
           "id": "ch_m_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -2979,12 +3431,17 @@
         {
           "id": "ch_p_rb_did",
           "label": "i did",
-          "tells": "insisted he remembered"
+          "tells": "insisted he remembered",
+          "match": [
+            "i did",
+            "did"
+          ]
         },
         {
           "id": "ch_p_rb_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     },
@@ -3018,12 +3475,18 @@
         {
           "id": "ch_m_back",
           "label": "i was doing something",
-          "tells": "said he was busy"
+          "tells": "said he was busy",
+          "match": [
+            "i was doing something",
+            "doing",
+            "something"
+          ]
         },
         {
           "id": "ch_m_back_none",
           "label": "[say nothing]",
-          "tells": null
+          "tells": null,
+          "silent": true
         }
       ]
     }

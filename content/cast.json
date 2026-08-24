@@ -9,7 +9,13 @@
       "capitalisation": "lower",
       "punctuation": "sparse",
       "voice": "blunt, escalates to capitals when annoyed, never apologises first",
-      "baseReplies": 6
+      "baseReplies": 6,
+      "unmatched": [
+        "what",
+        "what are you on about",
+        "mate what",
+        "is that meant to mean something"
+      ]
     },
     {
       "id": "c_priya",
@@ -19,7 +25,12 @@
       "capitalisation": "lower",
       "punctuation": "none",
       "voice": "flat, factual, wins arguments by repeating herself",
-      "baseReplies": 6
+      "baseReplies": 6,
+      "unmatched": [
+        "that isnt an answer",
+        "that isnt an answer either",
+        "im asking you a question"
+      ]
     },
     {
       "id": "c_mom",
@@ -29,7 +40,13 @@
       "capitalisation": "lower",
       "punctuation": "none",
       "voice": "asks the same question twice, never uses a question mark",
-      "baseReplies": 5
+      "baseReplies": 5,
+      "unmatched": [
+        "ren i dont understand",
+        "i dont understand love",
+        "say that again for me",
+        "is that a yes or a no"
+      ]
     },
     {
       "id": "c_dave",
@@ -39,7 +56,12 @@
       "capitalisation": "sentence",
       "punctuation": "full",
       "voice": "the only character who writes in full sentences. Never normalise anyone to match him, and never normalise him down.",
-      "baseReplies": 2
+      "baseReplies": 2,
+      "unmatched": [
+        "Sorry mate, not with you.",
+        "Not sure what you mean there.",
+        "Was that meant for me?"
+      ]
     },
     {
       "id": "c_notify",
@@ -49,7 +71,8 @@
       "capitalisation": "sentence",
       "punctuation": "full",
       "voice": "automated. Never varies. Does not know anyone is gone.",
-      "baseReplies": 0
+      "baseReplies": 0,
+      "unmatched": []
     },
     {
       "id": "c_unknown",
@@ -59,7 +82,14 @@
       "capitalisation": "lower",
       "punctuation": "none",
       "voice": "states things. Never asks twice. Quotes the player exactly, and to the wrong person -- it has read the other threads.",
-      "baseReplies": 0
+      "baseReplies": 0,
+      "unmatched": [
+        "thats not what i asked",
+        "i can see you typing",
+        "youre typing a lot tonight",
+        "say the other thing",
+        "you typed that and deleted it twice"
+      ]
     }
   ]
 }

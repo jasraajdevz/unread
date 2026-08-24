@@ -1310,3 +1310,76 @@ than the GitHub noreply address, because the script that created that repo passe
 explicitly. Every commit in `unread` itself uses the noreply address. If it is rewritten,
 note that a rewrite reduces exposure rather than erasing it: the address may already be
 cached by anything that read the API.
+
+---
+
+## D44 — the player types
+
+**Status:** decided · **Scope:** `src/director.js`, `src/engine.html`, `content/`,
+`Resources/story.json` (schema v8) · **Enforced by:** rules 20 and 21
+
+There is a field at the bottom of every thread. The player types whatever they want.
+
+**Every line the characters say is still written down in `content/`.** Nothing generates
+dialogue at runtime, there is no model, no server and no key, and the artifact still loads
+nothing but a Google Font. What changed is that the player is no longer picking from a
+list — and what lands in their bubble is *what they typed*, not the label of whatever it
+matched. A message that comes back reworded is a message you did not send.
+
+`Director.matchReply(text, choices)` is pure, lives beside the rest of the director, and
+is deliberately dumb and deliberately explainable: a scoring pass over keywords a human
+wrote down next to each choice. Phrase hits beat word hits. Yes and no are folded across
+their spellings, because nobody should have to write `yep`, `nah` and `aye` out next to
+every choice — and only those two families are folded, because anything wider and the
+matcher starts deciding what the player meant instead of reading it.
+
+**Negations are never stopwords.** "i did" and "i didnt" are the same sentence minus three
+letters and the opposite answer, and a matcher that scores them the same is a matcher that
+makes the player confess when they meant to deny.
+
+### Rule 20 — a reply nobody can type is a reply that is not there
+
+Every non-silent choice must carry `match` terms, and no two choices in one breath may
+answer to the same word. Rule 18 made a puzzle's answer provably findable; this is that
+rule for replies. All 129 choices carry them, and a test types each label back at its own
+choice set and asserts it lands.
+
+Bracketed choices — `[say nothing]`, `[delete this conversation]` — are `silent: true`.
+They are acts, not sentences, and you cannot type your way into one.
+
+### Rule 21 — somebody answers the unexpected
+
+Most of what a player types will be something nobody wrote a reply to, so that path is not
+an edge case, it is the main one. Each contact carries `unmatched` lines in their own
+voice. Notify's list is empty and that is the correct answer: it is automated and does not
+know anyone is gone.
+
+The number's lines are the reason to have built any of this. It is never confused. It
+says `i can see you typing`, and `you typed that and deleted it twice`.
+
+### The buttons stay
+
+Suggested replies above the field, the way a real messenger does it. It also means the
+game is still finishable if the matcher has a bad day, which matters for a build that is
+already public and already being played.
+
+### What is now kept
+
+`contactState.typed` holds every line the player typed, verbatim, with the day. Nothing
+reads it yet. Act III is going to.
+
+### Four bugs, and where they were
+
+1. `match` and `silent` were dropped by all four places a choice is rebuilt between the
+   JSON and the button, so the matcher scored against nulls and nothing could ever land.
+   The engine now matches against `S.liveChoices` — what is actually on screen — rather
+   than re-deriving it, so there is one answer to "what can they reply to right now".
+2. `openThread` appended a composer and `renderChoices` appended another, so a thread had
+   two fields with the same id. `renderChoices` owns the panel; there is one call site.
+3. Day one's three choices never went through `pendingChoices`, so the most important
+   question in the game was the one you could not type an answer to.
+4. `matchReply` bailed when the input tokenised to nothing — and "that was me" is three
+   stopwords and a real authored reply. Four choices could not match their own labels.
+
+The last one was found by a test that types every label in the game back at itself. It is
+the kind of bug no amount of playing finds, because you would have to try that exact line.

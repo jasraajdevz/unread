@@ -1184,3 +1184,164 @@ test('D40 — on a phone it is the phone, on a desktop it is a phone on a desk',
   expect(big.shadow).toBe(true);
   expect(big.foot).not.toBe('none');
 });
+
+// ---------------------------------------------------------------------------
+// D44 — the player types.
+// ---------------------------------------------------------------------------
+
+test('D44 — the matcher reads what a person would actually type', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // it is pure, so it can be driven directly with a fixture rather than a conversation
+  const out = await page.evaluate(() => {
+    const choices = [
+      { id: 'heard', label: 'i heard it too', match: ['heard', 'yes', 'me too'] },
+      { id: 'didnt', label: 'i didnt hear anything', match: ['no', 'didnt hear', 'nothing'] },
+      { id: 'quiet', label: '[say nothing]', silent: true },
+    ];
+    const ask = (t) => {
+      const m = window.Director.matchReply(t, choices);
+      return m ? m.choice.id : null;
+    };
+    return {
+      plain:    ['i heard it too', 'yes', 'no'].map(ask),
+      spelling: ['yeah', 'yep', 'nope', 'nah', 'ok'].map(ask),
+      caps:     ['HEARD IT', 'Heard It'].map(ask),
+      apostr:   ["i didn't hear anything", 'i didnt hear anything'].map(ask),
+      negated:  ['i heard nothing', 'i didnt hear it'].map(ask),
+      nonsense: ['what time is the bus', 'asdfgh', '', '   ', '???'].map(ask),
+      // typing the silent option's own words must never select it
+      silent:   [ask('[say nothing]'), ask('say nothing')],
+    };
+  });
+
+  expect(out.plain).toEqual(['heard', 'heard', 'didnt']);
+  expect(out.spelling, 'yes and no arrive in a dozen spellings')
+    .toEqual(['heard', 'heard', 'didnt', 'didnt', 'heard']);
+  expect(out.caps, 'shouting is still talking').toEqual(['heard', 'heard']);
+  expect(out.apostr, 'half of them will not reach for the apostrophe')
+    .toEqual(['didnt', 'didnt']);
+  expect(out.negated, 'a negation flips the meaning, not just the wording')
+    .toEqual(['didnt', 'didnt']);
+  expect(out.nonsense, 'nobody guesses when nobody knows')
+    .toEqual([null, null, null, null, null]);
+  expect(out.silent.includes('quiet'),
+    'a silent choice is never something you can type your way into').toBe(false);
+});
+
+test('D44 — typing a reply does everything tapping it did', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.evaluate(() => window.__unread.loadPhase(2, 'day'));
+  await page.locator('[data-thread="t_flat"]').click();
+
+  await expect(page.locator('#say'), 'exactly one field to type into').toHaveCount(1);
+  await expect(page.locator('#send')).toHaveCount(1);
+
+  const target = await page.evaluate(() =>
+    window.__unread.state.liveChoices.filter((c) => !c.silent)[0]);
+  const before = await page.evaluate(() => window.__unread.choicesForThread('t_flat'));
+  expect(before).toContain(target.id);
+
+  await page.locator('#say').fill(target.label);
+  await page.locator('#send').click();
+
+  // what lands in the bubble is what the player typed, stamped as theirs
+  const mine = page.locator('.msg.me').last();
+  await expect(mine).toHaveAttribute('data-src', 'player.typed');
+  expect((await mine.innerText()).split('\n')[0]).toBe(target.label);
+
+  // the question is spent, and the field is empty and still there
+  const after = await page.evaluate(() => window.__unread.choicesForThread('t_flat'));
+  expect(after, 'that question is answered').not.toContain(target.id);
+  await expect(page.locator('#say')).toHaveValue('');
+  await expect(page.locator('#say')).toHaveCount(1);
+
+  // and it recorded what the tap would have recorded
+  if (target.tells) {
+    const told = await page.evaluate(() =>
+      ((window.__unread.state.save.contactState || {}).lastToldByRen || []).map((t) => t.said));
+    expect(told, 'a typed reply is still a thing Ren said').toContain(target.tells);
+  }
+
+  // the exact words are kept, verbatim, for Act III to read back
+  const typed = await page.evaluate(() => window.__unread.typed());
+  expect(typed[typed.length - 1].text).toBe(target.label);
+  expect(typed[typed.length - 1].threadId).toBe('t_flat');
+});
+
+test('D44 — nobody wrote a reply to that, and the thread says so in character',
+  async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_mom"]').click();
+
+  const lines = await page.evaluate(() => {
+    const cast = window.CONTENT.cast.cast.filter((c) => c.thread === 't_mom');
+    return cast.reduce((all, c) => all.concat(c.unmatched || []), []);
+  });
+  expect(lines.length, 'Mom has something to say to the unexpected').toBeGreaterThan(1);
+
+  const heard = [];
+  for (const nonsense of ['whats the weather', 'i like bread', 'tell me a joke',
+                          'anyway', 'nothing much']) {
+    const was = await page.locator('.msg').count();
+    await page.locator('#say').fill(nonsense);
+    await page.locator('#send').click();
+    await expect(page.locator('.msg')).toHaveCount(was + 2, { timeout: 4000 });
+    const last = page.locator('.msg.them').last();
+    await expect(last).toHaveAttribute('data-src', 'content.unmatched');
+    heard.push((await last.innerText()).split('\n')[0]);
+  }
+  for (const line of heard) {
+    expect(lines, 'every deflection is a line somebody wrote down').toContain(line);
+  }
+  for (let i = 1; i < heard.length; i++) {
+    expect(heard[i], 'saying it twice running reads as a broken bot')
+      .not.toBe(heard[i - 1]);
+  }
+});
+
+test('D44 — every reply in the game can be reached by typing', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const audit = await page.evaluate(() => {
+    const sets = [];
+    (window.STORY.beats || []).forEach((b) => {
+      if (b.choices) sets.push({ where: 'beat ' + b.id, choices: b.choices });
+    });
+    window.CONTENT.templates.templates.forEach((t) => {
+      if (t.choices) sets.push({ where: 'template ' + t.id, choices: t.choices });
+    });
+    const unreachable = [], ambiguous = [];
+    sets.forEach((set) => {
+      set.choices.filter((c) => !c.silent).forEach((c) => {
+        if (!(c.match || []).length) unreachable.push(set.where + '/' + c.id);
+      });
+      window.Director.collisions(set.choices).forEach((clash) =>
+        ambiguous.push(set.where + ': ' + clash.a + ' vs ' + clash.b));
+    });
+    return { sets: sets.length, unreachable, ambiguous };
+  });
+
+  expect(audit.sets, 'there are questions to answer').toBeGreaterThan(30);
+  expect(audit.unreachable, 'a reply nobody can type is a reply that is not there')
+    .toEqual([]);
+  expect(audit.ambiguous, 'two replies to the same word is a coin flip').toEqual([]);
+
+  // and every one of them really does match its own label back
+  const misses = await page.evaluate(() => {
+    const out = [];
+    window.CONTENT.templates.templates.forEach((t) => {
+      const live = (t.choices || []).filter((c) => !c.silent);
+      live.forEach((c) => {
+        const m = window.Director.matchReply(c.label, live);
+        if (!m || m.choice.id !== c.id) out.push(t.id + '/' + c.id + ' ' + JSON.stringify(c.label));
+      });
+    });
+    return out;
+  });
+  expect(misses, 'typing the reply word for word must reach it').toEqual([]);
+});

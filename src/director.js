@@ -266,6 +266,8 @@
           kind: 'choice',
           choiceId: choice.id,
           label: choice.label,
+          match: choice.match || null,
+          silent: !!choice.silent,
           tells: choice.tells ? fillSlots(choice.tells, slots) : null,
           revealsClue: choice.revealsClue || null,
           memory: choice.memory
@@ -315,6 +317,8 @@
             kind: 'choice',
             choiceId: choice.id,
             label: choice.label,
+            match: choice.match || null,
+            silent: !!choice.silent,
             tells: choice.tells ? fillSlots(choice.tells, rescueSlots) : null,
             revealsClue: choice.revealsClue || null,
             memory: choice.memory
@@ -470,11 +474,162 @@
     return days;
   }
 
+
+  /* ---- what the player typed --------------------------------------------
+     The player types freely; this decides which authored reply they meant. It is
+     deliberately dumb and deliberately explainable: a scoring pass over keywords
+     that a human wrote down next to each choice. Nothing here generates a line.
+
+     Negations are never stopwords. "i did" and "i didnt" are the same sentence
+     minus three letters, and getting that wrong is the difference between
+     confessing and denying. */
+
+  var STOPWORDS = {
+    the: 1, a: 1, an: 1, and: 1, or: 1, but: 1, of: 1, to: 1, in: 1, on: 1, at: 1,
+    is: 1, are: 1, was: 1, were: 1, be: 1, been: 1, am: 1, im: 1, ive: 1, ill: 1,
+    it: 1, its: 1, this: 1, that: 1, there: 1, here: 1, then: 1, so: 1, just: 1,
+    for: 1, with: 1, my: 1, your: 1, we: 1, they: 1, them: 1, i: 1, me: 1
+  };
+
+  var NEGATIONS = {
+    no: 1, not: 1, nope: 1, dont: 1, didnt: 1, doesnt: 1, wasnt: 1, isnt: 1,
+    wont: 1, cant: 1, never: 1, nothing: 1, nobody: 1, none: 1, neither: 1
+  };
+
+  /* Yes and no arrive in two dozen spellings and nobody should have to write them all
+     out next to every choice. Only these two families are folded -- anything wider and
+     the matcher starts deciding what the player meant instead of reading it. */
+  var CANON = (function () {
+    var map = {};
+    var families = [
+      ['yes', 'yeah yep yea aye yup sure ok okay fine course certainly definitely absolutely'],
+      ['no',  'nope nah naw negative']
+    ];
+    for (var i = 0; i < families.length; i++) {
+      var head = families[i][0], words = families[i][1].split(' ');
+      map[head] = head;
+      for (var j = 0; j < words.length; j++) map[words[j]] = head;
+    }
+    return map;
+  })();
+
+  function canon(word) { return CANON[word] || word; }
+
+  /* Apostrophes go rather than split: didn't and didnt must be the same word, because
+     half the people typing will not reach for the apostrophe on a phone. */
+  function normalise(text) {
+    return String(text == null ? '' : text)
+      .toLowerCase()
+      .replace(/['’`]/g, '')
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function tokenise(text) {
+    var out = [], raw = normalise(text).split(' ');
+    for (var i = 0; i < raw.length; i++) {
+      var w = raw[i];
+      if (!w) continue;
+      if (STOPWORDS[w] && !NEGATIONS[w]) continue;
+      out.push(canon(w));
+    }
+    return out;
+  }
+
+  function hasNegation(tokens) {
+    for (var i = 0; i < tokens.length; i++) if (NEGATIONS[tokens[i]]) return true;
+    return false;
+  }
+
+  var PHRASE_HIT = 5;    /* they typed the whole authored phrase */
+  var TERM_HIT   = 3;    /* they typed a word someone wrote down for this choice */
+  var LABEL_HIT  = 1;    /* they typed a word off the button itself */
+  var NEG_MISS   = 4;    /* they negated and this choice does not, or the reverse */
+  var MIN_SCORE  = 3;    /* below this, nobody understood them */
+
+  function scoreChoice(input, tokens, choice) {
+    var terms = choice.match || [], score = 0, i, j, seen = {};
+
+    for (i = 0; i < terms.length; i++) {
+      var term = normalise(terms[i]);
+      if (!term) continue;
+      if (term.indexOf(' ') >= 0) {
+        if (input.indexOf(term) >= 0) score += PHRASE_HIT;
+        continue;
+      }
+      var want = canon(term);
+      for (j = 0; j < tokens.length; j++) {
+        if (tokens[j] === want && !seen['t' + want]) { seen['t' + want] = 1; score += TERM_HIT; }
+      }
+    }
+
+    var label = tokenise(choice.label || '');
+    for (i = 0; i < label.length; i++) {
+      for (j = 0; j < tokens.length; j++) {
+        if (tokens[j] === label[i] && !seen['l' + label[i]]) {
+          seen['l' + label[i]] = 1; score += LABEL_HIT;
+        }
+      }
+    }
+
+    /* "i did" and "i didnt" score identically on overlap alone. They are opposites. */
+    if (score > 0) {
+      var mine = hasNegation(tokens);
+      var theirs = hasNegation(label.concat(terms.join(' ').split(' ')));
+      if (mine !== theirs) score -= NEG_MISS;
+    }
+    return score;
+  }
+
+  /* Returns the choice they meant, or null if nobody could tell. Deterministic: a tie
+     goes to the earlier choice, because a coin flip reads to the player as a bug. */
+  function matchReply(text, choices) {
+    var input = normalise(text);
+    if (!input) return null;
+    /* "that was me" is three stopwords and nothing else, and it is a real reply someone
+       wrote. Bailing on an empty token list threw away every phrase-only match. */
+    var tokens = tokenise(text);
+
+    var best = null, bestScore = 0, runnerUp = 0;
+    for (var i = 0; i < (choices || []).length; i++) {
+      var choice = choices[i];
+      if (!choice || choice.silent) continue;
+      var score = scoreChoice(input, tokens, choice);
+      if (score > bestScore) { runnerUp = bestScore; bestScore = score; best = choice; }
+      else if (score > runnerUp) { runnerUp = score; }
+    }
+    if (!best || bestScore < MIN_SCORE) return null;
+    return { choice: best, score: bestScore, runnerUp: runnerUp };
+  }
+
+  /* Two choices in the same breath that answer to the same words are a coin flip. The
+     validator uses this; it is here so there is one definition of "ambiguous". */
+  function collisions(choices) {
+    var out = [], i, j;
+    for (i = 0; i < choices.length; i++) {
+      for (j = i + 1; j < choices.length; j++) {
+        if (choices[i].silent || choices[j].silent) continue;
+        var a = (choices[i].match || []).map(normalise);
+        var b = (choices[j].match || []).map(normalise);
+        var shared = a.filter(function (term) { return term && b.indexOf(term) >= 0; });
+        if (shared.length) {
+          out.push({ a: choices[i].id, b: choices[j].id, shared: shared });
+        }
+      }
+    }
+    return out;
+  }
+
   return {
     xmur3: xmur3,
     mulberry32: mulberry32,
     seededRandom: seededRandom,
     fillSlots: fillSlots,
+    normalise: normalise,
+    tokenise: tokenise,
+    matchReply: matchReply,
+    collisions: collisions,
     ladderFor: ladderFor,
     actFor: actFor,
     planPhase: planPhase,

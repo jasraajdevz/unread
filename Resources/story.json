@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "contacts": [
     {
       "id": "c_mom",
@@ -939,6 +939,11 @@
           "next": "b_end_found",
           "setsFlags": [
             "chose_found"
+          ],
+          "match": [
+            "i found this phone",
+            "found",
+            "phone"
           ]
         },
         {
@@ -947,7 +952,8 @@
           "next": "b_end_silence",
           "setsFlags": [
             "chose_silence"
-          ]
+          ],
+          "silent": true
         },
         {
           "id": "c_delete",
@@ -955,7 +961,8 @@
           "next": "b_end_delete",
           "setsFlags": [
             "chose_delete"
-          ]
+          ],
+          "silent": true
         }
       ]
     },

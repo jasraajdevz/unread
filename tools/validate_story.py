@@ -44,7 +44,7 @@ WEEKDAY_NAMES = frozenset([
     "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
     "today", "yesterday", "tomorrow",
 ])
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 # The shape of story.json. A required key must be present; an optional one may be
 # absent but must have the right type when it is there.
@@ -61,7 +61,7 @@ SCHEMA = {
                              "showTimestamp": bool, "requiresFlags": list,
                              "emphasis": str, "game": str}},
     "choice": {"required": {"id": str, "label": str, "next": str},
-               "optional": {"setsFlags": list}},
+               "optional": {"setsFlags": list, "match": list, "silent": bool}},
     "notification": {"required": {"afterSeconds": int, "title": str, "body": str, "resumeBeat": str},
                      "optional": {}},
     "beat": {"required": {"id": str, "threadId": str, "messages": list},
@@ -152,6 +152,63 @@ def _visible_words(text):
     stripped = re.sub(r"<[^>]*>", " ", text)
     stripped = re.sub(r"&[a-zA-Z#0-9]+;", " ", stripped)
     return [t for t in stripped.split() if re.search(r"[A-Za-z0-9]", t)]
+
+
+def audit_typing(story, cast, templates):
+    """RULE 20 and RULE 21 -- the player types now.
+
+    20: a choice with no `match` terms can only be tapped. It exists on screen and not
+        in the game. And two choices in one breath answering to the same word is a coin
+        flip, which the player reads as being ignored. Same principle as rule 18: if the
+        game asks for something, reaching it has to be provable.
+    21: somebody has to answer when the player types something nobody wrote a reply to,
+        or the send button looks broken.
+    """
+    problems = []
+
+    def check(where, choices):
+        live = [c for c in choices if not c.get("silent")]
+        for choice in live:
+            terms = [str(t).strip() for t in (choice.get("match") or []) if str(t).strip()]
+            if not terms:
+                problems.append(
+                    "%s/%s (%r): no 'match' terms, so it can only be tapped. The player "
+                    "types now, and a reply nobody can type is a reply that is not really "
+                    "there. Add the words someone would actually use, or mark it "
+                    '"silent": true.' % (where, choice.get("id"), choice.get("label")))
+        for i in range(len(live)):
+            for j in range(i + 1, len(live)):
+                a = set(str(t).strip().lower() for t in (live[i].get("match") or []))
+                b = set(str(t).strip().lower() for t in (live[j].get("match") or []))
+                shared = sorted(t for t in (a & b) if t)
+                if shared:
+                    problems.append(
+                        "%s: %r and %r both answer to %s, which makes typing it a coin "
+                        "flip. Give them words that tell them apart."
+                        % (where, live[i].get("label"), live[j].get("label"),
+                           ", ".join(repr(t) for t in shared)))
+
+    for beat in story.get("beats") or []:
+        if beat.get("choices"):
+            check("beats/%s" % beat.get("id"), beat["choices"])
+    for template in (templates or {}).get("templates") or []:
+        if template.get("choices"):
+            check("templates/%s" % template.get("id"), template["choices"])
+
+    for member in (cast or {}).get("cast") or []:
+        lines = member.get("unmatched")
+        if lines is None:
+            problems.append(
+                "cast/%s: no 'unmatched' lines. Say what they say when the player types "
+                "something nobody wrote a reply to -- an empty list is a valid answer and "
+                "means they never respond." % member.get("id"))
+        elif (member.get("baseReplies") or 0) > 0 and not lines:
+            problems.append(
+                "cast/%s replies %d times a day but has nothing to say to an unexpected "
+                "line, so typing at them does nothing."
+                % (member.get("id"), member.get("baseReplies")))
+
+    return problems
 
 
 def audit_engine(path):
@@ -868,6 +925,20 @@ def main(argv):
     if content_dir:
         errors = errors + audit_content(
             content_dir, getattr(validator, "emphasis_in_story", 0))
+
+    # RULE 20 / RULE 21 -- everything on screen has to be reachable by typing, and
+    # somebody has to answer when it is not.
+    if content_dir:
+        try:
+            with open(os.path.join(content_dir, "cast.json"), encoding="utf-8") as handle:
+                cast = json.load(handle)
+            with open(os.path.join(content_dir, "templates.json"), encoding="utf-8") as handle:
+                templates = json.load(handle)
+            with open(validator.story_path, encoding="utf-8") as handle:
+                story_doc = json.load(handle)
+            errors = errors + audit_typing(story_doc, cast, templates)
+        except (OSError, ValueError) as error:
+            errors = errors + ["typing audit could not read the content: %s" % error]
 
     if errors:
         print("story validation FAILED (%d problem%s)"

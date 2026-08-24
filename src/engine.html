@@ -421,7 +421,26 @@
     .convo{padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));}
     /* iOS zooms the page on focus for anything under 16px, and never zooms back */
     .searchbar input{font-size:16px;}
-    .foot{display:none;}   /* the same words are in Settings, where there is room */
+  
+  /* ---- the composer ------------------------------------------------------- */
+  .composer{display:flex;gap:8px;align-items:center;padding-top:2px;}
+  .say{flex:1;min-width:0;background:#11151B;border:1px solid var(--line);
+       border-radius:19px;padding:10px 14px;color:var(--ink);font-family:inherit;
+       font-size:15px;line-height:1.2;}
+  .say:focus{outline:none;border-color:#3B4653;background:#141922;}
+  .say::placeholder{color:var(--faint);}
+  .send{flex:none;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;
+        background:linear-gradient(180deg,#3B4A5A,#2F3E4C);color:#EEF2F6;font-size:17px;
+        line-height:1;box-shadow:var(--lift);
+        transition:transform .12s var(--ease),background .15s;}
+  .send:hover{background:linear-gradient(180deg,#44556A,#36475A);}
+  .send:active{transform:scale(.92);}
+  .send:focus-visible{outline:2px solid var(--instr);outline-offset:2px;}
+  @media (max-width:520px),(max-height:560px){
+    .say{font-size:16px;}   /* under 16 and iOS zooms the page on focus */
+  }
+
+  .foot{display:none;}   /* the same words are in Settings, where there is room */
   }
 
   .foot{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#2A313B;
@@ -485,6 +504,13 @@ var Text = (function(){
   return { mint: mint, isToken: isToken, paint: paint };
 })();
 
+/* The player is now an author, so the player gets a minter. Their words are the one
+   thing on screen that is not in any content file, and `data-src="player.typed"` is how
+   the audit says so. */
+var Player = {
+  said: function(text){ return Text.mint("player.typed", String(text == null ? "" : text)); }
+};
+
 /* ============================================================================
    STORY LAYER — knows the schema, touches no DOM (D18)
    ========================================================================== */
@@ -547,6 +573,8 @@ var Story = (function(data){
 var Generated = {
   body: function(event){ return Text.mint("director.message", event.body); },
   label: function(event){ return Text.mint("director.choice", event.label); },
+  /* what a character says when nobody wrote a reply to what the player typed */
+  unmatched: function(body){ return Text.mint("content.unmatched", body); },
   speaker: function(event){
     var cast = (window.CONTENT && window.CONTENT.cast && window.CONTENT.cast.cast) || [];
     var found = null;
@@ -723,7 +751,9 @@ var S = {
   save: null,
   away: null,
   repliesLocked: false,
-  pendingChoices: []
+  pendingChoices: [],
+  liveChoices: [],
+  lastDeflect: {}
 };
 
 var scroll  = document.getElementById("scroll"),
@@ -986,8 +1016,10 @@ function openThread(t){
   });
   if(isLocked(t)) paintLocked(t); else paint(t);
   scroll.scrollTop=0;
-  var mine = choicesForThread(t.id);
-  if(mine.length && !S.repliesLocked) renderChoices(mine);
+  /* One call, because renderChoices owns the panel -- including the composer. Appending
+     it here as well was how a thread ended up with two fields you could type into. */
+  if(isLocked(t) || S.ended) choicesEl.innerHTML = "";
+  else renderChoices(choicesForThread(t.id));
   if(t.id === UNKNOWN){
     if((S.save.day || 1) >= FINAL_DAY) revealFinalEnding();
     runQueue();
@@ -1065,7 +1097,8 @@ function beat4(){
   deliver(UNKNOWN, Story.messagesOf("b_unknown_4", S.flags), function(){
     S.beat=5;
     renderChoices(Story.choicesOf("b_unknown_4").map(function(c){
-      return { id: c.id, token: Story.labelOf(c), choice: c };
+      return { id: c.id, label: c.label, match: c.match, silent: c.silent,
+               token: Story.labelOf(c), choice: c };
     }));
   });
 }
@@ -1118,10 +1151,200 @@ function answerInThread(item){
   }
 }
 
+
+/* The bar you type into. Built fresh per thread so it never carries a draft across. */
+function buildComposer(t){
+  var wrap = document.createElement("form");
+  wrap.className = "composer";
+  wrap.setAttribute("data-thread", t.id);
+
+  var input = document.createElement("input");
+  input.type = "text";
+  input.id = "say";
+  input.className = "say";
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("maxlength", String(MAX_TYPED));
+  input.setAttribute("enterkeyhint", "send");
+
+  var send = document.createElement("button");
+  send.type = "submit";
+  send.className = "send";
+  send.id = "send";
+  send.textContent = SEND_GLYPH;                 /* not-story: a glyph */
+  send.setAttribute("aria-label", "Send");       /* not-story: chrome */
+
+  /* Nobody in this thread is left to answer: Notify never did, and by the end of Act I
+     the budget is gone. The field stays -- being able to type into a room that has
+     stopped answering is the whole of act one. */
+  var mute = S.repliesLocked || !castOf(t.id).some(function(c){
+    return (c.unmatched || []).length > 0;
+  });
+  input.setAttribute("placeholder", mute ? COMPOSE_MUTE : COMPOSE_HINT);
+  input.setAttribute("aria-label", COMPOSE_HINT);
+
+  function submit(e){
+    if(e) e.preventDefault();
+    var text = input.value;
+    if(!String(text).trim()) return;
+    input.value = "";
+    sendTyped(text);
+    input.focus();
+  }
+  wrap.addEventListener("submit", submit);
+
+  wrap.appendChild(input);
+  wrap.appendChild(send);
+  return wrap;
+}
+
+/* ============================================================================
+   TYPING
+   The player types anything. Director.matchReply decides which authored reply they
+   meant; the characters' words are still the ones somebody wrote down. What the
+   player typed is what appears in their bubble -- not the label of whatever it
+   matched, because a message that comes back reworded is a message you did not send.
+   ========================================================================== */
+var MAX_TYPED = 240;
+
+/* Only t_flat declares participantIds, and c_unknown is not in story.json at all, so who
+   is in a thread comes from the cast -- each member names the thread they live in. */
+function castOf(threadId){
+  var cast = (CONTENT.cast && CONTENT.cast.cast) || [];
+  return cast.filter(function(c){ return c.thread === threadId; });
+}
+
+function unmatchedLineFor(threadId){
+  var speakers = castOf(threadId).filter(function(c){
+    return (c.unmatched || []).length > 0;
+  });
+  if(!speakers.length) return null;
+  var r = seededRand(threadId + "|unmatched|" + ((S.save && S.save.day) || 1) + "|" + typedCount());
+  var who = speakers[Math.floor(r() * speakers.length) % speakers.length];
+  var lines = who.unmatched;
+  var i = Math.floor(r() * lines.length) % lines.length;
+  /* the same line twice running reads as a broken bot rather than a person */
+  if(lines.length > 1 && lines[i] === S.lastDeflect[threadId]) i = (i + 1) % lines.length;
+  S.lastDeflect[threadId] = lines[i];
+  return { contactId: who.id, body: lines[i] };
+}
+
+function typedBank(){
+  if(!S.save) return [];
+  var state = S.save.contactState || (S.save.contactState = {});
+  return state.typed || (state.typed = []);
+}
+function typedCount(){ return typedBank().length; }
+
+/* Verbatim, with the day it was said on. Act III is going to read this back. */
+function recordTyped(threadId, text){
+  typedBank().push({
+    day: (S.save && S.save.day) || 1,
+    phase: (S.save && S.save.phase) || "day",
+    threadId: threadId,
+    text: text
+  });
+  Save.write(S.save);
+}
+
+function pushMine(threadId, text){
+  var t = Story.thread(threadId);
+  if(!t || !S.shown[t.id]) return;
+  S.shown[t.id].push({
+    id: "typed_" + t.id + "_" + S.shown[t.id].length,
+    from: "me",
+    kind: "text",
+    body: text,
+    offsetMinutes: 0,
+    live: false,
+    delayMs: 0,
+    typingMs: 0,
+    __threadId: t.id,
+    __token: Player.said(text)
+  });
+  announce({ from: "me" });
+}
+
+function sendTyped(text){
+  var t = S.current;
+  if(!t) return;
+  text = String(text || "").trim().slice(0, MAX_TYPED);
+  if(!text) return;
+
+  var mine = (S.liveChoices || []).filter(function(c){ return !c.silent; });
+  var hit = window.Director ? Director.matchReply(text, mine.map(function(c){
+    return { id: c.id, label: c.label, match: c.match, silent: c.silent };
+  })) : null;
+
+  pushMine(t.id, text);
+  recordTyped(t.id, text);
+
+  if(hit){
+    var item = null;
+    mine.forEach(function(c){ if(c.id === hit.choice.id) item = c; });
+    if(item){ answerTyped(item); return; }
+  }
+  deflect(t.id);
+}
+
+/* A matched reply spends the question and records everything the tapped one would have,
+   but the bubble is already on screen and it is theirs. */
+function answerTyped(item){
+  S.pendingChoices = S.pendingChoices.filter(function(c){
+    return !(c.threadId === item.threadId && c.templateId === item.templateId);
+  });
+  if(item.choice){
+    choicesEl.innerHTML = "";
+    S.pendingChoices = [];
+    finish(item.choice);
+    return;
+  }
+  if(item.onPick) item.onPick(item);
+  var t = Story.thread(item.threadId);
+  if(S.current && t && S.current.id === t.id){
+    paint(t);
+    scroll.scrollTop = scroll.scrollHeight;
+    renderChoices(choicesForThread(t.id));
+  }
+}
+
+/* Nobody wrote a reply to that. The thread does not pretend otherwise -- it answers in
+   the voice of whoever is in it, and the number answers differently, because the number
+   never fails to understand you. */
+function deflect(threadId){
+  var line = unmatchedLineFor(threadId);
+  var t = Story.thread(threadId);
+  if(!line || !t || !S.shown[t.id]){ paint(t); return; }
+  window.setTimeout(function(){
+    S.shown[t.id].push({
+      id: "deflect_" + t.id + "_" + S.shown[t.id].length,
+      from: "them",
+      fromContactId: line.contactId,
+      kind: "text",
+      body: line.body,
+      offsetMinutes: 0,
+      live: true,
+      __threadId: t.id,
+      __token: Generated.unmatched(line.body)
+    });
+    if(S.current && S.current.id === t.id){
+      paint(t);
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+    announce({ from: "them" });
+  }, 900);
+  paint(t);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
 /* One place choices are built, for the same reason as one place text is painted. */
 function renderChoices(items){
   choicesEl.innerHTML="";
-  if(S.repliesLocked) return;
+  S.liveChoices = items || [];
+  var restore = S.current && !isLocked(S.current) && !S.ended;
+  if(S.repliesLocked){
+    if(restore) choicesEl.appendChild(buildComposer(S.current));
+    return;
+  }
   items.forEach(function(item){
     var b=document.createElement("button");
     b.className="choice";
@@ -1138,6 +1361,7 @@ function renderChoices(items){
     });
     choicesEl.appendChild(b);
   });
+  if(restore) choicesEl.appendChild(buildComposer(S.current));
 }
 
 /* ============================================================================
@@ -1285,7 +1509,7 @@ function loadPhase(day, phase, options){
       .filter(function(e){ return e.kind === "choice"; })
       .map(function(e){
         return { id: e.choiceId, threadId: e.threadId, templateId: e.templateId,
-                 label: e.label,
+                 label: e.label, match: e.match, silent: e.silent,
                  token: Generated.label(e), tells: e.tells,
                  revealsClue: e.revealsClue, memory: e.memory,
                  onPick: function(item){
@@ -1353,6 +1577,9 @@ function recordMemory(memory){
    Locked threads are not searched: a lock you can read through is not a lock.
    ========================================================================== */
 /* not-story:begin — chrome */
+var SEND_GLYPH = "↑";
+var COMPOSE_HINT = "Message";
+var COMPOSE_MUTE = "No one is answering";
 var FIND_GLYPH = "⌕";
 var FIND_PLACEHOLDER = "Search";
 var FIND_NOTHING = "No messages found";
@@ -2848,6 +3075,15 @@ window.__unread = {
   renderList: function(){ return renderList(true); },
   loadPhase: function(day, phase){ return loadPhase(day, phase); },
   toList: function(){ return renderList(true); },
+  say: function(text){ return sendTyped(text); },
+  typed: function(){ return typedBank().slice(); },
+  matchIn: function(threadId, text){
+    var mine = (S.liveChoices || []).filter(function(c){ return !c.silent; });
+    var hit = Director.matchReply(text, mine.map(function(c){
+      return { id: c.id, label: c.label, match: c.match, silent: c.silent };
+    }));
+    return hit ? { id: hit.choice.id, score: hit.score } : null;
+  },
   renderListSoft: function(){ return renderList(); },
   choicesForThread: function(id){ return choicesForThread(id).map(function(c){ return c.id; }); },
   finalDay: FINAL_DAY,
