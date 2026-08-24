@@ -1585,3 +1585,171 @@ test('D47 — the composer takes a rant, and the number will not read one back',
   expect(essays.bare, 'no bare slot, ever').toBe(0);
   expect(essays.quotes, 'an essay-only history is never quoted').toBe(0);
 });
+
+// ---------------------------------------------------------------------------
+// D48 — what the hunt found. Six findings, each pinned.
+// ---------------------------------------------------------------------------
+
+test('D48 — a timer cannot close the search either', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  for (const id of ['t_mom', 't_flat', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('#appbar .back').click();
+  }
+  await page.locator('#find').click();
+  await page.locator('#q').fill('mo');
+  await page.clock.fastForward(6000);          // night one's photo lands in this window
+  await expect(page.locator('#q'), 'the search bar is still there').toHaveCount(1);
+  await expect(page.locator('#q')).toHaveValue('mo');
+  // the photo really did arrive underneath, and shows once the search closes
+  expect(await page.evaluate(() =>
+    window.__unread.state.shown.t_unknown.some((m) => m.kind === 'photo'))).toBe(true);
+  await page.locator('#appbar .back').click();
+  await expect(page.locator('.row')).not.toHaveCount(0);
+});
+
+test('D48 — night one happens once, even for a save that never heard of beats',
+  async ({ page }) => {
+  const t0 = LAUNCH.getTime();
+  await page.addInitScript(([t]) => {
+    if (window.localStorage.getItem('unread.save.v1')) return;
+    window.localStorage.setItem('unread.save.v1', JSON.stringify({
+      runSeed: 'away-seed', day: 1, phase: 'night', phaseStartedAt: t, lastSeenAt: t,
+      flags: { chose_delete: true }, contactState: {}, cluesFound: {},  // legacy: no beat
+    }));
+  }, [t0]);
+  await page.clock.install({ time: new Date(t0 + 26 * 3600 * 1000) });
+  await page.goto(BUILT);
+
+  const boot = await page.evaluate(() => ({
+    day: window.__unread.state.save.day, beat: window.__unread.state.beat }));
+  expect(boot.day, 'the away band advanced the day').toBeGreaterThan(1);
+  expect(boot.beat, 'a run that answered night one is past it').toBe(5);
+
+  // the old bug: reading three threads re-armed the intro photo
+  for (const id of ['t_mom', 't_flat', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('#appbar .back').click();
+  }
+  await page.clock.fastForward(8000);
+  expect(await page.evaluate(() =>
+    window.__unread.state.shown.t_unknown.filter((m) => m.kind === 'photo').length),
+    'the intro photo does not come back').toBe(0);
+
+  // and typing the night-one answer at the number cannot re-answer the run
+  await page.locator('[data-thread="t_unknown"]').click();
+  const before = await page.evaluate(() => JSON.stringify(window.__unread.state.flags));
+  await page.locator('#say').fill('i found this phone');
+  await page.locator('#send').click();
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => JSON.stringify(window.__unread.state.flags)),
+    'the ending choice is not overwritten').toBe(before);
+});
+
+test('D48 — sending mid-delivery hides nothing', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  for (const id of ['t_mom', 't_flat', 't_dave']) {
+    await page.locator(`[data-thread="${id}"]`).click();
+    await page.locator('#appbar .back').click();
+  }
+  await page.clock.runFor(6000);
+  await page.locator('[data-thread="t_unknown"]').click();
+  await page.clock.runFor(9000);               // mid-delivery
+  await page.locator('#say').fill('hello who is this');
+  await page.locator('#send').click();         // repaints the convo under the deliverer
+  await page.clock.runFor(120000);             // the whole night plays out
+  await page.waitForTimeout(200);
+
+  const sync = await page.evaluate(() => {
+    const bodies = window.__unread.state.shown.t_unknown
+      .filter((m) => m.kind !== 'photo').map((m) => m.body).filter(Boolean);
+    const dom = Array.from(document.querySelectorAll('.msg'))
+      .map((n) => (n.childNodes[0] || {}).textContent || '');
+    return {
+      missing: bodies.filter((b) => !dom.some((d) => d.includes(b))),
+      choices: document.querySelectorAll('.choice').length,
+    };
+  });
+  expect(sync.missing, 'everything delivered is on screen').toEqual([]);
+  expect(sync.choices, 'and the question the choices answer was seen').toBeGreaterThan(0);
+});
+
+test('D48 — a day-one typed message survives a reload', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  await page.locator('[data-thread="t_mom"]').click();
+  await page.locator('#say').fill('mom im ok i promise');
+  await page.locator('#send').click();
+  await page.waitForTimeout(150);
+  await page.reload();
+  await page.locator('[data-thread="t_mom"]').click();
+  expect((await page.locator('.msg.me').allInnerTexts())
+    .some((t) => t.includes('mom im ok i promise')),
+    'the boot path rebuilds day one WITH the typed bank').toBe(true);
+});
+
+test('D48 — planning a day twice quotes exactly what planning it once quotes',
+  async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  const out = await page.evaluate(() => {
+    const content = { cast: window.CONTENT.cast, templates: window.CONTENT.templates,
+                      ladder: window.CONTENT.ladder, clues: window.CONTENT.clues };
+    const typed = [
+      { day: 2, threadId: 't_mom',  text: 'im fine' },
+      { day: 3, threadId: 't_flat', text: 'it wasnt me' },
+      { day: 5, threadId: 't_dave', text: 'not this week' },
+      { day: 6, threadId: 't_mom',  text: 'stop worrying' },
+    ];
+    const mk = () => ({ flags: {}, fired: {}, memory: { denied_typed: 'x' },
+                        spent: {}, clues: {}, typed: typed, quoted: {} });
+    const twice = mk(), once = mk();
+    const a = [], b = [];
+    for (let d = 1; d <= 100; d++) {
+      window.Director.planDay(content, 'replan-seed', d, twice);
+      const p = window.Director.planDay(content, 'replan-seed', d, twice);
+      const q = window.Director.planDay(content, 'replan-seed', d, once);
+      for (const [plan, sink] of [[p, a], [q, b]]) {
+        if (!plan) continue;
+        for (const ph of ['day', 'night']) for (const e of plan.phases[ph] || []) {
+          if (e.quotesPlayer) sink.push(d + ':' + e.body);
+        }
+      }
+    }
+    const plain = a.map((x) => x.split(':').slice(1).join(':'))
+      .filter((x) => !/^you typed/.test(x));
+    let repeats = 0;
+    for (let i = 1; i < plain.length; i++) if (plain[i] === plain[i - 1]) repeats++;
+    return { a, b, repeats };
+  });
+  expect(out.a.length, 'the quote-back still happens').toBeGreaterThan(0);
+  expect(out.a, 'the replan changes nothing').toEqual(out.b);
+  expect(out.repeats, 'and never the same sentence twice running').toBe(0);
+});
+
+test('D48 — lines typed at the number are never what it quotes', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+  const out = await page.evaluate(() => {
+    const content = { cast: window.CONTENT.cast, templates: window.CONTENT.templates,
+                      ladder: window.CONTENT.ladder, clues: window.CONTENT.clues };
+    const atNumber = Array.from({ length: 8 }, (_, i) =>
+      ({ day: i + 1, threadId: 't_unknown', text: 'who is this ' + i }));
+    const st = { flags: {}, fired: {}, memory: {}, spent: {}, clues: {},
+                 typed: atNumber, quoted: {} };
+    let quotes = 0, bare = 0;
+    for (let d = 1; d <= 100; d++) {
+      const p = window.Director.planDay(content, 'numb-seed', d, st);
+      if (!p) continue;
+      for (const ph of ['day', 'night']) for (const e of p.phases[ph] || []) {
+        if (e.quotesPlayer) quotes++;
+        if (/\{TYPED/.test(e.body)) bare++;
+      }
+    }
+    return { quotes, bare };
+  });
+  expect(out.quotes, '"you said that to +44..." is a receipt, not a scare').toBe(0);
+  expect(out.bare, 'and refusing to quote never leaks a slot').toBe(0);
+});

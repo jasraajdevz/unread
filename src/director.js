@@ -97,10 +97,13 @@
      cast note for the number has said so from the start.
      Old before recent, too: something from three weeks ago has had time to be forgotten. */
   function chooseTyped(rand, typed, threadId, already) {
-    var usable = (typed || []).filter(quotable);
-    if (!usable.length) return null;
-    var elsewhere = usable.filter(function (t) { return t.threadId !== threadId; });
-    var pool = elsewhere.length ? elsewhere : usable;
+    /* Only lines said to somebody else. "you said that to +44 7700 900931" is a
+       receipt, not a scare -- if nothing was typed elsewhere, nothing is quoted, and
+       eligibility counts by the same rule so the template never fires half-filled. */
+    var pool = (typed || []).filter(function (t) {
+      return quotable(t) && t.threadId !== threadId;
+    });
+    if (!pool.length) return null;
     /* Being read the same sentence twice is a coincidence; being read two different
        ones is a filing system. Only fall back to a repeat if there is nothing else. */
     var unheard = pool.filter(function (t) { return t.text !== already; });
@@ -180,7 +183,9 @@
        retrofitted onto a run somebody has already played. */
     if (template.requiresTyped) {
       var need = template.requiresTyped === true ? 1 : template.requiresTyped;
-      var have = (context.typed || []).filter(quotable);
+      var have = (context.typed || []).filter(function (t) {
+        return quotable(t) && t.threadId !== template.threadId;
+      });
       if (have.length < need) return false;
       var last = context.quotedOn;
       if (last !== undefined && context.day - last < QUOTE_COOLDOWN_DAYS) return false;
@@ -281,7 +286,14 @@
       used[template.id] = true;
       if (template.once) options.fired[template.id] = options.day;   /* the day, so it can be rewound */
       if (template.requiresMemory) recallAllowed = false;   /* one per phase */
-      if (template.requiresTyped && options.quoted) options.quoted.on = options.day;
+      if (template.requiresTyped && options.quoted) {
+        /* capture BEFORE overwriting: this pair is what a replan of today restores.
+           Capturing it later, after .on was already today, made the rewind restore
+           today -- which blocked the replan and silenced every quote-back. */
+        options.quoted.prevOn = options.quoted.on;
+        options.quoted.prevText = options.quoted.text;
+        options.quoted.on = options.day;
+      }
       memoryTags(template).forEach(function (tag) { options.spent[tag] = options.day; });
       (template.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
 
@@ -298,7 +310,7 @@
           slots.TYPED = quoted.text;
           slots.TYPEDWHO = threadNameOf(content, quoted.threadId);
           slots.TYPEDDAY = String(quoted.day || 1);
-          if (options.quoted) options.quoted.text = quoted.text;
+          if (options.quoted) options.quoted.text = quoted.text;   /* prev captured at the draw */
         }
       }
       var openedBy = {};
@@ -486,7 +498,13 @@
     Object.keys(state.spent).forEach(function (tag) {
       if (state.spent[tag] === day) delete state.spent[tag];
     });
-    if (state.quoted.on === day) { delete state.quoted.on; delete state.quoted.text; }
+    if (state.quoted.on === day) {
+      state.quoted.on = state.quoted.prevOn;
+      state.quoted.text = state.quoted.prevText;
+      if (state.quoted.on === undefined) delete state.quoted.on;
+      if (state.quoted.text === undefined) delete state.quoted.text;
+      delete state.quoted.prevOn; delete state.quoted.prevText;
+    }
 
     /* Split the day's budget between the phases so night is never left mute by a
        talkative morning. */

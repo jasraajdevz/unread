@@ -1486,3 +1486,62 @@ Worth writing down because the fix was to the tool, not the game:
    `director.quote`, because those words are not ours to police.
 
 A reporter that cannot tell its own noise from a finding stops being read.
+
+---
+
+## D47 — the composer takes 8000 characters; the number will not read an essay back
+
+**Status:** decided · **Scope:** `src/engine.html`, `src/director.js` · **Enforced by:**
+the D47 test and the gate
+
+240 read as a form field; a phone lets you rant. The cap is 8000 in the field, the
+engine and the save, and an unbroken 3000-character token still wraps inside the phone.
+
+Raising it opened a hole the same hour: `requiresTyped` counted any line over one
+character while the picker only quotes lines under 160, so a player who only ever typed
+essays would pass the gate and be shown a literal `{TYPED}`. One shared `quotable()`
+predicate now gates the template and picks the line. The rule it encodes: **quotable is
+something a person would say out loud** — over 160 characters the quote-back is a wall,
+not a scare.
+
+---
+
+## D48 — what the hunt found
+
+**Status:** decided · **Scope:** engine, director · **Enforced by:** six D48 tests
+
+Six parallel finders swept the surfaces; six findings survived reproduction. All fixed,
+each pinned by a test.
+
+1. **Timers wiped an open search.** `renderList` guarded `S.current` but never read
+   `S.searching` — the intro photo arriving mid-search replaced the search bar with the
+   thread list, eating the query. The D39 rule now covers both: neither a thread you are
+   reading nor a search you are typing into.
+2. **Night one replayed on every later day** — the worst of the six. `S.beat` was never
+   saved, and `maybeAdvance` counted the KEYS of `S.opened` (loadPhase seeds keys with
+   `false`), so any later boot looked like three threads read and re-armed the intro —
+   which then let typing at the number silently re-answer the run's ending question.
+   The beat is in the save now (`setBeat`), night one is gated to day one, and a legacy
+   save that carries a `chose_*` flag resolves straight to beat 5.
+3. **Sending mid-delivery hid the rest of the night.** `deliver()` captured the `.convo`
+   element once; any repaint (a deflection, a matched reply) replaced it, and the rest of
+   the delivery appended to the detached node — invisible messages, then choices asking
+   about words never shown. It re-queries the live element per step and skips DOM work
+   when the player is elsewhere; state still records everything.
+4. **Day-one typed messages vanished on reload.** `resetThreads()` runs at script-eval,
+   before the save exists; boot only rebuilt (via `loadPhase`) when day > 1. Day one now
+   rebuilds too.
+5. **The day-rewind destroyed the quote-back's anti-repeat.** Both phases plan the same
+   day; the rewind zeroed `quoted.text`, so the second plan repicked from a pool that
+   included the previously-quoted sentence. The fire now captures what it overwrites —
+   at the draw, *before* the overwrite; capturing after it restored *today* and silenced
+   every quote-back, which the pure walk caught — and the rewind restores it. Invariant
+   held by test: a double-planned run quotes exactly what a single-planned run quotes.
+6. **`TYPEDWHO` could name the number itself.** The picker fell back to lines typed at
+   the number when nothing was typed elsewhere — "you said that to +44 7700 900931" is a
+   receipt, not a scare. The fallback is gone, and eligibility counts by the same rule,
+   so the template cannot fire half-filled.
+
+One suite run flaked once (1/45) while a finder was still consuming the machine; two
+clean runs followed and the gate is green. If it flakes again, that is a real finding
+and gets its own entry.

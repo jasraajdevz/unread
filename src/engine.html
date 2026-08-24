@@ -687,6 +687,7 @@ var Save = {
       phase: "day",
       phaseStartedAt: now,
       lastSeenAt: now,
+      beat: 1,
       flags: {},
       contactState: {},
       cluesFound: {},
@@ -913,7 +914,8 @@ function previewToken(t){
 /* force is for the three places that mean it: the back button, closing search, and
    boot. Everything else is a timer, and a timer does not get to close what you opened. */
 function renderList(force){
-  if(S.current && !force) return;
+  /* neither a thread you are reading nor a search you are typing into */
+  if((S.current || S.searching) && !force) return;
   S.current=null; choicesEl.innerHTML="";
   appbar.innerHTML='<span class="title"></span>'
     + '<button class="find" id="find" aria-label="Search">' + FIND_GLYPH + '</button>'
@@ -1058,8 +1060,14 @@ function openThread(t){
    ========================================================================== */
 function deliver(threadId, list, done){
   var t = Story.thread(threadId);
-  var wrap = scroll.querySelector(".convo");
-  if(!wrap){ if(done) done(); return; }
+  if(!scroll.querySelector(".convo")){ if(done) done(); return; }
+  /* Never hold the element. Anything that repaints mid-delivery (a deflection, a
+     matched reply) replaces .convo, and a held reference keeps appending to the
+     detached one: invisible messages, then choices about words never shown. */
+  function liveWrap(){
+    return (S.current && S.current.id === threadId)
+      ? scroll.querySelector(".convo") : null;
+  }
   var i=0;
   (function step(){
     if(i>=list.length){ if(done) done(); return; }
@@ -1067,20 +1075,24 @@ function deliver(threadId, list, done){
     setTimeout(function(){
       var showTyping = m.kind !== "photo" && m.from !== "me";
       var ty=null;
-      if(showTyping){
+      var w0 = liveWrap();
+      if(showTyping && w0){
         ty=document.createElement("div"); ty.className="typing";
         ty.innerHTML="<i></i><i></i><i></i>";
-        wrap.appendChild(ty); scroll.scrollTop=scroll.scrollHeight;
+        w0.appendChild(ty); scroll.scrollTop=scroll.scrollHeight;
       }
       setTimeout(function(){
         if(ty) ty.remove();
         var prev = shownOf(t)[shownOf(t).length-1];
         S.shown[t.id].push(m);
-        var el=bubbleFor(m, prev); el.classList.add("live");
         announce(m);
-        wrap.appendChild(el);
-        appendStamp(wrap, m);
-        scroll.scrollTop=scroll.scrollHeight;
+        var w = liveWrap();
+        if(w){
+          var el=bubbleFor(m, prev); el.classList.add("live");
+          w.appendChild(el);
+          appendStamp(w, m);
+          scroll.scrollTop=scroll.scrollHeight;
+        }
         step();
       }, showTyping ? (m.typingMs || 0) : PHOTO_REVEAL_MS);
     }, m.delayMs || 0);
@@ -1091,9 +1103,10 @@ function deliver(threadId, list, done){
    BEATS (day 1 night)
    ========================================================================== */
 function maybeAdvance(){
-  var read=Object.keys(S.opened).length;
+  if(((S.save && S.save.day) || 1) > 1) return;   /* night one is day one's */
+  var read=Object.keys(S.opened).filter(function(k){ return S.opened[k]; }).length;
   if(S.beat===1 && read>=THREADS_TO_READ && !S.current){
-    S.beat=2;
+    setBeat(2);
     setTimeout(function(){
       var t=Story.thread(UNKNOWN);
       var photo=Story.messagesOf("b_unknown_2", S.flags);
@@ -1104,11 +1117,20 @@ function maybeAdvance(){
   }
 }
 
+/* S.beat is the night-one state machine, and it has to survive a reload: rebuilt from
+   scratch it re-armed the intro on every later day, because maybeAdvance counted the
+   KEYS of S.opened and loadPhase seeds keys with false. */
+function setBeat(n){
+  S.beat = n;
+  if(S.save){ S.save.beat = n; Save.write(S.save); }
+}
+
 function runQueue(){
+  if(((S.save && S.save.day) || 1) > 1) return;
   if(S.beat===2){
-    S.beat=3;
+    setBeat(3);
     deliver(UNKNOWN, Story.messagesOf("b_unknown_3", S.flags), function(){
-      S.beat=4;
+      setBeat(4);
       setTimeout(beat4, INTER_BEAT_MS);
     });
   } else if(S.beat===4){
@@ -1121,7 +1143,7 @@ function beat4(){
   if(S.current !== t){ t.forcedUnread=true; S.opened[UNKNOWN]=false; renderList(); return; }
   if(S.leftDuringLive) S.flags["left_during_live"]=true;
   deliver(UNKNOWN, Story.messagesOf("b_unknown_4", S.flags), function(){
-    S.beat=5;
+    setBeat(5);
     renderChoices(Story.choicesOf("b_unknown_4").map(function(c){
       return { id: c.id, label: c.label, match: c.match, silent: c.silent,
                token: Story.labelOf(c), choice: c };
@@ -3083,6 +3105,10 @@ function boot(){
   if(!save){ save = Save.fresh(now); }
   S.save = save;
   S.flags = save.flags || {};
+  /* An older save carries no beat. If its day moved on, or it already answered night
+     one (a chose_* flag), the intro is over -- resolving those to 1 replayed it. */
+  var answered = Object.keys(S.flags).some(function(f){ return f.indexOf("chose_") === 0; });
+  S.beat = save.beat || (save.day > 1 || answered ? 5 : 1);
 
   S.away = applyAway(save, now);
   if(S.away.band === "missed" || S.away.band === "dayAdvanced"){
@@ -3098,7 +3124,10 @@ function boot(){
   save.opens = (save.opens || 0) + 1;
   Save.write(save);
 
+  /* resetThreads ran at script-eval, before this save existed, so on day 1 it built
+     the threads without the typed bank. Now the save is real: build them again. */
   if(save.day > 1) loadPhase(save.day, save.phase, { silent: true });
+  else resetThreads();
   renderList();
 }
 
