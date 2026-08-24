@@ -80,6 +80,38 @@
     });
   }
 
+  /* Which of the player's own lines to read back.
+     It prefers one typed somewhere else. Being quoted a thing you said to this number is
+     unnerving; being quoted a thing you said to your mother is the whole idea, and the
+     cast note for the number has said so from the start.
+     Old before recent, too: something from three weeks ago has had time to be forgotten. */
+  function chooseTyped(rand, typed, threadId) {
+    var usable = (typed || []).filter(function (t) {
+      return t && typeof t.text === 'string' && t.text.trim().length > 1;
+    });
+    if (!usable.length) return null;
+    var elsewhere = usable.filter(function (t) { return t.threadId !== threadId; });
+    var pool = elsewhere.length ? elsewhere : usable;
+    /* the older half, so it has had time to stop being on your mind -- but never fewer
+       than three to draw from, or every quote-back in the run is the same sentence */
+    var window = pool.slice(0, Math.max(Math.min(3, pool.length),
+                                        Math.ceil(pool.length / 2)));
+    return window[Math.floor(rand() * window.length) % window.length];
+  }
+
+  function threadNameOf(content, threadId) {
+    var cast = ((content || {}).cast || {}).cast || [];
+    var names = [];
+    for (var i = 0; i < cast.length; i++) {
+      if (cast[i].thread === threadId && names.indexOf(cast[i].displayName) < 0) {
+        names.push(cast[i].displayName);
+      }
+    }
+    if (!names.length) return '';
+    if (names.length === 1) return names[0];
+    return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+
   function chooseSlots(rand, template) {
     var chosen = {};
     Object.keys(template.slots || {}).sort().forEach(function (key) {
@@ -95,6 +127,11 @@
      which is what lets something point out that two of your answers cannot both be
      true. */
   var RECALL_COOLDOWN_DAYS = 14;
+
+  /* Being read your own sentence back is a trick that works three or four times in a
+     hundred days and not thirteen. Longer than the recall cooldown, because this one
+     lands harder and wears out faster. */
+  var QUOTE_COOLDOWN_DAYS = 21;
 
   function memoryTags(template) {
     var need = template.requiresMemory;
@@ -122,6 +159,19 @@
        on a sensor, and something was standing under it. A clue never found is never
        confirmed, and that silence is the cost of not having looked. */
     if (template.requiresClue && !context.clues[template.requiresClue]) return false;
+
+    /* A template that reads the player's own words back cannot fire before they have
+       typed enough of them. This is why the typing had to land first: it cannot be
+       retrofitted onto a run somebody has already played. */
+    if (template.requiresTyped) {
+      var need = template.requiresTyped === true ? 1 : template.requiresTyped;
+      var have = (context.typed || []).filter(function (t) {
+        return t && typeof t.text === 'string' && t.text.trim().length > 1;
+      });
+      if (have.length < need) return false;
+      var last = context.quotedOn;
+      if (last !== undefined && context.day - last < QUOTE_COOLDOWN_DAYS) return false;
+    }
 
     var tags = memoryTags(template);
     for (var j = 0; j < tags.length; j++) {
@@ -170,7 +220,8 @@
         act: options.act, phase: options.phase,
         fired: options.fired, flags: options.flags, day: options.day,
         memory: options.memory || {}, spent: options.spent || {},
-        clues: options.clues || {}, recallUsed: false
+        clues: options.clues || {}, typed: options.typed || [],
+        quotedOn: options.quoted ? options.quoted.on : undefined, recallUsed: false
       });
     });
 
@@ -217,6 +268,7 @@
       used[template.id] = true;
       if (template.once) options.fired[template.id] = true;
       if (template.requiresMemory) recallAllowed = false;   /* one per phase */
+      if (template.requiresTyped && options.quoted) options.quoted.on = options.day;
       memoryTags(template).forEach(function (tag) { options.spent[tag] = options.day; });
       (template.setsFlags || []).forEach(function (f) { options.flags[f] = true; });
 
@@ -225,6 +277,15 @@
         slots[index === 0 ? 'MEMORY' : 'MEMORY' + (index + 1)] =
           (options.memory || {})[tag] || '';
       });
+      var quoted = null;
+      if (template.requiresTyped) {
+        quoted = chooseTyped(rand, options.typed, template.threadId);
+        if (quoted) {
+          slots.TYPED = quoted.text;
+          slots.TYPEDWHO = threadNameOf(content, quoted.threadId);
+          slots.TYPEDDAY = String(quoted.day || 1);
+        }
+      }
       var openedBy = {};
 
       template.lines.forEach(function (line) {
@@ -255,6 +316,7 @@
           durationMs: line.durationMs || null,
           body: fillSlots(line.text, slots),
           emphasis: line.emphasis || null,
+          quotesPlayer: !!(quoted && /\{TYPED\}/.test(line.text)),
           isReply: isReply
         });
       });
@@ -395,6 +457,8 @@
     state.memory = state.memory || {};
     state.spent = state.spent || {};
     state.clues = state.clues || {};
+    state.typed = state.typed || [];
+    state.quoted = state.quoted || {};
 
     /* Split the day's budget between the phases so night is never left mute by a
        talkative morning. */
@@ -432,6 +496,8 @@
         memory: state.memory,
         spent: state.spent,
         clues: state.clues,
+        typed: state.typed,
+        quoted: state.quoted,
         recallWeight: entry.recallWeight || 1,
         recallChance: entry.recallChance === undefined ? 1 : entry.recallChance
       });
@@ -626,6 +692,8 @@
     mulberry32: mulberry32,
     seededRandom: seededRandom,
     fillSlots: fillSlots,
+    chooseTyped: chooseTyped,
+    threadNameOf: threadNameOf,
     normalise: normalise,
     tokenise: tokenise,
     matchReply: matchReply,

@@ -1447,7 +1447,11 @@ function planFor(day){
     flags: S.flags,
     fired: (S.save && S.save.fired) || {},
     memory: (S.save && S.save.contactState && S.save.contactState.memory) || {},
-    clues: (S.save && S.save.cluesFound) || {}
+    clues: (S.save && S.save.cluesFound) || {},
+    /* D45: what the player actually typed. The director is still pure -- this is data
+       handed in, the same way memory is, so the same seed and the same history still
+       produce the same run. */
+    typed: (S.save && S.save.contactState && S.save.contactState.typed) || []
   };
   return window.Director.planDay(
     { cast: CONTENT.cast, templates: CONTENT.templates, ladder: CONTENT.ladder,
@@ -1476,7 +1480,7 @@ function eventsToMessages(events, baseOffsetMin){
       live: false,
       delayMs: 0,
       typingMs: 0,
-      __token: Text.mint("director.message", e.body)
+      __token: Text.mint(e.quotesPlayer ? "director.quote" : "director.message", e.body)
     });
     n += 1;
   });

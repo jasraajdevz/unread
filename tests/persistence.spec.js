@@ -1345,3 +1345,128 @@ test('D44 — every reply in the game can be reached by typing', async ({ page }
   });
   expect(misses, 'typing the reply word for word must reach it').toEqual([]);
 });
+
+// ---------------------------------------------------------------------------
+// D45 — the number reads the player's own sentences back at them.
+// ---------------------------------------------------------------------------
+
+const TYPED_FIXTURE = [
+  { day: 3,  phase: 'day',   threadId: 't_mom',     text: 'im fine mom stop asking' },
+  { day: 5,  phase: 'night', threadId: 't_flat',    text: 'i heard it again last night' },
+  { day: 9,  phase: 'day',   threadId: 't_dave',    text: 'sorry i cant make thursday' },
+  { day: 12, phase: 'night', threadId: 't_mom',     text: 'nothing happened' },
+  { day: 17, phase: 'day',   threadId: 't_flat',    text: 'it wasnt me' },
+  { day: 22, phase: 'night', threadId: 't_unknown', text: 'who is this' },
+];
+
+async function quotesIn(page, seed, typed) {
+  return page.evaluate(([seed, typed]) => {
+    const content = { cast: window.CONTENT.cast, templates: window.CONTENT.templates,
+                      ladder: window.CONTENT.ladder, clues: window.CONTENT.clues };
+    const carried = { flags: {}, fired: {}, spent: {}, clues: {}, typed: typed,
+                      memory: { denied_typed: 'you said you never said that' } };
+    const out = [];
+    for (let day = 1; day <= 100; day++) {
+      const plan = window.Director.planDay(content, seed, day, carried);
+      if (!plan) continue;
+      for (const phase of ['day', 'night']) {
+        for (const e of plan.phases[phase] || []) {
+          if (e.quotesPlayer) out.push({ day, body: e.body });
+          if (/\{TYPED[A-Z]*\}|\{MEMORY[0-9]*\}/.test(e.body)) {
+            out.push({ day, body: 'UNFILLED SLOT: ' + e.body });
+          }
+        }
+      }
+    }
+    return out;
+  }, [seed, typed]);
+}
+
+test('D45 — the number quotes you exactly, and to the wrong person', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const hits = await quotesIn(page, 'gate-seed', TYPED_FIXTURE);
+  expect(hits.length, 'it happens').toBeGreaterThan(0);
+
+  const mine = TYPED_FIXTURE.map((t) => t.text);
+  for (const hit of hits) {
+    expect(hit.body, 'no slot ever reaches a bubble').not.toContain('UNFILLED');
+    const quoted = mine.filter((m) => hit.body.includes(m));
+    expect(quoted.length, `"${hit.body}" contains something the player really typed`).toBe(1);
+    // the cast note: quoted to the wrong person. A line typed AT the number is not a scare.
+    const source = TYPED_FIXTURE.find((t) => t.text === quoted[0]);
+    expect(source.threadId, 'it reads back what you said to someone else')
+      .not.toBe('t_unknown');
+  }
+
+  // rare enough to keep working: it is not a thing that happens every week
+  expect(hits.length, 'restraint, the same as recall gets').toBeLessThanOrEqual(6);
+  const days = hits.map((h) => h.day);
+  for (let i = 1; i < days.length; i++) {
+    expect(days[i] - days[i - 1], 'a fortnight is not long enough between these')
+      .toBeGreaterThanOrEqual(21);
+  }
+});
+
+test('D45 — it cannot fire on a run where nothing was typed', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  for (const empty of [[], [{ day: 2, threadId: 't_mom', text: '  ' }]]) {
+    const hits = await quotesIn(page, 'gate-seed', empty);
+    expect(hits, 'nothing typed, nothing quoted, and no bare slot either').toEqual([]);
+  }
+
+  // it also cannot fire before there is enough to draw on
+  const one = await quotesIn(page, 'gate-seed', [TYPED_FIXTURE[0]]);
+  expect(one, 'one line is not a history').toEqual([]);
+});
+
+test('D45 — same seed and same history, same run; different words, different run',
+  async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  const a = await quotesIn(page, 'fixed', TYPED_FIXTURE);
+  const b = await quotesIn(page, 'fixed', TYPED_FIXTURE);
+  expect(b, 'the director is still pure').toEqual(a);
+
+  const different = TYPED_FIXTURE.map((t) => ({ ...t, text: t.text + ' really' }));
+  const c = await quotesIn(page, 'fixed', different);
+  expect(c.map((h) => h.body), 'what you typed is what comes back')
+    .not.toEqual(a.map((h) => h.body));
+});
+
+test('D45 — a bubble made of your own words says so', async ({ page }) => {
+  await page.clock.install({ time: LAUNCH });
+  await page.goto(BUILT);
+
+  // type at Mom, then find the night the number reads it back
+  await page.evaluate((typed) => {
+    const S = window.__unread.state;
+    S.save.contactState = S.save.contactState || {};
+    S.save.contactState.typed = typed;
+    S.save.contactState.memory = { denied_typed: 'you said you never said that' };
+  }, TYPED_FIXTURE);
+
+  const landed = await page.evaluate(() => {
+    for (let day = 21; day <= 100; day++) {
+      const plan = window.__unread.loadPhase(day, 'night');
+      if ((plan.phases.night || []).some((e) => e.quotesPlayer)) return day;
+    }
+    return null;
+  });
+  expect(landed, 'it arrives somewhere in the run').not.toBeNull();
+
+  await page.locator('[data-thread="t_unknown"]').click();
+  const quoted = page.locator('.msg[data-src="director.quote"]');
+  await expect(quoted, 'the audit can tell whose words these are').not.toHaveCount(0);
+
+  const text = (await quoted.first().innerText()).split('\n')[0];
+  expect(TYPED_FIXTURE.some((t) => text.includes(t.text)),
+    `"${text}" is a sentence the player typed`).toBe(true);
+
+  const orphans = await page.evaluate(() => window.__unread.auditIngress());
+  expect(orphans).toEqual([]);
+});

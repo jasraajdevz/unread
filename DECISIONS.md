@@ -1383,3 +1383,68 @@ reads it yet. Act III is going to.
 
 The last one was found by a test that types every label in the game back at itself. It is
 the kind of bug no amount of playing finds, because you would have to try that exact line.
+
+---
+
+## D45 — it reads your own sentences back at you
+
+**Status:** decided · **Scope:** `src/director.js`, `src/engine.html`,
+`content/templates.json` · **Enforced by:** rule 22 and the gate
+
+`c_unknown`'s voice rule has said this since the cast was written:
+
+> states things. Never asks twice. Quotes the player exactly, and to the wrong person —
+> it has read the other threads.
+
+Until D44 there was nothing exact to quote, because the player only ever picked from a
+list. Now there is, and this is the beat the typing was for.
+
+Somewhere after day 21, on a night, the number sends a sentence. The sentence is one the
+player typed themselves, weeks earlier, **to somebody else** — to Mom, or the flat, or
+Dave. Then: `you said that to Mom`.
+
+### The director is still pure
+
+The typed lines are handed to it exactly the way memory already is — data in, transcript
+out. Same seed and same history still give the same run, so a bug is still reproducible
+from its seed alone, and `check_run.js` still means what it meant. Three new slots come
+from that data: `{TYPED}`, `{TYPEDWHO}`, `{TYPEDDAY}`.
+
+### Which line it picks
+
+Never one typed at the number. Being quoted a thing you said to *it* is a receipt; being
+quoted a thing you said to your mother is the whole idea.
+
+From the older half of the history, never fewer than three to draw from. A sentence from
+three weeks ago has had time to stop being on your mind, and drawing from a window of one
+would make every quote-back in the run the same sentence.
+
+### Restraint, again
+
+`QUOTE_COOLDOWN_DAYS = 21` — longer than recall's fortnight, because this lands harder and
+wears out faster. Without it the trick fired thirteen times in eighty days, which is how
+you turn the best moment in the game into furniture. Three or four a run now, measured
+across seeds, and the gate asserts no two land closer than 21 days apart.
+
+### Rule 22 — declare that you quote
+
+A template using the TYPED family must set `requiresTyped`, or on a run where nothing was
+typed the director never fills the slot and the player is shown a literal `{TYPED}`. The
+reverse is also an error: gating on something you never use. Both directions fail the
+gate, and the tests sweep all hundred days asserting no bare slot ever reaches a bubble.
+
+`requiresTyped: N` also sets how much history it needs. One line is not a history.
+
+### A bubble made of your words says so
+
+`data-src="director.quote"`, not `director.message`. `{TYPED}` on its own line is a bubble
+whose every word came from the player, and the ingress audit should be able to say that
+out loud rather than filing it under authored dialogue.
+
+### One bug, and it was the boring kind
+
+`typed` reached `planPhase` and `chooseTyped` and was threaded through the carried state
+correctly — and was left out of the one object handed to `eligible()`. So the gate on
+`requiresTyped` read `undefined`, found zero lines, and refused every template. Nothing
+quoted, no error, no failing test: the feature simply was not there. Found by running it
+and looking, which is the only thing that finds that class of bug.

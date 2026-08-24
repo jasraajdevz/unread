@@ -3489,6 +3489,188 @@
           "silent": true
         }
       ]
+    },
+    {
+      "id": "tpl_p_quote_who",
+      "threadId": "t_unknown",
+      "acts": [
+        2,
+        3
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 5,
+      "once": false,
+      "requiresTyped": 3,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{TYPED}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you said that to {TYPEDWHO}"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_q_never",
+          "label": "i never said that",
+          "match": [
+            "i never said that",
+            "never",
+            "didnt say",
+            "no"
+          ],
+          "tells": "denied typing it",
+          "memory": {
+            "tag": "denied_typed",
+            "fragment": "you said you never said that"
+          }
+        },
+        {
+          "id": "ch_q_reading",
+          "label": "youre reading my messages",
+          "match": [
+            "youre reading my messages",
+            "reading",
+            "spying",
+            "how are you seeing"
+          ],
+          "tells": "accused it of reading the other threads"
+        },
+        {
+          "id": "ch_q_none",
+          "label": "[say nothing]",
+          "silent": true,
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_quote_day",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 6,
+      "once": true,
+      "requiresTyped": 5,
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{TYPED}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "day {TYPEDDAY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "i keep all of them"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_q_delete",
+          "label": "delete them",
+          "match": [
+            "delete them",
+            "delete",
+            "get rid of them",
+            "erase"
+          ],
+          "tells": "told it to delete what it kept"
+        },
+        {
+          "id": "ch_q_why",
+          "label": "why",
+          "match": [
+            "why",
+            "what for",
+            "whats the point"
+          ],
+          "tells": "asked why it keeps them"
+        },
+        {
+          "id": "ch_q_day_none",
+          "label": "[say nothing]",
+          "silent": true,
+          "tells": null
+        }
+      ]
+    },
+    {
+      "id": "tpl_p_quote_denied",
+      "threadId": "t_unknown",
+      "acts": [
+        3,
+        3
+      ],
+      "phases": [
+        "night"
+      ],
+      "weight": 6,
+      "once": true,
+      "requiresTyped": 6,
+      "requiresMemory": "denied_typed",
+      "requiresFlags": [],
+      "setsFlags": [],
+      "slots": {},
+      "lines": [
+        {
+          "speaker": "c_unknown",
+          "text": "{MEMORY}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "you typed {TYPED}"
+        },
+        {
+          "speaker": "c_unknown",
+          "text": "i can show you"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ch_q_show",
+          "label": "show me",
+          "match": [
+            "show me",
+            "show",
+            "go on then",
+            "prove it"
+          ],
+          "tells": "asked it to prove what he typed"
+        },
+        {
+          "id": "ch_q_stop2",
+          "label": "stop",
+          "match": [
+            "stop",
+            "leave me alone",
+            "enough"
+          ],
+          "tells": "told it to stop again"
+        },
+        {
+          "id": "ch_q_den_none",
+          "label": "[say nothing]",
+          "silent": true,
+          "tells": null
+        }
+      ]
     }
   ]
 }

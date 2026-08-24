@@ -346,12 +346,28 @@ def audit_content(content_dir, story_emphasis=0):
         for choice in template.get("choices") or []:
             used.update(re.findall(r"\{([A-Z0-9_]+)\}", choice.get("tells") or ""))
             used.update(re.findall(r"\{([A-Z0-9_]+)\}", choice.get("label") or ""))
-        # {MEMORY} is filled by the director from what the player said, so a template
-        # quotes it without declaring it.
-        for name in sorted(used - set(slots) - {"MEMORY", "MEMORY2"}):
+        # {MEMORY} is filled by the director from what the player chose, and the TYPED
+        # family from what the player actually typed (D45), so a template quotes them
+        # without declaring them. Nothing else gets that: an undeclared slot is a typo.
+        RUNTIME_SLOTS = {"MEMORY", "MEMORY2", "TYPED", "TYPEDWHO", "TYPEDDAY"}
+        for name in sorted(used - set(slots) - RUNTIME_SLOTS):
             problems.append("template '%s' uses slot {%s}, which it does not declare" % (tid, name))
         for name in sorted(set(slots) - used):
             problems.append("template '%s' declares slot {%s}, which nothing uses" % (tid, name))
+        # RULE 22 -- a template that reads the player's own words back must declare that
+        # it needs them. Without requiresTyped the director never fills the slot and the
+        # player is shown a literal {TYPED}.
+        typed_slots = used & {"TYPED", "TYPEDWHO", "TYPEDDAY"}
+        if typed_slots and not template.get("requiresTyped"):
+            problems.append(
+                "template '%s' quotes the player back with %s but does not set "
+                "'requiresTyped', so on a run where nothing was typed it renders the "
+                "slot name into a bubble"
+                % (tid, ", ".join("{%s}" % n for n in sorted(typed_slots))))
+        if template.get("requiresTyped") and not typed_slots:
+            problems.append(
+                "template '%s' sets 'requiresTyped' but quotes nothing back, so it is "
+                "gated on something it never uses" % tid)
         for name, options in slots.items():
             if not isinstance(options, list) or not options:
                 problems.append("template '%s' slot {%s} has no options" % (tid, name))
